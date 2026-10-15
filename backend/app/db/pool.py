@@ -1,3 +1,6 @@
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 import asyncpg
 
 _pool: asyncpg.Pool | None = None
@@ -28,3 +31,12 @@ def get_pool() -> asyncpg.Pool:
         raise RuntimeError("Database pool is not initialised")
     return _pool
 
+
+@asynccontextmanager
+async def connection(conn: asyncpg.Connection | None = None) -> AsyncIterator[asyncpg.Connection]:
+    """Use the caller's connection (so it can group calls in one transaction), or borrow one."""
+    if conn is not None:
+        yield conn
+    else:
+        async with get_pool().acquire() as acquired:
+            yield acquired

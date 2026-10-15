@@ -1,20 +1,233 @@
-"""Pydantic models for every PRD §8.1 type. Shared by Backend 1 and Backend 2.
+"""Pydantic models for every PRD §8.1 type, plus Backend 2's request/response bodies.
 
-Phase 1 only defines the base model and timestamp type; the contract models are added in Phase 4.
+Shared by Backend 1 and Backend 2. Field names match the API contract exactly; do not rename
+without agreeing with the frontend (their mock layer mirrors §8).
 """
 
-from datetime import datetime
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, PlainSerializer
+from pydantic import AwareDatetime, BaseModel, Field, PlainSerializer, model_serializer, model_validator
 
 from app.timeutil import iso
 
-Status = Literal["routine", "possible_away", "unusual_inactivity", "unresolved_concern"]
+# Timestamps must be timezone-aware on input (a naive value is a 422, not a later 500) and
+# always serialise as UTC ISO-8601 with millisecond precision and a Z suffix.
+UtcDatetime = Annotated[AwareDatetime, PlainSerializer(iso, return_type=str)]
 
-# Use for every timestamp field so it serialises as "...Z" with millisecond precision.
-UtcDatetime = Annotated[datetime, PlainSerializer(iso, return_type=str | None)]
+UnitId = str
+Role = Literal["township", "caregiver"]
+Sensor = Literal["water", "electricity", "door"]
+DoorState = Literal["open", "closed"]
+Status = Literal["routine", "possible_away", "unusual_inactivity", "unresolved_concern"]
+IncidentState = Literal["grace", "notified", "acknowledged", "closed", "auto_resolved"]
+Outcome = Literal["resident_ok", "assistance_provided", "resident_away", "resident_activity_detected"]
+IncidentEventType = Literal[
+    "detected",
+    "voice_call_started",
+    "voice_call_no_answer",
+    "voice_call_cancelled",
+    "notified",
+    "reminder",
+    "acknowledged",
+    "closed",
+    "auto_resolved",
+]
+NotificationKind = Literal[
+    "morning_reassurance",
+    "alert",
+    "reminder",
+    "acknowledged",
+    "closed",
+    "auto_resolved",
+    "message_delivered",
+    "buddy_matched",
+]
+CommunityAction = Literal["invite_resident", "join_together"]
+
+ACTIVE_INCIDENT_STATES: tuple[IncidentState, ...] = ("grace", "notified", "acknowledged")
 
 
 class ContractModel(BaseModel):
     """Base for all API models."""
+
+
+# --- §8.1 shared types -----------------------------------------------------------------
+
+
+class Reading(ContractModel):
+    unit_id: UnitId
+    sensor: Sensor
+    value: float | DoorState  # water: L/min, electricity: kW, door: "open" | "closed"
+    recorded_at: UtcDatetime
+
+    @model_validator(mode="after")
+    def _value_matches_sensor(self) -> "Reading":
+        if self.sensor == "door":
+            if not isinstance(self.value, str):
+                raise ValueError('door readings need value "open" or "closed"')
+        elif isinstance(self.value, str) or self.value < 0:
+            raise ValueError(f"{self.sensor} readings need a number >= 0")
+        return self
+
+
+class Baseline(ContractModel):
+    usual_quiet_gap_seconds: int
+    usual_outing_seconds: int
+    standby_power_kw: float
+    source: Literal["simulated_history"] = "simulated_history"
+
+
+class UnitLatest(ContractModel):
+    water_lpm: float
+    power_kw: float
+    door: DoorState
+    last_door_event_at: UtcDatetime | None
+
+
+class QuietGap(ContractModel):
+    last_water_activity_at: UtcDatetime | None
+    usual_max_seconds: int
+
+
+class Unit(ContractModel):
+    unit_id: UnitId
+    resident_name: str
+    caregiver_name: str
+    caregiver_relationship: str
+    controllable: bool
+    status: Status
+    status_reason: str
+    status_since: UtcDatetime
+    latest: UnitLatest
+    quiet_gap: QuietGap
+    baseline: Baseline
+    active_incident_id: str | None
+
+
+class Actor(ContractModel):
+    role: Role
+    name: str
+
+
+class IncidentEvent(ContractModel):
+    type: IncidentEventType
+    at: UtcDatetime
+    actor: Actor | None = None
+    detail: str | None = None
+
+    @model_serializer(mode="wrap")
+    def _omit_empty_optionals(self, handler: Any) -> dict[str, Any]:
+        # §8.1 marks actor and detail optional (absent, not null). Done here rather than with
+        # exclude_none at call sites, so FastAPI responses and broadcasts both get it right.
+        data = handler(self)
+        for key in ("actor", "detail"):
+            if data.get(key) is None:
+                data.pop(key, None)
+        return data
+
+
+class Acknowledgement(ContractModel):
+    role: Role
+    name: str
+    at: UtcDatetime
+
+
+class Incident(ContractModel):
+    incident_id: str
+    unit_id: UnitId
+    state: IncidentState
+    opened_at: UtcDatetime
+    grace_ends_at: UtcDatetime | None
+    next_reminder_at: UtcDatetime | None
+    reminder_count: int
+    acknowledged_by: Acknowledgement | None
+    outcome: Outcome | None
+    closed_at: UtcDatetime | None
+    events: list[IncidentEvent]
+
+
+class Notification(ContractModel):
+    notification_id: str
+    role: Role
+    unit_id: UnitId
+    kind: NotificationKind
+    message: str
+    incident_id: str | None
+    created_at: UtcDatetime
+    read: bool
+
+
+class CommunityActivity(ContractModel):
+    activity_id: str
+    title: str
+    starts_at: UtcDatetime
+    location: str
+    near_unit_id: UnitId
+
+
+class MessagePreset(ContractModel):
+    preset_id: str
+    text: str
+
+
+class CompanionMessage(ContractModel):
+    message_id: str
+    unit_id: UnitId
+    from_name: str
+    preset_id: str
+    text: str
+    channel: Literal["voice_call"] = "voice_call"
+    simulated: Literal[True] = True
+    status: Literal["delivered"] = "delivered"
+    sent_at: UtcDatetime
+
+
+class Buddy(ContractModel):
+    buddy_id: str
+    name: str
+    interests: list[str]
+
+
+class BuddyMatch(ContractModel):
+    unit_id: UnitId
+    buddy: Buddy
+    shared_interest: str
+    next_activity: CommunityActivity | None
+    simulated: Literal[True] = True
+    matched_at: UtcDatetime
+
+
+class Config(ContractModel):
+    grace_period_seconds: int
+    reminder_interval_seconds: int
+
+
+# --- Backend 2 request and response bodies (§8.4, §8.5) ---------------------------------
+# Backend 1 adds its own bodies (POST /api/readings, acknowledge, close) here.
+
+
+class MarkReadRequest(ContractModel):
+    role: Role
+
+
+class CommunityRespondRequest(ContractModel):
+    action: CommunityAction
+
+
+class SendMessageRequest(ContractModel):
+    unit_id: UnitId
+    from_name: str = Field(min_length=1)
+    preset_id: str
+
+
+class BuddyRequest(ContractModel):
+    unit_id: UnitId
+
+
+class OkResponse(ContractModel):
+    ok: Literal[True] = True
+
+
+class ResetResponse(ContractModel):
+    units: list[Unit]
+
