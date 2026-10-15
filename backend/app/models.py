@@ -4,7 +4,7 @@ Shared by Backend 1 and Backend 2. Field names match the API contract exactly; d
 without agreeing with the frontend (their mock layer mirrors §8).
 """
 
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, TypeAlias
 
 from pydantic import AwareDatetime, BaseModel, Field, PlainSerializer, model_serializer, model_validator
 
@@ -12,16 +12,16 @@ from app.timeutil import iso
 
 # Timestamps must be timezone-aware on input (a naive value is a 422, not a later 500) and
 # always serialise as UTC ISO-8601 with millisecond precision and a Z suffix.
-UtcDatetime = Annotated[AwareDatetime, PlainSerializer(iso, return_type=str)]
+UtcDatetime: TypeAlias = Annotated[AwareDatetime, PlainSerializer(iso, return_type=str)]
 
-UnitId = str
-Role = Literal["township", "caregiver"]
-Sensor = Literal["water", "electricity", "door"]
-DoorState = Literal["open", "closed"]
-Status = Literal["routine", "possible_away", "unusual_inactivity", "unresolved_concern"]
-IncidentState = Literal["grace", "notified", "acknowledged", "closed", "auto_resolved"]
-Outcome = Literal["resident_ok", "assistance_provided", "resident_away", "resident_activity_detected"]
-IncidentEventType = Literal[
+UnitId: TypeAlias = str
+Role: TypeAlias = Literal["township", "caregiver"]
+Sensor: TypeAlias = Literal["water", "electricity", "door"]
+DoorState: TypeAlias = Literal["open", "closed"]
+Status: TypeAlias = Literal["routine", "possible_away", "unusual_inactivity", "unresolved_concern"]
+IncidentState: TypeAlias = Literal["grace", "notified", "acknowledged", "closed", "auto_resolved"]
+Outcome: TypeAlias = Literal["resident_ok", "assistance_provided", "resident_away", "resident_activity_detected"]
+IncidentEventType: TypeAlias = Literal[
     "detected",
     "voice_call_started",
     "voice_call_no_answer",
@@ -32,7 +32,7 @@ IncidentEventType = Literal[
     "closed",
     "auto_resolved",
 ]
-NotificationKind = Literal[
+NotificationKind: TypeAlias = Literal[
     "morning_reassurance",
     "alert",
     "reminder",
@@ -42,7 +42,7 @@ NotificationKind = Literal[
     "message_delivered",
     "buddy_matched",
 ]
-CommunityAction = Literal["invite_resident", "join_together"]
+CommunityAction: TypeAlias = Literal["invite_resident", "join_together"]
 
 ACTIVE_INCIDENT_STATES: tuple[IncidentState, ...] = ("grace", "notified", "acknowledged")
 
@@ -231,3 +231,14 @@ class OkResponse(ContractModel):
 class ResetResponse(ContractModel):
     units: list[Unit]
 
+
+# --- WebSocket payloads (§8.6) -----------------------------------------------------------
+
+
+class Snapshot(ContractModel):
+    """data of the `snapshot` event: sent on connect and after demo reset."""
+
+    units: list[Unit]
+    incidents: list[Incident]
+    notifications: list[Notification]
+    config: Config
