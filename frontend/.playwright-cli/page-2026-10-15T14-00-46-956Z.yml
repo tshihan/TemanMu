@@ -1,0 +1,71 @@
+- generic [ref=f5e3]:
+  - banner [ref=f5e4]:
+    - generic [ref=f5e5]:
+      - generic [aria-hidden] [ref=f5e6]: T
+      - generic [ref=f5e7]:
+        - paragraph [ref=f5e8]: TemanMu
+        - paragraph [ref=f5e9]: Township care prototype
+    - generic [ref=f5e10]:
+      - generic [ref=f5e11]: Simulated data
+      - status [ref=f5e12]: Connected
+  - generic [ref=f5e14]:
+    - region [ref=f5e15]:
+      - generic [ref=f5e16]:
+        - generic [ref=f5e17]:
+          - paragraph [ref=f5e18]: Demo home · A-105
+          - heading [level=1] [ref=f5e19]:
+            - text: Madam Lee’s
+            - emphasis [ref=f5e20]: home
+        - generic [ref=f5e21]: 3D home
+      - generic [ref=f5e22]:
+        - status [ref=f5e23]: Preparing the 3D home…
+        - group [ref=f5e24]:
+          - generic "Demo controls" [ref=f5e25] [cursor=pointer]
+      - generic [ref=f5e26]:
+        - paragraph [ref=f5e27]:
+          - strong [ref=f5e28]: For the audience only.
+          - text: TemanMu receives water, electricity and door data—not the character’s movements.
+        - generic "Latest utility readings" [ref=f5e29]:
+          - generic [ref=f5e30]:
+            - text: Water
+            - strong [ref=f5e31]: 0 L/min
+          - generic [ref=f5e32]:
+            - text: Power
+            - strong [ref=f5e33]: 0.15 kW
+          - generic [ref=f5e34]:
+            - text: Door
+            - strong [ref=f5e35]: closed
+    - separator "Resize home and dashboard panels" [ref=f5e36]
+    - region "Dashboard" [ref=f5e38]:
+      - generic [ref=f5e39]:
+        - generic [ref=f5e40]:
+          - paragraph [ref=f5e41]: Dashboard
+          - heading [level=2] [ref=f5e42]:
+            - text: Township
+            - emphasis [ref=f5e43]: overview
+        - tablist "Dashboard role" [ref=f5e44]:
+          - tab "Township" [selected] [ref=f5e45] [cursor=pointer]
+          - tab "Caregiver" [ref=f5e46] [cursor=pointer]
+      - tabpanel "Township" [ref=f5e47]:
+        - generic "Floors in housing block A" [ref=f5e49]:
+          - generic "Floor 4" [ref=f5e50]:
+            - generic [ref=f5e51]: "04"
+            - strong [ref=f5e60]: Floor 4
+            - generic [aria-hidden] [ref=f5e61]: —
+          - generic "Floor 3" [ref=f5e62]:
+            - generic [ref=f5e63]: "03"
+            - strong [ref=f5e72]: Floor 3
+            - generic [aria-hidden] [ref=f5e73]: —
+          - generic "Floor 2" [ref=f5e74]:
+            - generic [ref=f5e75]: "02"
+            - strong [ref=f5e84]: Floor 2
+            - generic [aria-hidden] [ref=f5e85]: —
+          - button "Open Floor 1, 6 enrolled homes" [ref=f5e86] [cursor=pointer]:
+            - generic [ref=f5e87]: "01"
+            - generic [ref=f5e95]:
+              - strong [ref=f5e96]: Floor 1
+              - generic [ref=f5e97]: 6 enrolled homes
+            - generic [aria-hidden] [ref=f5e98]: →
+      - generic [ref=f5e99]:
+        - generic [ref=f5e100]: Both roles are up to date
+        - generic [ref=f5e101]: Grace 15s · Reminder 15s

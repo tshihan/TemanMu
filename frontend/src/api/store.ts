@@ -1,6 +1,13 @@
 import { useSyncExternalStore } from 'react'
 import { api } from './index'
-import type { Config, Incident, Notification, Reading, RealtimeEvent, Role, Unit } from './types'
+import type { Config, Incident, Notification, Reading, RealtimeEvent, Role, Status, Unit } from './types'
+
+export interface StatusChange {
+  unit_id: string
+  status: Status
+  previous_status: Status
+  at: string
+}
 
 export interface AppState {
   connected: boolean
@@ -8,13 +15,14 @@ export interface AppState {
   units: Unit[]
   incidents: Incident[]
   notifications: Notification[]
+  statusHistory: StatusChange[]
   config: Config | null
   readingsByUnit: Record<string, Reading[]>
   snapshotRevision: number
 }
 
 let state: AppState = {
-  connected: false, loaded: false, units: [], incidents: [], notifications: [], config: null,
+  connected: false, loaded: false, units: [], incidents: [], notifications: [], statusHistory: [], config: null,
   readingsByUnit: {}, snapshotRevision: 0,
 }
 const subscribers = new Set<() => void>()
@@ -31,11 +39,16 @@ function upsert<T>(items: T[], item: T, key: keyof T): T[] {
 export function applyEvent(event: RealtimeEvent): void {
   switch (event.type) {
     case 'snapshot':
-      setState({ ...state, loaded: true, ...event.data, readingsByUnit: {}, snapshotRevision: state.snapshotRevision + 1 })
+      setState({ ...state, loaded: true, ...event.data, statusHistory: [], readingsByUnit: {}, snapshotRevision: state.snapshotRevision + 1 })
       break
-    case 'unit.updated':
-      setState({ ...state, units: upsert(state.units, event.data, 'unit_id') })
+    case 'unit.updated': {
+      const previous = state.units.find(unit => unit.unit_id === event.data.unit_id)
+      const statusHistory = previous && previous.status !== event.data.status
+        ? [...state.statusHistory, { unit_id: event.data.unit_id, status: event.data.status, previous_status: previous.status, at: event.data.status_since }]
+        : state.statusHistory
+      setState({ ...state, units: upsert(state.units, event.data, 'unit_id'), statusHistory })
       break
+    }
     case 'incident.updated':
       setState({ ...state, incidents: upsert(state.incidents, event.data, 'incident_id') })
       break

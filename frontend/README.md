@@ -1,5 +1,7 @@
 # TemanMu frontend
 
+> **3D home, Missions 1–2:** The furnished home and animated Madam Lee are embedded in the left panel of the existing app. Township and Caregiver dashboards remain on the right. Temporary character movement controls sit below the scene; the previous mock controls remain under **Demo controls**. See [home viewer documentation](src/home/README.md) for camera, animation and navigation details.
+
 React, TypeScript, Vite and Tailwind frontend for the TemanMu prototype.
 
 ## Run
@@ -18,13 +20,16 @@ To connect the real backend, copy `.env.example` to `.env.local`, set `VITE_USE_
 
 - `src/api/types.ts`: types matching PRD section 8 and `backend/app/models.py`.
 - `src/api/live.ts`: typed REST client and reconnecting WebSocket client. A new `snapshot` replaces local state.
-- `src/mocks/api.ts`: seed-backed implementation of the same API interface, including mock WebSocket events and contract-shaped responses.
+- `src/mocks/api.ts`: seed-backed implementation of the same API interface, including mock WebSocket events, timed incident transitions and contract-shaped responses.
 - `src/api/store.ts`: shared React state updated by `snapshot`, `unit.updated`, `incident.updated`, and `notification.created` events.
-- `src/App.tsx`: Phase 2 split-screen shell and role switcher. The left `home-stage` is the replacement point for the 3D scene.
-- `src/dashboard/TownshipView.tsx`: Township flow from four-floor overview to six illustrated Floor 1 homes, then a unit's status reason, quiet-gap progress, utility timelines and incident summary.
+- `src/App.tsx`: split-screen shell and role switcher. The left `home-stage` mounts the 3D scene and retains the demo controls.
+- `src/dashboard/TownshipView.tsx`: Township flow from four-floor overview to six illustrated Floor 1 homes, then a unit's status reason, quiet-gap progress, utility timelines and shared incident response.
+- `src/dashboard/CaregiverView.tsx`: resident status, chronological activity timeline, simulated call and notification feed.
+- `src/dashboard/IncidentPanel.tsx`: shared countdown, timeline, acknowledgement and outcome actions for both roles.
+- `src/theme.css`: shared parchment, terracotta and editorial typography styling for the dashboard.
 - `src/dashboard/HomeIllustration.tsx`: reusable SVG home art, tinted by unit status.
 
-The mock currently models data operations and a morning reassurance event. In mock mode, **Preview water use** sends readings and creates a Caregiver notification so the inactive-role badge can be checked. **Reset preview** clears that data after confirmation. Timed safety scenarios and the visual home belong to later phases. Keep the shared types, backend contract, and mock implementation in sync when changing endpoints.
+In mock mode, the four scenario buttons run **Normal morning**, **Going out**, **Unusual inactivity** and **False alarm recovery** from a fresh seed snapshot. The safety scenario shows a quiet-gap trigger, 15-second grace period, simultaneous role alerts, 15-second reminders, acknowledgement and closure. Activity can auto-resolve an incident. **Manual water use** sends a reading; **Reset preview** clears the session after confirmation. These mock timers run only while the page is open and reset on reload. The live backend and sensor interaction with the 3D objects are later phases. Keep the shared types, backend contract, and mock implementation in sync when changing endpoints.
 
 All six seeded units are shown on Floor 1, as the first-round frontend assumption. Floors 2–4 are visible but have no enrolled homes in this prototype. The API has no floor field yet; add one to the shared contract and seed if homes are later distributed across floors.
 

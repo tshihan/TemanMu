@@ -77,6 +77,17 @@ let messages: CompanionMessage[] = []
 let matches: BuddyMatch[] = []
 let responses: { activity_id: string; action: string }[] = []
 let morningSent = false
+let scenarioTimers = new Set<ReturnType<typeof setTimeout>>()
+
+function later(action: () => void, milliseconds: number): void {
+  const timer = setTimeout(() => { scenarioTimers.delete(timer); action() }, milliseconds)
+  scenarioTimers.add(timer)
+}
+
+function clearScenarioTimers(): void {
+  for (const timer of scenarioTimers) clearTimeout(timer)
+  scenarioTimers = new Set()
+}
 
 function emit(event: RealtimeEvent): void {
   for (const listener of listeners) listener(clone(event))
@@ -102,6 +113,85 @@ function notify(notification: Omit<Notification, 'notification_id' | 'created_at
   const entry: Notification = { ...notification, notification_id: crypto.randomUUID(), created_at: now(), read: false }
   state.notifications.unshift(entry)
   publish('notification.created', clone(entry))
+}
+
+function updateUnit(unit: Unit, status: Unit['status'], reason: string): void {
+  unit.status = status
+  unit.status_reason = reason
+  unit.status_since = now()
+  publish('unit.updated', clone(unit))
+}
+
+function latestIncident(unitId: string): Incident | undefined {
+  return state.incidents.find(item => item.unit_id === unitId && ['grace', 'notified', 'acknowledged'].includes(item.state))
+}
+
+function autoResolve(unit: Unit, incident: Incident): void {
+  const alreadyNotified = incident.state !== 'grace'
+  clearScenarioTimers()
+  if (incident.state === 'grace') incident.events.push({ type: 'voice_call_cancelled', at: now(), detail: 'simulated' })
+  incident.state = 'auto_resolved'
+  incident.outcome = 'resident_activity_detected'
+  incident.closed_at = now()
+  incident.grace_ends_at = null
+  incident.next_reminder_at = null
+  incident.events.push({ type: 'auto_resolved', at: incident.closed_at, detail: 'Resident activity detected' })
+  unit.active_incident_id = null
+  updateUnit(unit, 'routine', 'Resolved: resident activity detected during the check')
+  publish('incident.updated', clone(incident))
+  if (alreadyNotified) for (const role of ['caregiver', 'township'] as Role[]) {
+    notify({ role, unit_id: unit.unit_id, kind: 'auto_resolved', message: `${unit.resident_name} activity detected. Concern resolved.`, incident_id: incident.incident_id })
+  }
+}
+
+function sendReminder(incident: Incident): void {
+  if (incident.state !== 'notified') return
+  incident.reminder_count += 1
+  incident.events.push({ type: 'reminder', at: now(), detail: `Reminder #${incident.reminder_count}` })
+  incident.next_reminder_at = new Date(Date.now() + state.config.reminder_interval_seconds * 1000).toISOString()
+  publish('incident.updated', clone(incident))
+  for (const role of ['caregiver', 'township'] as Role[]) {
+    notify({ role, unit_id: incident.unit_id, kind: 'reminder', message: `Reminder #${incident.reminder_count}: concern at ${incident.unit_id} still needs a response.`, incident_id: incident.incident_id })
+  }
+  later(() => sendReminder(incident), state.config.reminder_interval_seconds * 1000)
+}
+
+function notifyConcern(unit: Unit, incident: Incident): void {
+  if (incident.state !== 'grace') return
+  incident.state = 'notified'
+  incident.grace_ends_at = null
+  incident.next_reminder_at = new Date(Date.now() + state.config.reminder_interval_seconds * 1000).toISOString()
+  incident.events.push({ type: 'notified', at: now(), detail: 'Caregiver and township notified together' })
+  updateUnit(unit, 'unresolved_concern', `No water use beyond the usual ${unit.baseline.usual_quiet_gap_seconds}-second gap; no door outing and electricity at standby. Mum did not answer the simulated call.`)
+  publish('incident.updated', clone(incident))
+  for (const role of ['caregiver', 'township'] as Role[]) {
+    notify({ role, unit_id: unit.unit_id, kind: 'alert', message: `Unresolved concern at ${unit.unit_id}: ${unit.resident_name} could not be reached.`, incident_id: incident.incident_id })
+  }
+  later(() => sendReminder(incident), state.config.reminder_interval_seconds * 1000)
+}
+
+function startGrace(unit: Unit): Incident {
+  const openedAt = now()
+  const incident: Incident = {
+    incident_id: crypto.randomUUID(), unit_id: unit.unit_id, state: 'grace', opened_at: openedAt,
+    grace_ends_at: new Date(Date.now() + state.config.grace_period_seconds * 1000).toISOString(),
+    next_reminder_at: null, reminder_count: 0, acknowledged_by: null, outcome: null, closed_at: null,
+    events: [
+      { type: 'detected', at: openedAt, detail: 'Water quiet gap exceeded' },
+      { type: 'voice_call_started', at: openedAt, detail: 'Calling Mum (simulated)' },
+    ],
+  }
+  state.incidents.unshift(incident)
+  unit.active_incident_id = incident.incident_id
+  updateUnit(unit, 'unusual_inactivity', `No water use longer than the usual ${unit.baseline.usual_quiet_gap_seconds}-second gap. No door outing; electricity remains at standby.`)
+  publish('incident.updated', clone(incident))
+  later(() => {
+    if (incident.state !== 'grace') return
+    incident.events.push({ type: 'voice_call_no_answer', at: now(), detail: 'No answer (simulated)' })
+    publish('incident.updated', clone(incident))
+  }, Math.min(2000, state.config.grace_period_seconds * 500))
+  later(() => notifyConcern(unit, incident), state.config.grace_period_seconds * 1000)
+  return incident
 }
 
 export const mockApi: Api = {
@@ -141,8 +231,13 @@ export const mockApi: Api = {
     } else throw new ApiError(422, 'Invalid sensor value')
     readings.push(reading)
     publish('reading.received', clone(reading))
-    publish('unit.updated', clone(unit))
-    if (!morningSent && (reading.sensor === 'door' || (typeof reading.value === 'number' && reading.value > (reading.sensor === 'electricity' ? unit.baseline.standby_power_kw : 0)))) {
+    const activity = reading.sensor === 'door' ? reading.value === 'open' : typeof reading.value === 'number' && reading.value > (reading.sensor === 'electricity' ? unit.baseline.standby_power_kw : 0)
+    const incident = latestIncident(unit.unit_id)
+    if (activity && incident) autoResolve(unit, incident)
+    else if (activity && reading.sensor !== 'door' && unit.status === 'routine') {
+      updateUnit(unit, 'routine', reading.sensor === 'electricity' ? 'Water and electricity activity within usual routine' : 'Water activity detected within usual routine')
+    } else publish('unit.updated', clone(unit))
+    if (!morningSent && activity && !incident) {
       morningSent = true
       notify({ role: 'caregiver', unit_id: unit.unit_id, kind: 'morning_reassurance', message: `${unit.caregiver_relationship}'s day has started. Activity detected at home.`, incident_id: null })
     }
@@ -151,8 +246,10 @@ export const mockApi: Api = {
   async acknowledgeIncident(id, actor) {
     const incident = incidentOrThrow(id)
     if (!['grace', 'notified'].includes(incident.state)) throw new ApiError(409, 'Incident already acknowledged or closed')
+    clearScenarioTimers()
     incident.state = 'acknowledged'
     incident.acknowledged_by = { ...actor, at: now() }
+    incident.grace_ends_at = null
     incident.next_reminder_at = null
     incident.events.push({ type: 'acknowledged', at: now(), actor })
     publish('incident.updated', clone(incident))
@@ -163,6 +260,7 @@ export const mockApi: Api = {
     const incident = incidentOrThrow(id)
     if (incident.state !== 'acknowledged') throw new ApiError(409, 'Incident must be acknowledged first')
     if (incident.acknowledged_by?.role !== actor.role || incident.acknowledged_by.name !== actor.name) throw new ApiError(403, 'Only the acknowledger can close this incident')
+    clearScenarioTimers()
     incident.state = 'closed'
     incident.outcome = actor.outcome
     incident.closed_at = now()
@@ -216,6 +314,7 @@ export const mockApi: Api = {
     return clone(match)
   },
   async resetDemo() {
+    clearScenarioTimers()
     state = initialSnapshot()
     readings = []
     messages = []
@@ -229,5 +328,49 @@ export const mockApi: Api = {
     listeners.add(onEvent)
     queueMicrotask(() => { if (listeners.has(onEvent)) { onStatus?.(true); onEvent({ type: 'snapshot', at: now(), data: clone(state) }) } })
     return () => { listeners.delete(onEvent); onStatus?.(false) }
+  },
+}
+
+export type MockScenario = 'normal_morning' | 'going_out' | 'unusual_inactivity' | 'false_alarm_recovery'
+
+// Developer-only sequences. They emit the contract events without a backend; the 3D viewer
+// will own scenario scripts in the integrated demo and send ordinary sensor readings instead.
+export const mockScenarios = {
+  async run(scenario: MockScenario): Promise<void> {
+    await mockApi.resetDemo()
+    const unit = unitOrThrow('A-105')
+    if (scenario === 'normal_morning') {
+      await mockApi.postReading({ unit_id: unit.unit_id, sensor: 'water', value: 6 })
+      await mockApi.postReading({ unit_id: unit.unit_id, sensor: 'water', value: 0 })
+      await mockApi.postReading({ unit_id: unit.unit_id, sensor: 'electricity', value: 1.8 })
+      await mockApi.postReading({ unit_id: unit.unit_id, sensor: 'electricity', value: unit.baseline.standby_power_kw })
+      return
+    }
+    morningSent = true // These scenarios begin after the resident's day has started.
+    if (scenario === 'going_out') {
+      await mockApi.postReading({ unit_id: unit.unit_id, sensor: 'door', value: 'open' })
+      await mockApi.postReading({ unit_id: unit.unit_id, sensor: 'door', value: 'closed' })
+      updateUnit(unit, 'possible_away', 'Door opened, then no water use and electricity at standby: probably out')
+      later(() => {
+        void mockApi.postReading({ unit_id: unit.unit_id, sensor: 'door', value: 'open' }).then(() =>
+          mockApi.postReading({ unit_id: unit.unit_id, sensor: 'door', value: 'closed' })).then(() =>
+          updateUnit(unit, 'routine', 'Door opened again and the resident returned home'))
+      }, 6000)
+      return
+    }
+    // Begin near the resident's own threshold so the presenter can see the progress
+    // bar finish without waiting the full quiet gap on stage.
+    unit.quiet_gap.last_water_activity_at = new Date(Date.now() - (unit.baseline.usual_quiet_gap_seconds - 5) * 1000).toISOString()
+    publish('unit.updated', clone(unit))
+    later(() => {
+      const incident = startGrace(unit)
+      if (scenario === 'false_alarm_recovery') {
+        later(() => {
+          if (incident.state !== 'grace') return
+          void mockApi.postReading({ unit_id: unit.unit_id, sensor: 'water', value: 6 }).then(() =>
+            mockApi.postReading({ unit_id: unit.unit_id, sensor: 'water', value: 0 }))
+        }, Math.min(5000, state.config.grace_period_seconds * 500))
+      }
+    }, 5000)
   },
 }

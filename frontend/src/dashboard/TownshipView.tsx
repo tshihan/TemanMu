@@ -2,10 +2,11 @@ import { useEffect, useLayoutEffect, useState } from 'react'
 import { loadUnitReadings, useAppState } from '../api/store'
 import type { Reading, Sensor, Status, Unit } from '../api/types'
 import { HomeIllustration } from './HomeIllustration'
+import { IncidentPanel } from './IncidentPanel'
 
 type Screen = 'floors' | 'homes' | 'detail'
 const statusLabels: Record<Status, string> = {
-  routine: 'Routine',
+  routine: 'Normal',
   possible_away: 'Possible Away',
   unusual_inactivity: 'Unusual Inactivity',
   unresolved_concern: 'Unresolved Concern',
@@ -61,11 +62,6 @@ export function TownshipView() {
   }, [screen])
 
   if (screen === 'floors') return <div className="township-screen">
-    <div className="township-intro">
-      <p className="eyebrow">Housing block A</p>
-      <h3>Choose a floor</h3>
-      <p>Four floors in this housing block. Floor 1 has the six homes enrolled in this prototype.</p>
-    </div>
     <div className="building-list" aria-label="Floors in housing block A">
       {[4, 3, 2, 1].map(floor => floor === 1 ?
         <button key={floor} type="button" className="floor-card floor-active" onClick={() => setScreen('homes')} aria-label={`Open Floor 1, ${units.length} enrolled homes`}>
@@ -74,14 +70,13 @@ export function TownshipView() {
           <span className="floor-copy"><strong>Floor 1</strong><small>{units.length} enrolled homes</small></span>
           <span className="floor-arrow" aria-hidden="true">→</span>
         </button> :
-        <div key={floor} className="floor-card floor-empty" aria-label={`Floor ${floor}, no enrolled homes`}>
+        <div key={floor} className="floor-card floor-empty" aria-label={`Floor ${floor}`}>
           <span className="floor-number">0{floor}</span>
           <span className="floor-windows" aria-hidden="true">{Array.from({ length: 6 }, (_, index) => <span key={index} />)}</span>
-          <span className="floor-copy"><strong>Floor {floor}</strong><small>No enrolled homes yet</small></span>
+          <span className="floor-copy"><strong>Floor {floor}</strong></span>
           <span className="floor-empty-mark" aria-hidden="true">—</span>
         </div>)}
     </div>
-    <p className="floor-explainer">Select Floor 1 to see each participating home.</p>
   </div>
 
   if (screen === 'homes') {
@@ -90,7 +85,7 @@ export function TownshipView() {
       <button type="button" className="back-link" onClick={() => setScreen('floors')}>← All floors</button>
       <div className="township-intro compact">
         <p className="eyebrow">Housing block A · Floor 1</p>
-        <h3>Enrolled homes</h3>
+        <h3>Enrolled <em>homes</em></h3>
         <p>Select a home to see its utility signals and status reason.</p>
       </div>
       <div className="home-grid">
@@ -98,7 +93,7 @@ export function TownshipView() {
           onClick={() => { setReadingsError(null); setSelectedId(unit.unit_id); setScreen('detail') }}
           aria-label={`Open unit ${unit.unit_id}, ${unit.resident_name}, ${statusLabels[unit.status]}`}>
           <span className="home-art-wrap"><HomeIllustration status={unit.status} unitId={unit.unit_id} /></span>
-          <span className="home-card-info"><strong>{unit.unit_id}</strong><span className={`status-pill status-${unit.status}`}>{statusLabels[unit.status]}</span></span>
+          <span className="home-card-info"><strong>{unit.unit_id}</strong>{unit.status !== 'routine' && <span className={`status-pill status-${unit.status}`}>{statusLabels[unit.status]}</span>}</span>
           <span className="home-card-name">{unit.resident_name}</span>
           {unit.controllable && <span className="home-card-caption">Simulated home</span>}
         </button>)}
@@ -112,7 +107,8 @@ export function TownshipView() {
   const elapsed = lastWater ? Math.max(0, (clock - new Date(lastWater).getTime()) / 1000) : 0
   const maximum = selected.quiet_gap.usual_max_seconds
   const exceeded = elapsed > maximum
-  const incident = incidents.find(item => item.incident_id === selected.active_incident_id)
+  const incident = incidents.find(item => item.incident_id === selected.active_incident_id) ||
+    [...incidents].filter(item => item.unit_id === selected.unit_id).sort((a, b) => b.opened_at.localeCompare(a.opened_at))[0] || null
   const reassurance = notifications.find(item => item.unit_id === selected.unit_id && item.kind === 'morning_reassurance')
 
   return <div className="township-screen detail-screen">
@@ -139,7 +135,6 @@ export function TownshipView() {
       <div className={`quiet-track ${exceeded ? 'is-exceeded' : ''}`} role="progressbar" aria-label="Water quiet gap" aria-valuemin={0} aria-valuemax={maximum} aria-valuenow={Math.min(maximum, Math.floor(elapsed))}>
         <span style={{ width: `${Math.min(100, elapsed / Math.max(maximum, 1) * 100)}%` }} />
       </div>
-      <p className="detail-hint">{selected.status === 'possible_away' ? 'Door activity suggests a possible outing; this status stays silent.' : exceeded ? 'Longer than this resident’s usual maximum.' : 'Within this resident’s usual quiet gap.'} Baseline learned from history (simulated).</p>
     </section>
 
     <section className="detail-section" aria-labelledby="signals-heading">
@@ -151,23 +146,15 @@ export function TownshipView() {
           return <article className="signal-card" key={sensor}>
             <div className="signal-head"><span className="signal-symbol" aria-hidden="true">{signalSymbols[sensor]}</span><strong>{signalLabels[sensor]}</strong></div>
             <p className="signal-current">{currentSignal(selected, sensor)}</p>
-            <div className="signal-events" aria-label={`${signalLabels[sensor]} timeline`}>
-              {events.length ? events.map((event, index) => <div key={`${event.recorded_at}-${index}`}><time dateTime={event.recorded_at}>{timeLabel(event.recorded_at)}</time><span>{readingValue(event)}</span></div>) :
-                <p>No events since reset. Current value is seeded.</p>}
-            </div>
+            {events.length > 0 && <div className="signal-events" aria-label={`${signalLabels[sensor]} timeline`}>
+              {events.map((event, index) => <div key={`${event.recorded_at}-${index}`}><time dateTime={event.recorded_at}>{timeLabel(event.recorded_at)}</time><span>{readingValue(event)}</span></div>)}
+            </div>}
           </article>
         })}
       </div>
     </section>
 
-    <section className="detail-section incident-summary" aria-labelledby="incident-heading">
-      <div className="detail-section-title"><h4 id="incident-heading">Incident</h4><span>{incident ? incident.state.replaceAll('_', ' ') : 'None active'}</span></div>
-      {incident ? <>
-        {incident.state === 'grace' && incident.grace_ends_at && <p>Grace period: {duration((new Date(incident.grace_ends_at).getTime() - clock) / 1000)} remaining</p>}
-        {incident.state === 'notified' && <p>Reminder #{incident.reminder_count}{incident.next_reminder_at ? ` · next in ${duration((new Date(incident.next_reminder_at).getTime() - clock) / 1000)}` : ''}</p>}
-        <ol className="incident-events">{incident.events.map((event, index) => <li key={`${event.at}-${index}`}><time dateTime={event.at}>{timeLabel(event.at)}</time><span>{event.type.replaceAll('_', ' ')}{event.detail ? ` · ${event.detail}` : ''}</span></li>)}</ol>
-        <p className="detail-hint">Acknowledgement and outcome actions arrive in Phase 4.</p>
-      </> : <p className="detail-hint">{reassurance ? `Latest reassurance: ${reassurance.message}` : 'No active incident or reassurance yet for this unit.'}</p>}
-    </section>
+    <IncidentPanel key={incident?.incident_id || 'empty'} incident={incident} unit={selected} role="township" />
+    {!incident && reassurance && <p className="detail-hint">Latest reassurance: {reassurance.message}</p>}
   </div>
 }

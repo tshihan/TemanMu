@@ -1,18 +1,15 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { api, usingMock } from './api'
 import { connectStore, markRoleViewed, useAppState } from './api/store'
-import type { Role, Status } from './api/types'
+import type { Role } from './api/types'
+import { CaregiverView } from './dashboard/CaregiverView'
 import { TownshipView } from './dashboard/TownshipView'
+import { mockScenarios, type MockScenario } from './mocks/api'
 
 const DEFAULT_SPLIT = 48
 const MIN_PANEL_WIDTH = 420
 const SPLIT_KEY = 'temanmu.splitPercent'
-const statusLabels: Record<Status, string> = {
-  routine: 'Routine',
-  possible_away: 'Possible Away',
-  unusual_inactivity: 'Unusual Inactivity',
-  unresolved_concern: 'Unresolved Concern',
-}
+const HomeEnvironment = lazy(() => import('./home/HomeEnvironment').then(module => ({ default: module.HomeEnvironment })))
 
 function savedSplit(): number {
   const saved = Number(window.localStorage.getItem(SPLIT_KEY))
@@ -30,6 +27,7 @@ export default function App() {
   const [role, setRole] = useState<Role>('township')
   const [split, setSplit] = useState(savedSplit)
   const [previewBusy, setPreviewBusy] = useState(false)
+  const [previewError, setPreviewError] = useState<string | null>(null)
   const workspace = useRef<HTMLDivElement>(null)
   const homeUnit = units.find(unit => unit.controllable)
   const activeUnread = notifications.filter(item => item.role === role && !item.read).length
@@ -60,17 +58,28 @@ export default function App() {
   async function previewWaterUse() {
     if (!homeUnit || previewBusy) return
     setPreviewBusy(true)
+    setPreviewError(null)
     try {
       await api.postReading({ unit_id: homeUnit.unit_id, sensor: 'water', value: 6 })
       await api.postReading({ unit_id: homeUnit.unit_id, sensor: 'water', value: 0 })
-    } catch (error) { console.error('Could not send preview reading', error) }
+    } catch (error) { setPreviewError(error instanceof Error ? error.message : 'Could not send reading') }
+    finally { setPreviewBusy(false) }
+  }
+
+  async function runScenario(scenario: MockScenario) {
+    if (previewBusy) return
+    setPreviewBusy(true)
+    setPreviewError(null)
+    try { await mockScenarios.run(scenario) }
+    catch (error) { setPreviewError(error instanceof Error ? error.message : 'Could not start scenario') }
     finally { setPreviewBusy(false) }
   }
 
   async function resetPreview() {
     if (!window.confirm('Reset the demo and clear its notifications?')) return
+    setPreviewError(null)
     try { await api.resetDemo() }
-    catch (error) { console.error('Could not reset demo', error) }
+    catch (error) { setPreviewError(error instanceof Error ? error.message : 'Could not reset demo') }
   }
 
   return <div className="app-shell">
@@ -95,20 +104,31 @@ export default function App() {
         <div className="panel-heading">
           <div>
             <p className="eyebrow">Demo home · {homeUnit?.unit_id || 'A-105'}</p>
-            <h1 id="home-heading">Madam Lee’s home</h1>
+            <h1 id="home-heading">Madam Lee’s <em>home</em></h1>
           </div>
-          <span className="panel-tag">3D scene slot</span>
+          <span className="panel-tag">3D home</span>
         </div>
-        <div className="home-stage">
-          <div className="home-placeholder" aria-label="Placeholder for the simulated 3D home">
-            <div className="placeholder-icon" aria-hidden="true">⌂</div>
-            <h2>Simulated home</h2>
-            <p>The interactive 3D scene will appear here. It will send tap, kettle and door readings through the shared API.</p>
-            {usingMock && <div className="preview-controls">
-              <button type="button" onClick={() => void previewWaterUse()} disabled={!loaded || previewBusy}>{previewBusy ? 'Sending…' : 'Preview water use'}</button>
-              <button type="button" onClick={() => void resetPreview()}>Reset preview</button>
-            </div>}
-          </div>
+        <div className="home-stage home-stage-3d">
+          <Suspense fallback={<p className="home-scene-loading" role="status">Preparing the 3D home…</p>}>
+            <HomeEnvironment />
+          </Suspense>
+          {usingMock && <details className="home-demo-controls">
+            <summary>Demo controls</summary>
+            <div className="mock-panel">
+              <span className="mock-panel-label">Mock scenario controls</span>
+              <div className="scenario-buttons">
+                <button type="button" disabled={!loaded || previewBusy} onClick={() => void runScenario('normal_morning')}>Normal morning</button>
+                <button type="button" disabled={!loaded || previewBusy} onClick={() => void runScenario('going_out')}>Going out</button>
+                <button type="button" disabled={!loaded || previewBusy} onClick={() => void runScenario('unusual_inactivity')}>Unusual inactivity</button>
+                <button type="button" disabled={!loaded || previewBusy} onClick={() => void runScenario('false_alarm_recovery')}>False alarm recovery</button>
+              </div>
+              <div className="preview-controls">
+                <button type="button" onClick={() => void previewWaterUse()} disabled={!loaded || previewBusy}>{previewBusy ? 'Sending…' : 'Manual water use'}</button>
+                <button type="button" onClick={() => void resetPreview()}>Reset preview</button>
+              </div>
+              {previewError && <p className="action-error" role="alert">{previewError}</p>}
+            </div>
+          </details>}
         </div>
         <div className="home-footer">
           <p className="privacy-note"><strong>For the audience only.</strong> TemanMu receives water, electricity and door data—not the character’s movements.</p>
@@ -138,7 +158,7 @@ export default function App() {
         <div className="dashboard-header">
           <div>
             <p className="eyebrow">Dashboard</p>
-            <h2>{role === 'township' ? 'Township overview' : 'Caregiver view'}</h2>
+            <h2>{role === 'township' ? <>Township <em>overview</em></> : <>Caregiver <em>view</em></>}</h2>
           </div>
           <div className="role-switcher" role="tablist" aria-label="Dashboard role">
             {(['township', 'caregiver'] as Role[]).map(tabRole => {
@@ -153,20 +173,7 @@ export default function App() {
         </div>
 
         <div className="dashboard-content" role="tabpanel" id={`panel-${role}`} aria-labelledby={`tab-${role}`}>
-          {!loaded ? <p className="loading-state" role="status">Waiting for the first snapshot…</p> : role === 'township' ? <TownshipView /> : <>
-            <div className="caregiver-card">
-              <p className="eyebrow">Sarah Lee’s view</p>
-              <h3>{homeUnit?.resident_name || 'Madam Lee Mei Ling'}</h3>
-              <p>Unit {homeUnit?.unit_id || 'A-105'} · {homeUnit ? statusLabels[homeUnit.status] : 'Loading'}</p>
-            </div>
-            <div className="section-intro"><h3>Updates</h3><span>{notifications.filter(item => item.role === 'caregiver').length} messages</span></div>
-            <div className="notification-list">
-              {notifications.filter(item => item.role === 'caregiver').length ? notifications.filter(item => item.role === 'caregiver').map(item =>
-                <article className="notification-row" key={item.notification_id}><strong>{item.kind.replaceAll('_', ' ')}</strong><p>{item.message}</p></article>) :
-                <p className="empty-state">No updates yet. The morning scenario will add a reassurance message.</p>}
-            </div>
-            <p className="phase-note">Caregiver actions and the full notification flow arrive in Phase 4.</p>
-          </>}
+          {!loaded ? <p className="loading-state" role="status">Waiting for the first snapshot…</p> : role === 'township' ? <TownshipView /> : <CaregiverView />}
         </div>
         <div className="dashboard-footer">
           <span>{inactiveUnread ? `${inactiveUnread} unread for ${inactiveRole}` : 'Both roles are up to date'}</span>
