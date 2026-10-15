@@ -4,11 +4,13 @@ Phase 1 only defines the base model and timestamp type; the contract models are 
 """
 
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, PlainSerializer
 
 from app.timeutil import iso
+
+Status = Literal["routine", "possible_away", "unusual_inactivity", "unresolved_concern"]
 
 # Use for every timestamp field so it serialises as "...Z" with millisecond precision.
 UtcDatetime = Annotated[datetime, PlainSerializer(iso, return_type=str | None)]

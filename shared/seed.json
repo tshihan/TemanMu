@@ -1,0 +1,151 @@
+{
+  "version": 1,
+  "responders": {
+    "caregiver": "Sarah Lee",
+    "township": "Guard Ali"
+  },
+  "units": [
+    {
+      "unit_id": "A-101",
+      "resident_name": "Mr Tan Ah Kow",
+      "caregiver_name": "Jason Tan",
+      "caregiver_relationship": "Dad",
+      "controllable": false,
+      "status": "routine",
+      "status_reason": "Water and electricity activity within usual routine",
+      "latest": { "water_lpm": 0, "power_kw": 0.12, "door": "closed" },
+      "last_water_activity_offset_seconds": -20,
+      "last_door_event_offset_seconds": null,
+      "interests": ["chess"],
+      "baseline": {
+        "usual_quiet_gap_seconds": 40,
+        "usual_outing_seconds": 60,
+        "standby_power_kw": 0.12
+      }
+    },
+    {
+      "unit_id": "A-102",
+      "resident_name": "Puan Aminah binti Yusof",
+      "caregiver_name": "Farah",
+      "caregiver_relationship": "Mak",
+      "controllable": false,
+      "status": "possible_away",
+      "status_reason": "Door opened at {door_time}, then no water use and electricity back to standby: probably out",
+      "latest": { "water_lpm": 0, "power_kw": 0.10, "door": "closed" },
+      "last_water_activity_offset_seconds": -900,
+      "last_door_event_offset_seconds": -600,
+      "interests": ["cooking"],
+      "baseline": {
+        "usual_quiet_gap_seconds": 35,
+        "usual_outing_seconds": 60,
+        "standby_power_kw": 0.10
+      }
+    },
+    {
+      "unit_id": "A-103",
+      "resident_name": "Mr Rajan Pillai",
+      "caregiver_name": "Priya",
+      "caregiver_relationship": "Appa",
+      "controllable": false,
+      "status": "routine",
+      "status_reason": "Water and electricity activity within usual routine",
+      "latest": { "water_lpm": 0, "power_kw": 0.15, "door": "closed" },
+      "last_water_activity_offset_seconds": -15,
+      "last_door_event_offset_seconds": null,
+      "interests": ["tai chi"],
+      "baseline": {
+        "usual_quiet_gap_seconds": 45,
+        "usual_outing_seconds": 50,
+        "standby_power_kw": 0.15
+      }
+    },
+    {
+      "unit_id": "A-104",
+      "resident_name": "Madam Wong Siew Lan",
+      "caregiver_name": "Kelvin Wong",
+      "caregiver_relationship": "Mum",
+      "controllable": false,
+      "status": "routine",
+      "status_reason": "Water and electricity activity within usual routine",
+      "latest": { "water_lpm": 0, "power_kw": 0.12, "door": "closed" },
+      "last_water_activity_offset_seconds": -10,
+      "last_door_event_offset_seconds": null,
+      "interests": ["karaoke"],
+      "baseline": {
+        "usual_quiet_gap_seconds": 30,
+        "usual_outing_seconds": 40,
+        "standby_power_kw": 0.12
+      }
+    },
+    {
+      "unit_id": "A-105",
+      "resident_name": "Madam Lee Mei Ling",
+      "caregiver_name": "Sarah Lee",
+      "caregiver_relationship": "Mum",
+      "controllable": true,
+      "status": "routine",
+      "status_reason": "No activity yet today",
+      "latest": { "water_lpm": 0, "power_kw": 0.15, "door": "closed" },
+      "last_water_activity_offset_seconds": 0,
+      "last_door_event_offset_seconds": null,
+      "interests": ["gardening", "cooking"],
+      "baseline": {
+        "usual_quiet_gap_seconds": 30,
+        "usual_outing_seconds": 45,
+        "standby_power_kw": 0.15
+      }
+    },
+    {
+      "unit_id": "A-106",
+      "resident_name": "Encik Ismail bin Hassan",
+      "caregiver_name": "Hakim",
+      "caregiver_relationship": "Ayah",
+      "controllable": false,
+      "status": "routine",
+      "status_reason": "Water and electricity activity within usual routine",
+      "latest": { "water_lpm": 0, "power_kw": 0.10, "door": "closed" },
+      "last_water_activity_offset_seconds": -25,
+      "last_door_event_offset_seconds": null,
+      "interests": ["gardening"],
+      "baseline": {
+        "usual_quiet_gap_seconds": 50,
+        "usual_outing_seconds": 60,
+        "standby_power_kw": 0.10
+      }
+    }
+  ],
+  "message_presets": [
+    { "preset_id": "p1", "text": "Thinking of you, Mum" },
+    { "preset_id": "p2", "text": "Have a good day, Mum" },
+    { "preset_id": "p3", "text": "I'll visit you this weekend" },
+    { "preset_id": "p4", "text": "Remember to drink some water, Mum" }
+  ],
+  "buddies": [
+    { "buddy_id": "b1", "name": "Auntie Mei", "interests": ["gardening", "tai chi"] },
+    { "buddy_id": "b2", "name": "Encik Rahman", "interests": ["chess", "cooking"] },
+    { "buddy_id": "b3", "name": "Kak Ros", "interests": ["cooking", "karaoke"] }
+  ],
+  "community_activities": [
+    {
+      "activity_id": "c1",
+      "title": "Community Gardening Session",
+      "schedule": { "repeat": "weekly", "weekday": "saturday", "time": "09:00" },
+      "location": "Community Garden",
+      "near_unit_id": "A-105"
+    },
+    {
+      "activity_id": "c2",
+      "title": "Morning Tai Chi",
+      "schedule": { "repeat": "daily", "time": "07:30" },
+      "location": "Central Park",
+      "near_unit_id": "A-103"
+    },
+    {
+      "activity_id": "c3",
+      "title": "Healthy Cooking Class",
+      "schedule": { "repeat": "weekly", "weekday": "wednesday", "time": "15:00" },
+      "location": "Community Hall",
+      "near_unit_id": "A-102"
+    }
+  ]
+}
