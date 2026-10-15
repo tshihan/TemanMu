@@ -1,0 +1,16 @@
+# Secrets: only .env.example is committed
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# Node
+node_modules/
+dist/
+
+.DS_Store
