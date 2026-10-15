@@ -1,6 +1,7 @@
 /** Walkable centres in the existing Unit A-105 floor plan (metres, x/z). */
 export const WAYPOINTS = {
   bedroom: [-1.22, -1.34],
+  bedside: [-1.4, -3.28],
   bedroomDoor: [-1.22, -.65],
   northLane: [-1.2, .3],
   livingLane: [-1.24, 1.55],
@@ -15,7 +16,16 @@ export const WAYPOINTS = {
   diningEast: [2.74, 2.83],
   frontLane: [1.85, 3.53],
   entryLane: [.75, 3.55],
-  mainDoor: [1.48, 4.12],
+  mainDoor: [1.48, 4.58],
+  doorThreshold: [1.48, 5.28],
+  porch: [1.48, 5.68],
+  outside: [1.48, 6.08],
+  collapseSpot: [-1.35, 3.4],
+  tapApproach: [.35, -3.18],
+  kettleApproach: [4.32, 2.08],
+  phoneLane: [-1.42, 3.55],
+  phoneCrossing: [-3.95, 3.55],
+  phoneApproach: [-4.03, 4.05],
 } as const
 
 export type Waypoint = keyof typeof WAYPOINTS
@@ -27,17 +37,23 @@ export const ROOM_LABELS: Record<RoomId, string> = {
 
 const EDGES: [Waypoint, Waypoint][] = [
   ['bedroom', 'bedroomDoor'], ['bedroomDoor', 'northLane'],
+  ['bedroom', 'bedside'],
   ['bedroomDoor', 'bathroomDoor'], ['bathroomDoor', 'bathroomInner'],
   ['bathroomInner', 'bathroom'], ['bathroomDoor', 'kitchenDoor'],
   ['kitchenDoor', 'kitchenLane'], ['kitchenLane', 'kitchen'],
   ['kitchen', 'diningEast'], ['diningEast', 'frontLane'],
   ['frontLane', 'entryLane'], ['entryLane', 'mainDoor'],
+  ['mainDoor', 'doorThreshold'], ['doorThreshold', 'porch'], ['porch', 'outside'],
+  ['bathroom', 'tapApproach'], ['kitchen', 'kettleApproach'],
+  ['living', 'phoneLane'], ['phoneLane', 'phoneCrossing'],
+  ['phoneCrossing', 'phoneApproach'],
   ['northLane', 'livingLane'], ['livingLane', 'living'],
   ['living', 'dining'], ['dining', 'entryLane'],
+  ['living', 'collapseSpot'], ['collapseSpot', 'phoneLane'],
 ]
 
 /** Dijkstra keeps the authored clearances while choosing the shortest available route. */
-export function routeBetween(from: Waypoint, to: RoomId): Waypoint[] {
+export function routeBetween(from: Waypoint, to: Waypoint): Waypoint[] {
   if (from === to) return []
   const pending = new Set<Waypoint>(Object.keys(WAYPOINTS) as Waypoint[])
   const distance = new Map<Waypoint, number>([[from, 0]])

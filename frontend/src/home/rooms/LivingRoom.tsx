@@ -1,7 +1,39 @@
+import { useRef } from 'react'
+import { Html } from '@react-three/drei'
+import { useFrame } from '@react-three/fiber'
+import { MathUtils, type Group } from 'three'
 import { Art, Ball, Books, Box, Cylinder, Pipe, Plant } from '../primitives'
 import { getMaterials } from '../materials'
+import { InteractiveObject } from '../interactions/InteractiveObject'
+import { interactionPrompt, type InteractionBindings, type TelephoneState } from '../interactions/registry'
 
-export function LivingRoom() {
+function Telephone({ state, paused }: { state: TelephoneState; paused?: boolean }) {
+  const m = getMaterials()
+  const receiver = useRef<Group>(null)
+  useFrame(({ clock }, delta) => {
+    if (paused) return
+    if (!receiver.current) return
+    const answering = state === 'answering'
+    receiver.current.position.x = MathUtils.damp(receiver.current.position.x, answering ? .55 : -.13, 4, delta)
+    receiver.current.position.y = MathUtils.damp(receiver.current.position.y, answering ? .77 : .12, 4, delta)
+    receiver.current.rotation.z = MathUtils.damp(receiver.current.rotation.z, answering ? -.58 : 0, 4, delta)
+    if (state === 'ringing') receiver.current.rotation.y = Math.sin(clock.elapsedTime * 24) * .14
+    else receiver.current.rotation.y = MathUtils.damp(receiver.current.rotation.y, 0, 8, delta)
+  })
+  return <group name="telephone" position={[0, .69, 0]}>
+    <Box size={[.37, .1, .38]} mat={m.dark} radius={.05} rotation={[.1, 0, 0]} />
+    <Box at={[.055, .07, -.08]} size={[.16, .012, .09]} mat={m.sage} />
+    {Array.from({ length: 12 }, (_, i) => <Box key={i} at={[.005 + (i % 3) * .052, .065, .015 + Math.floor(i / 3) * .043]} size={[.035, .015, .027]} mat={m.cream} radius={.007} />)}
+    <group ref={receiver} position={[-.13, .12, 0]}>
+      <Box size={[.1, .09, .36]} mat={m.dark} radius={.045} />
+      {[-.13, .13].map(z => <Ball key={z} at={[0, -.02, z]} size={[.075, .055, .065]} mat={m.dark} />)}
+    </group>
+    <Pipe points={[[-.17, .04, -.12], [-.29, -.03, -.15], [-.29, -.03, .15], [-.15, .06, .17]]} radius={.012} mat={m.dark} />
+    {state === 'ringing' && <Html position={[0, .44, 0]} center distanceFactor={9} style={{ pointerEvents: 'none' }}><span className="home-object-tip">♪ Incoming call</span></Html>}
+  </group>
+}
+
+export function LivingRoom({ interaction }: { interaction?: InteractionBindings }) {
   const m = getMaterials()
   return <group name="living-room">
     <Box at={[-3.2, .085, 2.06]} size={[3.75, .045, 4.2]} mat={m.rug} radius={.15} />
@@ -40,14 +72,12 @@ export function LivingRoom() {
     <group name="telephone-table" position={[-4.72, 0, 4.05]}>
       <Box at={[0, .6, 0]} size={[.75, .075, .65]} mat={m.oak} />
       {[-.28, .28].flatMap(x => [-.23, .23].map(z => <Box key={`${x}${z}`} at={[x, .32, z]} size={[.055, .58, .055]} mat={m.walnut} />))}
-      <group name="telephone" position={[0, .69, 0]}>
-        <Box size={[.37, .1, .38]} mat={m.dark} radius={.05} rotation={[.1, 0, 0]} />
-        <Box at={[.055, .07, -.08]} size={[.16, .012, .09]} mat={m.sage} />
-        {Array.from({ length: 12 }, (_, i) => <Box key={i} at={[.005 + (i % 3) * .052, .065, .015 + Math.floor(i / 3) * .043]} size={[.035, .015, .027]} mat={m.cream} radius={.007} />)}
-        <Box at={[-.13, .12, 0]} size={[.1, .09, .36]} mat={m.dark} radius={.045} />
-        {[-.13, .13].map(z => <Ball key={z} at={[-.13, .1, z]} size={[.075, .055, .065]} mat={m.dark} />)}
-        <Pipe points={[[-.17, .04, -.12], [-.29, -.03, -.15], [-.29, -.03, .15], [-.15, .06, .17]]} radius={.012} mat={m.dark} />
-      </group>
+      {interaction ? <InteractiveObject id="telephone" label={interactionPrompt('telephone', interaction.states)}
+        selected={interaction.selected === 'telephone'} hovered={interaction.hovered === 'telephone'} disabled={interaction.disabled}
+        onSelect={interaction.onSelect} onHover={interaction.onHover}
+        hitbox={[0, .77, 0]} hitboxSize={[.66, .4, .58]} tooltip={[0, 1.24, 0]}>
+        <Telephone state={interaction.states.telephone} paused={interaction.paused} />
+      </InteractiveObject> : <Telephone state="idle" />}
     </group>
     <group name="console" position={[-3.1, 0, -.73]}>
       <Box at={[0, .58, 0]} size={[1.35, .075, .36]} mat={m.walnut} />

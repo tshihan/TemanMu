@@ -1,5 +1,10 @@
+import { useRef } from 'react'
+import { useFrame } from '@react-three/fiber'
+import { MathUtils, type Mesh } from 'three'
 import { Ball, Box, Cylinder, Pipe } from '../primitives'
 import { getMaterials } from '../materials'
+import { InteractiveObject } from '../interactions/InteractiveObject'
+import { interactionPrompt, type InteractionBindings } from '../interactions/registry'
 
 export function Tap({ at, name = 'tap' }: { at: [number, number, number]; name?: string }) {
   const m = getMaterials()
@@ -9,7 +14,31 @@ export function Tap({ at, name = 'tap' }: { at: [number, number, number]; name?:
     <Box at={[.09, .09, 0]} size={[.15, .025, .04]} mat={m.steel} />
   </group>
 }
-export function Bathroom() {
+function WaterFlow({ running, paused }: { running: boolean; paused?: boolean }) {
+  const stream = useRef<Mesh>(null)
+  const flow = useRef(0)
+  useFrame(({ clock }, delta) => {
+    if (paused) return
+    flow.current = MathUtils.damp(flow.current, running ? 1 : 0, 8, delta)
+    if (!stream.current) return
+    stream.current.visible = flow.current > .01
+    stream.current.scale.y = Math.max(.001, flow.current)
+    stream.current.position.y = 1.19 + (1 - flow.current) * .11
+    stream.current.scale.x = .88 + Math.sin(clock.elapsedTime * 13) * .09
+    stream.current.scale.z = stream.current.scale.x
+  })
+  return <group name="tap-water-flow">
+    <mesh ref={stream} position={[.35, 1.19, -3.79]} visible={false}>
+      <cylinderGeometry args={[.012, .018, .28, 12]} />
+      <meshPhysicalMaterial color="#9fe7ed" transparent opacity={.66} roughness={.08} metalness={.04} depthWrite={false} />
+    </mesh>
+    {running && <mesh position={[.35, 1.065, -3.79]} rotation={[-Math.PI / 2, 0, 0]}>
+      <ringGeometry args={[.045, .06, 24]} /><meshBasicMaterial color="#a6dce6" transparent opacity={.66} depthWrite={false} />
+    </mesh>}
+  </group>
+}
+
+export function Bathroom({ interaction }: { interaction?: InteractionBindings }) {
   const m = getMaterials()
   return <group name="bathroom">
     <Box at={[1.82, 1.1, -4.88]} size={[4.35, 2.13, .045]} mat={m.tile} radius={0} />
@@ -20,9 +49,15 @@ export function Bathroom() {
       <Ball at={[0, 1.03, .04]} size={[.4, .055, .28]} mat={m.steel} />
       <Ball at={[0, 1.045, .04]} size={[.35, .035, .24]} mat={m.porcelain} />
       <Cylinder at={[0, 1.08, .05]} radius={.03} height={.004} mat={m.steel} />
-      <Tap at={[0, 1.04, -.26]} name="bathroom-tap" />
+      {interaction ? <InteractiveObject id="bathroomTap" label={interactionPrompt('bathroomTap', interaction.states)}
+        selected={interaction.selected === 'bathroomTap'} hovered={interaction.hovered === 'bathroomTap'} disabled={interaction.disabled}
+        onSelect={interaction.onSelect} onHover={interaction.onHover}
+        hitbox={[0, 1.26, -.08]} hitboxSize={[.42, .44, .5]} tooltip={[0, 1.75, -.08]}>
+        <Tap at={[0, 1.04, -.26]} name="bathroom-tap" />
+      </InteractiveObject> : <Tap at={[0, 1.04, -.26]} name="bathroom-tap" />}
       <Box at={[.43, 1.15, -.1]} size={[.09, .23, .09]} mat={m.sage} />
     </group>
+    {interaction && <WaterFlow running={interaction.states.bathroomTap} paused={interaction.paused} />}
     <Box at={[.35, 1.73, -4.81]} size={[.95, .83, .06]} mat={m.brass} radius={.16} />
     <Box at={[.35, 1.73, -4.77]} size={[.88, .76, .02]} mat={m.mirror} radius={.14} />
     <group name="toilet" position={[1.75, 0, -3.83]}>

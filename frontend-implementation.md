@@ -6,7 +6,7 @@
 
 One browser page has a simulated home on the left and a dashboard on the right. The dashboard switches between **Township Operator** and **Caregiver**. It reads water, electricity and front-door data for enrolled homes, shows why a status changed, and supports a human incident response. The demo has six enrolled units, A-101 through A-106. A-105 is the controllable home.
 
-The **3D viewer is a reusable component** now mounted in the left panel. Mission 1 supplies the furnished static scene and camera. The existing mock controls and meter strip stay in the app shell. Future missions will connect sensor objects and companion-call events; the backend decides unit status.
+The **3D viewer is a reusable component** mounted in the left panel. Missions 1–4 supply the furnished scene, animated resident, interactive objects and automated 3D scenarios. These scenarios run only inside the viewer. The existing dashboard mock controls and meter strip stay in the app shell; future integration will connect sensor objects and companion-call events to backend-owned unit status.
 
 For the current Township navigation, the housing block has four visible floors. Only **Floor 1** opens; it contains all six enrolled homes. Floors 2–4 show no enrolled homes. The API has no `floor` field yet, so this is a frontend demo assumption. Add a shared floor field to the seed and API before distributing units across floors.
 
@@ -18,7 +18,7 @@ For the current Township navigation, the housing block has four visible floors. 
 | 2. App shell | Split screen, home slot, role switcher and notification badge | Built; checked at 1366×768 |
 | 3. Township view | Floors → illustrated homes → unit detail | Built against seed/mock data; live safety transitions still depend on the backend |
 | 4. Caregiver and incident flow | Caregiver safety view and shared response actions | Built and browser checked in mock mode |
-| 5. 3D viewer handoff | Embed and connect the separately built viewer | Furnished 3D home embedded in the left panel; sensor and scenario integration pending |
+| 5. 3D viewer handoff | Embed and connect the separately built viewer | Missions 1–4 embedded and browser checked; sensor/backend integration pending |
 | 6. Backend integration | Replace mocks with live REST/WebSocket data | Pending backend safety endpoints |
 | 7. Companionship, polish and demo QA | Normal-day features and full demo run | Pending |
 
@@ -54,9 +54,9 @@ Extend mock scenarios so the dashboard can demonstrate detection → grace → n
 
 ## Phase 5 — Separate 3D viewer handoff
 
-**Viewer owner builds separately:** The furnished home scene is embedded. Mission 2 adds Madam Lee's rigged avatar, idle/walk animation and room-to-room movement with temporary test controls. Later missions add clickable tap/kettle/door and optional companion phone-call animation. The existing app retains its mock meter panel, four scenario buttons and reset control. The character is audience-only and never sends movement data.
+**Viewer owner builds separately:** The furnished home scene is embedded. Mission 2 adds Madam Lee's rigged avatar, idle/walk animation and room-to-room movement. Mission 3 adds clickable tap, kettle, door and telephone interactions, plus local test controls. Mission 4 adds scripted Normal Morning, Going Out, Unusual Inactivity and False Alarm Recovery sequences with pause/resume/stop/reset and configurable outdoor/recovery waits. Their visual states stay inside the viewer and do not send sensor readings or update the dashboard. The app retains its separate mock meter panel, scenario buttons and reset control. The character is audience-only and never sends movement data.
 
-**Frontend team integrates:** The static viewer is mounted in the existing left `home-stage` slot. Later missions will connect its interactive objects. Give it the A-105 unit ID and access to the shared API/realtime interface. Sensor objects and scenarios send `POST /api/readings`; the viewer receives `snapshot` after reset and `companion.message_delivered` for the phone animation. The viewer must not use dashboard state as a substitute for sending readings. Keep the permanent audience-only privacy label visible.
+**Frontend team integrates:** The viewer is mounted in the existing left `home-stage` slot. A later integration will connect its interactive objects to the shared API/realtime interface for A-105. At that stage, sensor objects and dashboard scenarios send `POST /api/readings`; the viewer receives `snapshot` after reset and `companion.message_delivered` for the phone animation. The viewer must not use dashboard state as a substitute for sending readings. Keep the permanent audience-only privacy label visible.
 
 **Done when:** A tap, kettle or door action changes the A-105 meter readout and dashboard through the API, reset restores both sides, and the viewer fits the resizable panel at the demo screen sizes. The scene can be developed in parallel with Phases 3–4; integration waits for its handoff.
 

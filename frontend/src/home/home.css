@@ -44,16 +44,50 @@
 .home-fallback { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 40px; text-align: center; background: #eeeae1; color: #3c513c; }
 .home-fallback p { margin-top: 12px; }
 .home-fallback button { padding: 10px 18px; border: 1px solid #7d8f70; border-radius: 8px; }
-.character-panel { flex: none; display: flex; flex-direction: column; gap: 7px; padding: 9px 14px; border-top: 1px solid #e0dfd5; background: #fbfaf6; }
+.character-panel { flex: none; display: block; padding: 8px 14px; border-top: 1px solid #e0dfd5; background: #fbfaf6; }
+.character-panel:not([open]) > :not(summary), .interaction-panel:not([open]) > :not(summary), .scenario-timing:not([open]) > :not(summary) { display: none; }
+.character-panel summary, .interaction-panel summary, .scenario-timing summary { cursor: pointer; list-style: none; }
+.character-panel summary::-webkit-details-marker, .interaction-panel summary::-webkit-details-marker, .scenario-timing summary::-webkit-details-marker { display: none; }
 .character-panel-heading { display: flex; align-items: center; flex: none; gap: 7px; }
+.character-panel-toggle { margin-left: auto; color: #8a9082; font-size: 9px; white-space: nowrap; }
 .character-avatar { display: grid; place-items: center; width: 24px; height: 24px; flex: none; border-radius: 50%; background: #e5e7df; color: #516447; font-family: Georgia, serif; font-size: 10px; }
 .character-panel-heading strong, .character-panel-heading span[role="status"] { display: inline; }
 .character-panel-heading strong { font-size: 11px; line-height: 1.25; }
 .character-panel-heading span[role="status"] { margin-left: 9px; color: #7e8477; font-size: 10px; line-height: 1.25; }
-.character-moves { display: flex; flex-wrap: wrap; gap: 6px; }
+.character-moves { display: flex; flex-wrap: nowrap; gap: 6px; max-width: 100%; overflow-x: auto; scrollbar-width: thin; padding-top: 8px; }
 .character-moves button { padding: 7px 9px; border: 1px solid #daddd1; border-radius: 7px; background: white; color: #435440; font-size: 10px; white-space: nowrap; }
 .character-moves button:disabled { opacity: .45; cursor: wait; }
 .character-moves .character-reset { color: #775b45; background: #f7f2ec; border-color: #e6d9cd; }
+.interaction-panel { flex: none; display: block; padding: 8px 14px; border-top: 1px solid #e4e3d9; background: #f6f5ef; }
+.interaction-panel-heading { display: flex; gap: 12px; align-items: baseline; }
+.interaction-panel-heading strong { font-size: 9px; letter-spacing: .15em; color: #64755d; }
+.interaction-panel-heading span { font-size: 9px; color: #919587; }
+.interaction-actions { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 8px; }
+.interaction-actions button { padding: 7px 9px; border: 1px solid #d9dfd1; border-radius: 7px; background: white; color: #435440; font-size: 10px; white-space: nowrap; }
+.interaction-actions button:disabled { opacity: .5; cursor: wait; }
+.interaction-actions .interaction-reset { color: #775b45; background: #f7f2ec; border-color: #e6d9cd; }
+.interaction-states { display: flex; flex-wrap: wrap; gap: 7px 16px; padding-top: 7px; color: #858a7d; font-size: 9px; }
+.interaction-states b { color: #4d6650; font-weight: 650; }
+.scenario-panel { flex: none; display: flex; flex-direction: column; gap: 6px; padding: 9px 14px; border-top: 1px solid #d6dccf; background: #edf1e9; }
+.scenario-panel-heading { display: flex; align-items: baseline; gap: 12px; }
+.scenario-panel-heading strong { color: #536c4c; font-size: 9px; letter-spacing: .15em; }
+.scenario-panel-heading span { color: #838e7d; font-size: 9px; }
+.home-scenario-buttons { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
+.home-scenario-buttons button { min-height: 30px; padding: 5px; border: 1px solid #cad7c6; border-radius: 7px; background: #fffefa; color: #3f5d3b; font-size: 9px; font-weight: 600; }
+.home-scenario-buttons button.is-current { border-color: #9db78f; background: #dfead8; }
+.home-scenario-buttons button:disabled { opacity: .55; cursor: default; }
+.scenario-transport { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
+.scenario-transport button { padding: 5px 8px; border: 1px solid #c9d5c4; border-radius: 6px; background: #fbfcf6; color: #4d6148; font-size: 9px; }
+.scenario-transport button:disabled { opacity: .45; cursor: default; }
+.scenario-transport button:nth-child(4) { color: #795b48; border-color: #ddcdbd; background: #f8f1ea; }
+.scenario-transport [role="status"] { flex-basis: 100%; color: #5b7055; font-size: 10px; line-height: 1.2; }
+.scenario-timing { color: #86917f; font-size: 9px; }
+.scenario-timing[open] { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.scenario-timing label { display: inline-flex; align-items: center; gap: 4px; }
+.scenario-timing input { width: 35px; padding: 2px 3px; border: 1px solid #cbd7c5; border-radius: 4px; background: white; color: #41583d; font: inherit; }
+.home-object-tip, .home-character-speech { display: block; padding: 7px 10px; border: 1px solid #d5d9c8; border-radius: 8px; background: #fffdf3f2; box-shadow: 0 3px 12px #242c241c; color: #354b36; font: 600 11px 'Avenir Next', 'Segoe UI', sans-serif; white-space: nowrap; }
+.home-object-tip.is-selected { border-color: #d8b782; color: #856235; }
+.home-character-speech { padding: 9px 13px; border-color: #b9caa9; font-size: 12px; }
 @media (max-width: 750px) {
   .home-experience { padding: 0 16px; }
   .home-header { height: 73px; }
@@ -68,8 +102,12 @@
   .home-camera-bottom { left: 12px; right: 12px; bottom: 12px; }
   .home-camera-bottom p { gap: 5px; font-size: 9px; }
   .home-reset { padding: 8px; font-size: 10px; }
-  .character-panel { align-items: flex-start; gap: 8px; padding: 10px; }
+  .character-panel { padding: 8px 10px; }
   .character-moves { gap: 5px; }
   .character-moves button { padding: 6px; font-size: 9px; }
+  .interaction-panel { padding: 9px 10px; }
+  .interaction-actions button { padding: 6px; font-size: 9px; }
+  .scenario-panel { padding: 8px 10px; }
+  .home-scenario-buttons { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (prefers-reduced-motion: reduce) { .home-environment button { transition: none; } }

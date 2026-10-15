@@ -1,8 +1,34 @@
+import { useRef } from 'react'
+import { useFrame } from '@react-three/fiber'
+import { MathUtils, type Mesh } from 'three'
 import { Ball, Box, Cylinder, Pipe, Plant } from '../primitives'
 import { getMaterials } from '../materials'
 import { Tap } from './Bathroom'
+import { InteractiveObject } from '../interactions/InteractiveObject'
+import { interactionPrompt, type InteractionBindings } from '../interactions/registry'
 
-export function Kitchen() {
+function KettleSteam({ heating, paused }: { heating: boolean; paused?: boolean }) {
+  const wisps = useRef<(Mesh | null)[]>([])
+  const strength = useRef(0)
+  useFrame(({ clock }, delta) => {
+    if (paused) return
+    strength.current = MathUtils.damp(strength.current, heating ? 1 : 0, 4, delta)
+    wisps.current.forEach((mesh, i) => {
+      if (!mesh) return
+      mesh.visible = strength.current > .02
+      const phase = (clock.elapsedTime * .42 + i / 3) % 1
+      mesh.position.set(-.24 + Math.sin(clock.elapsedTime * 2 + i) * .035, .46 + phase * .38, Math.sin(clock.elapsedTime + i * 2) * .025)
+      mesh.scale.setScalar((.035 + phase * .045) * strength.current)
+      const material = mesh.material
+      if (!Array.isArray(material)) material.opacity = strength.current * (1 - phase) * .27
+    })
+  })
+  return <group name="kettle-steam">{[0, 1, 2].map(i => <mesh key={i} ref={mesh => { wisps.current[i] = mesh }} visible={false}>
+    <sphereGeometry args={[1, 12, 8]} /><meshBasicMaterial color="#f5faf5" transparent opacity={0} depthWrite={false} />
+  </mesh>)}</group>
+}
+
+export function Kitchen({ interaction }: { interaction?: InteractionBindings }) {
   const m = getMaterials()
   return <group name="kitchen">
     <group name="refrigerator" position={[3.35, 0, -.45]}>
@@ -42,13 +68,12 @@ export function Kitchen() {
       <Box at={[-.48, .68, 0]} size={[.05, .035, .5]} mat={m.steel} />
       {[-.2, 0, .2].map(z => <Cylinder key={z} at={[-.46, .83, z]} radius={.04} height={.02} rotation={[0, 0, Math.PI / 2]} mat={m.steel} />)}
     </group>
-    <group name="electric-kettle" position={[5, 1.04, 2.07]}>
-      <Cylinder at={[0, .02, 0]} radius={.19} height={.04} mat={m.dark} />
-      <Ball at={[0, .2, 0]} size={[.17, .2, .17]} mat={m.steel} />
-      <Cylinder at={[0, .38, 0]} radius={.12} height={.025} mat={m.dark} />
-      <Pipe points={[[.1, .32, 0], [.26, .34, 0], [.28, .11, 0], [.12, .1, 0]]} radius={.035} mat={m.dark} />
-      <Pipe points={[[-.1, .13, 0], [-.23, .21, 0], [-.25, .3, 0]]} radius={.045} mat={m.steel} />
-    </group>
+    {interaction ? <InteractiveObject id="kitchenKettle" label={interactionPrompt('kitchenKettle', interaction.states)}
+      selected={interaction.selected === 'kitchenKettle'} hovered={interaction.hovered === 'kitchenKettle'} disabled={interaction.disabled}
+      onSelect={interaction.onSelect} onHover={interaction.onHover}
+      hitbox={[5, 1.3, 2.07]} hitboxSize={[.52, .55, .5]} tooltip={[5, 1.82, 2.07]}>
+      <KettleModel heating={interaction.states.kitchenKettle} paused={interaction.paused} />
+    </InteractiveObject> : <KettleModel heating={false} />}
     <Plant at={[4.01, 1.03, -.61]} scale={.35} />
     <Cylinder at={[5.04, 1.18, -.38]} radius={.1} height={.3} mat={m.terracotta} />
     {[-.05, .02, .07].map((x, i) => <group key={x} position={[5.04 + x, 1.4, -.38]} rotation={[.1 * i, 0, x * 2]}>
@@ -59,4 +84,16 @@ export function Kitchen() {
     <Ball at={[4.96, 1.11, 2.47]} size={[.075, .075, .075]} mat={m.terracotta} />
     <Ball at={[5.13, 1.11, 2.47]} size={[.075, .075, .075]} mat={m.sage} />
   </group>
+}
+
+function KettleModel({ heating, paused }: { heating: boolean; paused?: boolean }) {
+  const m = getMaterials()
+  return <group name="electric-kettle" position={[5, 1.04, 2.07]}>
+      <Cylinder at={[0, .02, 0]} radius={.19} height={.04} mat={m.dark} />
+      <Ball at={[0, .2, 0]} size={[.17, .2, .17]} mat={m.steel} />
+      <Cylinder at={[0, .38, 0]} radius={.12} height={.025} mat={m.dark} />
+      <Pipe points={[[.1, .32, 0], [.26, .34, 0], [.28, .11, 0], [.12, .1, 0]]} radius={.035} mat={m.dark} />
+      <Pipe points={[[-.1, .13, 0], [-.23, .21, 0], [-.25, .3, 0]]} radius={.045} mat={m.steel} />
+      <KettleSteam heating={heating} paused={paused} />
+    </group>
 }

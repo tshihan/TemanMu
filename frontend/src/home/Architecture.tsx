@@ -1,5 +1,10 @@
+import { useRef } from 'react'
+import { useFrame } from '@react-three/fiber'
+import { MathUtils, type Group } from 'three'
 import { Box, Plant } from './primitives'
 import { getMaterials } from './materials'
+import { InteractiveObject } from './interactions/InteractiveObject'
+import { interactionPrompt, type InteractionBindings } from './interactions/registry'
 
 function Window({ at, rotation = 0, width = 1.8 }: { at: [number, number, number]; rotation?: number; width?: number }) {
   const m = getMaterials()
@@ -22,7 +27,27 @@ function Wall({ x, z, width, depth, height = 2.5 }: { x: number; z: number; widt
     <Box at={[x, .075, z]} size={[width + .025, .13, depth + .025]} mat={m.trim} radius={.006} />
   </group>
 }
-export function Architecture() {
+function EntranceDoor({ interaction }: { interaction?: InteractionBindings }) {
+  const leaf = useRef<Group>(null)
+  useFrame((_, delta) => {
+    if (interaction?.paused) return
+    if (leaf.current) leaf.current.rotation.y = MathUtils.damp(leaf.current.rotation.y, interaction?.states.mainDoor ? .85 : 0, 4.5, delta)
+  })
+  const model = <group ref={leaf} name="main-door" position={[2.3, .03, 5]}>
+    <Box at={[-.56, 1.07, 0]} size={[1.12, 2.14, .075]} mat={getMaterials().walnut} />
+    {[.55, 1.48].map(y => <Box key={y} at={[-.56, y, .05]} size={[.9, .71, .035]} mat={getMaterials().oak} radius={.008} />)}
+    <Box at={[-.98, 1.05, -.08]} size={[.055, .22, .055]} mat={getMaterials().brass} />
+    <Box at={[-.98, 1.06, .08]} size={[.055, .22, .055]} mat={getMaterials().brass} />
+  </group>
+  return interaction ? <InteractiveObject id="mainDoor" label={interactionPrompt('mainDoor', interaction.states)}
+    selected={interaction.selected === 'mainDoor'} hovered={interaction.hovered === 'mainDoor'} disabled={interaction.disabled}
+    onSelect={interaction.onSelect} onHover={interaction.onHover}
+    hitbox={[1.69, 1.03, 5.25]} hitboxSize={[1.3, 2.1, 1.5]} tooltip={[1.6, 2.5, 5]}>
+    {model}
+  </InteractiveObject> : model
+}
+
+export function Architecture({ interaction }: { interaction?: InteractionBindings }) {
   const m = getMaterials()
   return <group name="architecture">
     <Box at={[-.7, -.23, -3]} size={[9.82, .44, 4.22]} mat={m.trim} radius={.035} />
@@ -57,11 +82,6 @@ export function Architecture() {
     <Box at={[1.6, -.28, 6.35]} size={[3.6, .18, .3]} mat={m.trim} />
     <Box at={[1.62, .015, 5.65]} size={[1.05, .035, .6]} mat={m.rug} />
     <Plant at={[.2, .02, 5.6]} scale={.85} /><Plant at={[3, .02, 5.6]} scale={.85} />
-    <group name="main-door" position={[2.3, .03, 5]} rotation={[0, -.85, 0]}>
-      <Box at={[-.56, 1.07, 0]} size={[1.12, 2.14, .075]} mat={m.walnut} />
-      {[.55, 1.48].map(y => <Box key={y} at={[-.56, y, .05]} size={[.9, .71, .035]} mat={m.oak} radius={.008} />)}
-      <Box at={[-.98, 1.05, -.08]} size={[.055, .22, .055]} mat={m.brass} />
-      <Box at={[-.98, 1.06, .08]} size={[.055, .22, .055]} mat={m.brass} />
-    </group>
+    <EntranceDoor interaction={interaction} />
   </group>
 }

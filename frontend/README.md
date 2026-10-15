@@ -1,6 +1,6 @@
 # TemanMu frontend
 
-> **3D home, Missions 1–2:** The furnished home and animated Madam Lee are embedded in the left panel of the existing app. Township and Caregiver dashboards remain on the right. Temporary character movement controls sit below the scene; the previous mock controls remain under **Demo controls**. See [home viewer documentation](src/home/README.md) for camera, animation and navigation details.
+> **3D home, Missions 1–4:** The furnished home, animated Madam Lee, four local household interactions and four automated 3D scenarios are embedded in the left panel of the existing app. Township and Caregiver dashboards remain on the right. Scenario playback and collapsible manual controls sit below the scene; the dashboard's separate mock controls remain under **Demo controls**. See [home viewer documentation](src/home/README.md) for camera, animation, navigation and scenario details.
 
 React, TypeScript, Vite and Tailwind frontend for the TemanMu prototype.
 
@@ -29,7 +29,7 @@ To connect the real backend, copy `.env.example` to `.env.local`, set `VITE_USE_
 - `src/theme.css`: shared parchment, terracotta and editorial typography styling for the dashboard.
 - `src/dashboard/HomeIllustration.tsx`: reusable SVG home art, tinted by unit status.
 
-In mock mode, the four scenario buttons run **Normal morning**, **Going out**, **Unusual inactivity** and **False alarm recovery** from a fresh seed snapshot. The safety scenario shows a quiet-gap trigger, 15-second grace period, simultaneous role alerts, 15-second reminders, acknowledgement and closure. Activity can auto-resolve an incident. **Manual water use** sends a reading; **Reset preview** clears the session after confirmation. These mock timers run only while the page is open and reset on reload. The live backend and sensor interaction with the 3D objects are later phases. Keep the shared types, backend contract, and mock implementation in sync when changing endpoints.
+The dashboard's **Demo controls** are separate from the 3D viewer's Mission 4 scenario controls. In mock mode, the dashboard's four scenario buttons run **Normal morning**, **Going out**, **Unusual inactivity** and **False alarm recovery** from a fresh seed snapshot. The safety scenario shows a quiet-gap trigger, 15-second grace period, simultaneous role alerts, 15-second reminders, acknowledgement and closure. Activity can auto-resolve an incident. **Manual water use** sends a reading; **Reset preview** clears the session after confirmation. These mock timers run only while the page is open and reset on reload. The live backend and sensor interaction with the 3D objects are later phases. Keep the shared types, backend contract, and mock implementation in sync when changing endpoints.
 
 All six seeded units are shown on Floor 1, as the first-round frontend assumption. Floors 2–4 are visible but have no enrolled homes in this prototype. The API has no floor field yet; add one to the shared contract and seed if homes are later distributed across floors.
 
