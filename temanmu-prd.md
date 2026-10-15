@@ -501,7 +501,7 @@ Per-resident values (`usual_quiet_gap_seconds`, `usual_outing_seconds`, `standby
 
 | Table | Key columns |
 | --- | --- |
-| `units` | `unit_id` PK, `resident_name`, `caregiver_name`, `caregiver_relationship`, `controllable`, `status`, `status_reason`, `status_since`, `last_water_activity_at`, `last_door_event_at` |
+| `units` | `unit_id` PK, `resident_name`, `caregiver_name`, `caregiver_relationship`, `controllable`, `status`, `status_reason`, `status_since`, `last_water_activity_at`, `last_door_event_at`, `latest_water_lpm`, `latest_power_kw`, `latest_door` |
 | `resident_profiles` | `unit_id` PK/FK, `usual_quiet_gap_seconds`, `usual_outing_seconds`, `standby_power_kw` |
 | `readings` | `id` PK, `unit_id` FK, `sensor`, `value_num`, `value_text`, `recorded_at` |
 | `incidents` | `incident_id` PK, `unit_id` FK, `state`, `opened_at`, `grace_ends_at`, `next_reminder_at`, `reminder_count`, `ack_role`, `ack_name`, `ack_at`, `outcome`, `closed_at` |
@@ -509,11 +509,14 @@ Per-resident values (`usual_quiet_gap_seconds`, `usual_outing_seconds`, `standby
 | `notifications` | `notification_id` PK, `role`, `unit_id` FK, `kind`, `message`, `incident_id` FK nullable, `created_at`, `read` |
 | `community_activities` | `activity_id` PK, `title`, `starts_at`, `location`, `near_unit_id` FK |
 | `community_responses` | `id` PK, `activity_id` FK, `action`, `created_at` |
-| `resident_interests` | `unit_id` FK, `interest` |
+| `resident_interests` | `unit_id` FK, `interest`, `position` |
 | `buddies` | `buddy_id` PK, `name`, `interests` (text[]) |
 | `buddy_matches` | `unit_id` PK/FK, `buddy_id` FK, `shared_interest`, `matched_at` |
 | `message_presets` | `preset_id` PK, `text` |
 | `companion_messages` | `message_id` PK, `unit_id` FK, `from_name`, `preset_id` FK, `text`, `channel`, `status`, `sent_at` |
+
+- `units.latest_water_lpm`, `latest_power_kw` and `latest_door` hold each unit's current values for `Unit.latest`. Background units never receive readings, so these cannot be derived from `readings`. Reset fills them from `seed.json`, and reading ingestion updates them for the controllable unit.
+- `resident_interests.position` keeps the interest order from `seed.json`. Buddy matching (section 9.6) depends on this order.
 
 ### 8.9 Tech Stack
 
