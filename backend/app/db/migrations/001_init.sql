@@ -2,8 +2,7 @@
 -- `python -m app.db.migrate` or by pasting into the Supabase SQL editor.
 -- Enum-like columns use text + check constraints instead of Postgres enums, so they are easy
 -- to change mid-hackathon.
-
-create extension if not exists pgcrypto;
+-- gen_random_uuid() is built into Postgres 13+, so no extension is needed.
 
 create table if not exists units (
   unit_id                text primary key,
