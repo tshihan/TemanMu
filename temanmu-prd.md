@@ -614,7 +614,14 @@ Buddy matching picks the first buddy sharing an interest with the resident, in `
 | `c2` | Morning Tai Chi | Daily 7:30 AM | Central Park | A-103 |
 | `c3` | Healthy Cooking Class | Wednesday 3:00 PM | Community Hall | A-102 |
 
-`starts_at` in `seed.json` is an ISO timestamp computed relative to the reset date (next matching day).
+`seed.json` stores each activity as a `schedule` rule, not a fixed date, so it never goes out of date:
+
+```json
+{ "activity_id": "c1", "schedule": { "repeat": "weekly", "weekday": "saturday", "time": "09:00" }, ... }
+{ "activity_id": "c2", "schedule": { "repeat": "daily", "time": "07:30" }, ... }
+```
+
+`time` is local time in `Asia/Kuala_Lumpur`. On reset, the backend turns the rule into `starts_at` (UTC ISO) for the next matching occurrence: today if that time has not passed yet, otherwise the next matching day. The API still returns `CommunityActivity.starts_at`, so the API contract does not change. The frontend mock layer must compute `starts_at` with the same rule.
 
 ---
 
@@ -669,6 +676,7 @@ REMINDER_INTERVAL_SECONDS=15
 CONTROLLABLE_UNIT_ID=A-105
 SEED_FILE=../shared/seed.json
 CORS_ORIGINS=http://localhost:5173
+DEMO_TIMEZONE=Asia/Kuala_Lumpur    # local time for activity schedules and reason-line clock times
 ```
 
 **`frontend/.env.example`**
