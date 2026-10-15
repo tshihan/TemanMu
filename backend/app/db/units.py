@@ -64,6 +64,11 @@ async def get_unit(unit_id: str, conn: asyncpg.Connection | None = None) -> Unit
     return _row_to_unit(row) if row else None
 
 
+async def unit_exists(unit_id: str, conn: asyncpg.Connection | None = None) -> bool:
+    async with connection(conn) as c:
+        return await c.fetchval("select exists (select 1 from units where unit_id = $1)", unit_id)
+
+
 async def get_baseline(unit_id: str, conn: asyncpg.Connection | None = None) -> Baseline | None:
     async with connection(conn) as c:
         row = await c.fetchrow("select * from resident_profiles where unit_id = $1", unit_id)

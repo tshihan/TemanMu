@@ -5,7 +5,7 @@ import asyncpg
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import config, demo, units
+from app.api import community, companion, config, demo, incidents, notifications, units
 from app.db import pool
 from app.settings import settings
 
@@ -45,9 +45,16 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # Backend 2 routers, all under /api. Still to come: incidents, notifications,
-    # community, companion.
-    for router in (config.router, units.router, demo.router):
+    # Backend 2 routers, all under /api.
+    for router in (
+        config.router,
+        units.router,
+        incidents.router,
+        notifications.router,
+        community.router,
+        companion.router,
+        demo.router,
+    ):
         app.include_router(router, prefix="/api")
 
     # ------------------------------------------------------------------
