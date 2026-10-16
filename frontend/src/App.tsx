@@ -5,9 +5,11 @@ import type { Role } from './api/types'
 import { CaregiverView } from './dashboard/CaregiverView'
 import { TownshipView } from './dashboard/TownshipView'
 
+const Landing = lazy(() => import('./landing/Landing').then(module => ({ default: module.Landing })))
 const HomeEnvironment = lazy(() => import('./home/HomeEnvironment').then(module => ({ default: module.HomeEnvironment })))
-type Page = 'dashboard' | 'simulator'
-const pageFromHash = (): Page => window.location.hash === '#simulator' ? 'simulator' : 'dashboard'
+type Page = 'landing' | 'dashboard' | 'simulator'
+// Any other hash (including the landing page's own #how / #roles anchors) stays on the landing page.
+const pageFromHash = (): Page => window.location.hash === '#simulator' ? 'simulator' : window.location.hash === '#dashboard' ? 'dashboard' : 'landing'
 
 export default function App() {
   const { connected, loaded, units, notifications, config } = useAppState()
@@ -28,6 +30,11 @@ export default function App() {
     if (page === 'dashboard' && loaded && activeUnread)
       void markRoleViewed(role).catch(error => console.error('Could not mark notifications read', error))
   }, [page, role, loaded, activeUnread])
+  useEffect(() => {
+    if (page !== 'landing') window.scrollTo(0, 0)
+  }, [page])
+
+  if (page === 'landing') return <Suspense fallback={null}><Landing /></Suspense>
 
   return <div className="app-shell">
     <header className="app-header">

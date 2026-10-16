@@ -1,0 +1,8 @@
+.landing { background: #fef9ef; color: #2a2b2f; }
+.landing a { color: #b05a36; text-decoration: none; }
+.landing a:hover { color: #8b4429; }
+.landing .lp-cta:hover { background: #8b4429 !important; color: #fef9ef !important; }
+.landing .lp-cta-light:hover { background: #f4e4d7 !important; color: #8b4429 !important; }
+.landing em { font-style: italic; }
+@keyframes tm-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) { .landing * { animation: none !important; } }
