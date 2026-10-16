@@ -37,6 +37,8 @@ The browser results above used the SharedWorker mock API. The FastAPI app still 
 
 Follow-up check: the extended Unusual Inactivity scene reached step 14 with Guard Ali visible beside Madam Lee, the confirmed sensor meter still at 0.0 L/min / 0.15 kW / CLOSED, and no browser errors. The Township incident timeline showed `notified` followed by `acknowledged · Guard Ali`; it remained open for a human outcome. The responder is a procedural presenter character, not a detection source or real dispatch confirmation.
 
+Quiet-gap handoff fix: the worker now returns the newly opened grace incident directly instead of relying on a five-second event wait. A fresh-browser run reached Guard Ali's check with **Awaiting outcome** and no scenario error. Repeating Unusual Inactivity while that acknowledged incident remained active stopped with the specific active-incident message. Build, lint and seven frontend tests passed; the older-worker fallback was reviewed in code but was not exercised against an old worker binary.
+
 The door sensor reports opening and closing, not whether a resident crossed the threshold. The Going Out scene sends real door transitions through the existing API, but the current mock reading handler does not infer an outing from those transitions. A separate developer-only mock scenario sets Possible Away directly. Do not present a brief door opening as confirmed departure. A future backend rule should treat it as **door activity** and only label **possible** away after a resident-specific interval without other household activity, with human confirmation for consequential action. That rule belongs to backend product design, outside this Mission 6 simulator polish.
 
 ## Run the demo

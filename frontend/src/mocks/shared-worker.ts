@@ -27,8 +27,8 @@ scope.onconnect = event => {
     const { id, method, args } = data
     if (method === 'primeInactivity') {
       try {
-        primeMockInactivity()
-        port.postMessage({ kind: 'reply', id } satisfies Reply)
+        const incident = primeMockInactivity()
+        port.postMessage({ kind: 'reply', id, result: incident } satisfies Reply)
       } catch (error) {
         port.postMessage({ kind: 'reply', id, error: { message: error instanceof Error ? error.message : 'Could not start mock inactivity' } } satisfies Reply)
       }

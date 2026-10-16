@@ -17,7 +17,7 @@ import { ScenarioController, type ScenarioActions } from './scenarios/ScenarioCo
 import { DEFAULT_TIMING, SCENARIO_LABELS, scenarioSteps, type ScenarioId, type ScenarioStep, type ScenarioTiming } from './scenarios/definitions'
 import { api, usingMock } from '../api'
 import { primeSharedMockInactivity } from '../mocks/shared-client'
-import { getAppState, subscribeAppEvents, useAppState } from '../api/store'
+import { applyEvent, getAppState, subscribeAppEvents, useAppState } from '../api/store'
 import type { CompanionMessage, Config, Incident, Reading, Unit } from '../api/types'
 import { HOME_UNIT_ID, SensorGateway, readingForObject } from './integration/sensorGateway'
 import seed from '../../../shared/seed.json'
@@ -325,24 +325,44 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
     if (target === 'telephone') setVisualStates({ ...localStates.current, telephone: value ? 'ringing' : 'idle' })
     else await sendObjectState(target, value)
   }
-  const waitForIncident = (predicate: (incidents: Incident[]) => boolean, signal: AbortSignal, timeoutMs = 0) => new Promise<void>((resolve, reject) => {
+  const waitForIncident = (predicate: (incidents: Incident[]) => boolean, signal: AbortSignal) => new Promise<void>((resolve, reject) => {
     if (signal.aborted) { reject(new DOMException('Scenario stopped', 'AbortError')); return }
-    let timeout: ReturnType<typeof setTimeout> | null = null
+    let pollTimer: ReturnType<typeof setInterval> | null = null
+    let settled = false
     const check = () => {
       const incidents = getAppState().incidents.filter(item => item.unit_id === HOME_UNIT_ID)
-      if (!predicate(incidents)) return
+      if (settled || !predicate(incidents)) return
+      settled = true
       cleanup()
       resolve()
     }
-    const abort = () => { cleanup(); reject(new DOMException('Scenario stopped', 'AbortError')) }
+    const abort = () => { if (settled) return; settled = true; cleanup(); reject(new DOMException('Scenario stopped', 'AbortError')) }
     const unsubscribe = subscribeAppEvents(check)
-    const cleanup = () => { unsubscribe(); signal.removeEventListener('abort', abort); if (timeout) clearTimeout(timeout) }
+    const cleanup = () => { unsubscribe(); signal.removeEventListener('abort', abort); if (pollTimer) clearInterval(pollTimer) }
+    const refresh = async () => {
+      if (settled) return
+      try {
+        const incidents = await api.getUnitIncidents(HOME_UNIT_ID)
+        if (settled || signal.aborted || !predicate(incidents)) return
+        for (const incident of incidents) {
+          const local = getAppState().incidents.find(item => item.incident_id === incident.incident_id)
+          if (!local || local.state !== incident.state || local.events.length !== incident.events.length)
+            applyEvent({ type: 'incident.updated', at: incident.opened_at, data: incident })
+        }
+        check()
+      } catch (error) {
+        if (settled) return
+        settled = true
+        cleanup()
+        reject(error)
+      }
+    }
     signal.addEventListener('abort', abort, { once: true })
-    if (timeoutMs) timeout = setTimeout(() => { cleanup(); reject(new Error('The mock did not start the inactivity check. Reset Demo and try again.')) }, timeoutMs)
+    if (usingMock) pollTimer = setInterval(() => { void refresh() }, 500)
     check()
   })
-  const waitForGrace = async (signal: AbortSignal, timeoutMs = 0) => {
-    await waitForIncident(items => items.some(item => item.state === 'grace'), signal, timeoutMs)
+  const waitForGrace = async (signal: AbortSignal) => {
+    await waitForIncident(items => items.some(item => item.state === 'grace'), signal)
     const incident = getAppState().incidents.find(item => item.unit_id === HOME_UNIT_ID && item.state === 'grace')
     if (!incident) throw new Error('The backend grace state ended before recovery could begin')
     graceIncident.current = incident.incident_id
@@ -350,8 +370,27 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
   }
   const waitForQuietGap = async (signal: AbortSignal) => {
     if (signal.aborted) throw new DOMException('Scenario stopped', 'AbortError')
-    if (usingMock) await primeSharedMockInactivity()
-    await waitForGrace(signal, usingMock ? 5000 : 0)
+    if (usingMock) {
+      const prior = await api.getUnitIncidents(HOME_UNIT_ID)
+      if (prior.some(item => ['grace', 'notified', 'acknowledged'].includes(item.state)))
+        throw new Error('A previous A-105 incident is still active. Close it on the dashboard or use Reset Demo before starting this scenario.')
+      const previousIds = new Set(prior.map(item => item.incident_id))
+      let incident = await primeSharedMockInactivity()
+      if (!incident) {
+        // A tab left open through a code update can still be attached to the older worker protocol.
+        for (let attempt = 0; attempt < 15 && !incident; attempt++) {
+          if (signal.aborted) throw new DOMException('Scenario stopped', 'AbortError')
+          const current = await api.getUnitIncidents(HOME_UNIT_ID)
+          incident = current.find(item => !previousIds.has(item.incident_id) && item.state === 'grace')
+          if (!incident) await clock.current.wait(.2, signal)
+        }
+      }
+      if (!incident || incident.unit_id !== HOME_UNIT_ID || incident.state !== 'grace')
+        throw new Error('The mock session did not create a new inactivity incident. Close every TemanMu tab, then reopen the app to refresh its SharedWorker.')
+      graceIncident.current = incident.incident_id
+      graceDeadline.current = incident.grace_ends_at
+      applyEvent({ type: 'incident.updated', at: incident.opened_at, data: incident })
+    } else await waitForGrace(signal)
     setVisualStates({ ...localStates.current, telephone: 'ringing' })
   }
   const waitForNoAnswer = async (signal: AbortSignal) => {
@@ -364,16 +403,36 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
     const id = graceIncident.current
     if (!id) { reject(new Error('No backend inactivity incident was observed')); return }
     if (signal.aborted) { reject(new DOMException('Scenario stopped', 'AbortError')); return }
+    let pollTimer: ReturnType<typeof setInterval> | null = null
+    let settled = false
     const check = () => {
       const notified = getAppState().notifications.some(item => item.incident_id === id && item.role === 'caregiver' && item.kind === 'alert')
-      if (!notified) return
+      if (settled || !notified) return
+      settled = true
       cleanup()
       resolve()
     }
-    const abort = () => { cleanup(); reject(new DOMException('Scenario stopped', 'AbortError')) }
+    const abort = () => { if (settled) return; settled = true; cleanup(); reject(new DOMException('Scenario stopped', 'AbortError')) }
     const unsubscribe = subscribeAppEvents(check)
-    const cleanup = () => { unsubscribe(); signal.removeEventListener('abort', abort) }
+    const cleanup = () => { unsubscribe(); signal.removeEventListener('abort', abort); if (pollTimer) clearInterval(pollTimer) }
+    const refresh = async () => {
+      if (settled) return
+      try {
+        const notifications = await api.getNotifications('caregiver')
+        if (settled || signal.aborted) return
+        const alert = notifications.find(item => item.incident_id === id && item.kind === 'alert')
+        if (alert && !getAppState().notifications.some(item => item.notification_id === alert.notification_id))
+          applyEvent({ type: 'notification.created', at: alert.created_at, data: alert })
+        check()
+      } catch (error) {
+        if (settled) return
+        settled = true
+        cleanup()
+        reject(error)
+      }
+    }
     signal.addEventListener('abort', abort, { once: true })
+    if (usingMock) pollTimer = setInterval(() => { void refresh() }, 500)
     check()
   })
   const dispatchResponder = async (signal: AbortSignal) => {

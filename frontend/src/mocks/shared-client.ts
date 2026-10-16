@@ -1,5 +1,5 @@
 import { ApiError } from '../api/live'
-import type { Api, RealtimeEvent } from '../api/types'
+import type { Api, Incident, RealtimeEvent } from '../api/types'
 
 type Method = Exclude<keyof Api, 'connect'> | 'primeInactivity'
 type Reply = { kind: 'reply'; id: number; result?: unknown; error?: { status?: number; message: string } }
@@ -48,7 +48,7 @@ function call<T>(method: Method, ...args: unknown[]): Promise<T> {
   })
 }
 
-export const primeSharedMockInactivity = () => call<void>('primeInactivity')
+export const primeSharedMockInactivity = () => call<Incident | undefined>('primeInactivity')
 
 export const sharedMockApi: Api = {
   getConfig: () => call('getConfig'),

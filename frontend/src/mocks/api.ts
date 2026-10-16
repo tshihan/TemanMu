@@ -83,7 +83,7 @@ export const mockSnapshot = (): Snapshot => clone(state)
 
 // Presenter-only time jump: simulate the quiet-gap detector after a visible quiet period.
 // It never runs in live mode; real status decisions belong to the backend.
-export function primeMockInactivity(): void {
+export function primeMockInactivity(): Incident {
   const unit = unitOrThrow('A-105')
   if (latestIncident(unit.unit_id)) throw new ApiError(409, 'An incident is already active. Reset Demo before the inactivity scenario.')
   if (unit.status === 'possible_away' || unit.latest.door !== 'closed')
@@ -93,7 +93,7 @@ export function primeMockInactivity(): void {
   morningSent = true
   unit.quiet_gap.last_water_activity_at = new Date(Date.now() - unit.baseline.usual_quiet_gap_seconds * 1000).toISOString()
   publish('unit.updated', clone(unit))
-  startGrace(unit)
+  return startGrace(unit)
 }
 
 function later(action: () => void, milliseconds: number): void {
