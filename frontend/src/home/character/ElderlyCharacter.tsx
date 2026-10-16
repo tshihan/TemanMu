@@ -47,8 +47,8 @@ function disposeAvatar(group: Group) {
 }
 
 /** Self-contained actor: loaded once, animated in the render loop, navigated on authored clear paths. */
-export function ElderlyCharacter({ command, pose, speech, visible, paused, onStatus, onReached, onArrived, onAnimationComplete }: {
-  command: CharacterCommand; pose: InteractionPose; speech: boolean; visible: boolean; paused: boolean
+export function ElderlyCharacter({ command, pose, speech, visible, paused, urgent, onStatus, onReached, onArrived, onAnimationComplete }: {
+  command: CharacterCommand; pose: InteractionPose; speech: string | null; visible: boolean; paused: boolean; urgent: boolean
   onStatus: (status: CharacterStatus) => void; onReached: (id: number, target: InteractionId) => void
   onArrived: (id: number, target: Waypoint) => void; onAnimationComplete: (id: number, animation: CharacterAnimation) => void
 }) {
@@ -62,6 +62,7 @@ export function ElderlyCharacter({ command, pose, speech, visible, paused, onSta
   const anchor = useRef<Waypoint>('bedroom')
   const destination = useRef<Waypoint | null>(null)
   const moveCommandId = useRef(0)
+  const handledCommandId = useRef(0)
   const interaction = useRef<{ id: number; target: InteractionId } | null>(null)
   const pausedNext = useRef<Waypoint | null>(null)
   const lastRoom = useRef<RoomId>('bedroom')
@@ -134,7 +135,8 @@ export function ElderlyCharacter({ command, pose, speech, visible, paused, onSta
   }, [invalidate, onStatus])
 
   useEffect(() => {
-    if (command.id === 0 || !shell.current) return
+    if (command.id === 0 || command.id === handledCommandId.current || !shell.current) return
+    handledCommandId.current = command.id
     if (command.destination === 'reset') {
       queue.current = []
       pausedNext.current = null
@@ -168,7 +170,7 @@ export function ElderlyCharacter({ command, pose, speech, visible, paused, onSta
       pausedNext.current = null
       interaction.current = null
       destination.current = null
-      motion.current = { id: command.id, kind, elapsed: 0, duration: kind === 'collapse' ? 3.1 : kind === 'recover' ? 3.2 : 2.2 }
+      motion.current = { id: command.id, kind, elapsed: 0, duration: kind === 'collapse' ? 3.1 : kind === 'recover' ? (urgent ? 2.2 : 3.2) : 2.2 }
       onStatus({ room: lastRoom.current, destination: null, phase: 'interacting' })
       invalidate()
       return
@@ -194,7 +196,7 @@ export function ElderlyCharacter({ command, pose, speech, visible, paused, onSta
       onStatus({ room: lastRoom.current, destination: destination.current, phase: 'walking' })
     }
     invalidate()
-  }, [command, invalidate, onStatus, onArrived])
+  }, [command, invalidate, onStatus, onArrived, urgent])
 
   useFrame((_, delta) => {
     const shellGroup = shell.current
@@ -217,7 +219,7 @@ export function ElderlyCharacter({ command, pose, speech, visible, paused, onSta
       shellGroup.rotation.y += MathUtils.clamp(difference, -TURN_SPEED * frame, TURN_SPEED * frame)
       const remaining = Math.hypot(dx, dz)
       if (Math.abs(difference) < .42) {
-        const step = Math.min(remaining, WALK_SPEED * frame)
+        const step = Math.min(remaining, WALK_SPEED * (urgent ? 2.4 : 1) * frame)
         if (remaining > 0) {
           shellGroup.position.x += dx / remaining * step
           shellGroup.position.z += dz / remaining * step
@@ -288,6 +290,7 @@ export function ElderlyCharacter({ command, pose, speech, visible, paused, onSta
       if (motion.current?.kind === 'collapse' && motion.current.elapsed < .7)
         poseGroup.current.rotation.z += Math.sin(motion.current.elapsed * 16) * .07 * (1 - motion.current.elapsed / .7)
     }
+    animation.walk.timeScale = urgent ? 1.9 : .8
     if (fallPose.current < .99) mixer.current?.update(frame)
     reachStrength.current = MathUtils.damp(reachStrength.current, pose === 'none' ? 0 : 1, 6, frame)
     if (arm.current) {
@@ -302,6 +305,6 @@ export function ElderlyCharacter({ command, pose, speech, visible, paused, onSta
 
   return <group ref={shell} name="madam-lee-mei-ling" visible={visible} position={[WAYPOINTS.bedroom[0], .045, WAYPOINTS.bedroom[1]]}>
     <group ref={poseGroup}>{model && <primitive object={model} />}</group>
-    {speech && <Html position={[0, 1.9, 0]} center distanceFactor={10} style={{ pointerEvents: 'none' }}><span className="home-character-speech">“Thinking of you, Mum!”</span></Html>}
+    {speech && <Html position={[0, 1.9, 0]} center style={{ pointerEvents: 'none' }}><span className="home-character-speech">“{speech}”</span></Html>}
   </group>
 }

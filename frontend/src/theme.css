@@ -33,13 +33,19 @@ button:focus-visible, select:focus-visible, .divider:focus-visible { outline: 3p
 .environment-label, .connection-label { border: 1px solid var(--color-warm-taupe); background: var(--color-aged-paper); font-size: 12px; }
 .connection-label.is-connected { border-color: #d8ae97; background: var(--color-terracotta-wash); color: var(--color-terracotta-dark); }
 .workspace { width: min(100%, 1280px); margin: 0 auto; padding: 20px 24px 24px; }
+.workspace-dashboard, .workspace-simulator { width: min(100%, 1440px); }
+.view-navigation { border-color: var(--color-warm-taupe); background: var(--color-aged-paper); }
+.view-navigation a { color: var(--color-charcoal); }
+.view-navigation a[aria-current="page"] { background: var(--color-terracotta); color: var(--color-parchment); box-shadow: none; }
+.view-navigation a:hover { color: var(--color-terracotta-dark); }
+.view-navigation a[aria-current="page"]:hover { color: var(--color-parchment); }
 .home-panel, .dashboard-panel { border-color: var(--color-warm-taupe); border-radius: 24px; background: var(--color-parchment); }
 .panel-heading, .dashboard-header { border-color: var(--color-warm-taupe); padding: 24px 28px; }
 .eyebrow { margin-bottom: 8px; color: var(--color-terracotta); font-size: 12px; font-weight: 700; letter-spacing: -.023em; }
-.panel-heading h1, .dashboard-header h2, .township-intro h3, .detail-hero-copy h3, .caregiver-status h3 {
+.panel-heading h1, .dashboard-header h1, .dashboard-header h2, .township-intro h3, .detail-hero-copy h3, .caregiver-status h3 {
   color: var(--color-ink); font-family: var(--font-editorial); font-weight: 400; letter-spacing: -.025em;
 }
-.panel-heading h1, .dashboard-header h2 { font-size: clamp(25px, 2.2vw, 34px); line-height: 1.05; }
+.panel-heading h1, .dashboard-header h1, .dashboard-header h2 { font-size: clamp(25px, 2.2vw, 34px); line-height: 1.05; }
 .panel-heading em, .dashboard-header em, .township-intro em { font-weight: 400; }
 .panel-tag { border: 1px solid var(--color-warm-taupe); border-radius: 9999px; background: var(--color-aged-paper); color: var(--color-graphite); font-size: 12px; }
 .divider::before { background: var(--color-warm-taupe); }

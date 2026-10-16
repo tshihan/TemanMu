@@ -26,7 +26,13 @@ let state: AppState = {
   readingsByUnit: {}, snapshotRevision: 0,
 }
 const subscribers = new Set<() => void>()
+const eventSubscribers = new Set<(event: RealtimeEvent) => void>()
+export const subscribeAppEvents = (listener: (event: RealtimeEvent) => void) => {
+  eventSubscribers.add(listener)
+  return () => { eventSubscribers.delete(listener) }
+}
 const getSnapshot = () => state
+export const getAppState = () => state
 const subscribe = (listener: () => void) => { subscribers.add(listener); return () => { subscribers.delete(listener) } }
 const setState = (next: AppState) => { state = next; subscribers.forEach(listener => listener()) }
 
@@ -55,6 +61,9 @@ export function applyEvent(event: RealtimeEvent): void {
     case 'notification.created':
       setState({ ...state, notifications: [event.data, ...state.notifications.filter(item => item.notification_id !== event.data.notification_id)] })
       break
+    case 'notification.updated':
+      setState({ ...state, notifications: upsert(state.notifications, event.data, 'notification_id') })
+      break
     case 'reading.received':
       setState({ ...state, readingsByUnit: {
         ...state.readingsByUnit,
@@ -65,6 +74,7 @@ export function applyEvent(event: RealtimeEvent): void {
       // Companion history loads from REST when its view opens.
       break
   }
+  eventSubscribers.forEach(listener => listener(event))
 }
 
 export function connectStore(): () => void {

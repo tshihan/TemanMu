@@ -21,11 +21,18 @@ button { font: inherit; cursor: pointer; }
 .connection-label.is-connected { color: #286451; background: #eaf4ee; }
 .connection-dot { height: 7px; width: 7px; border-radius: 50%; background: currentColor; }
 .workspace { display: grid; grid-template-columns: minmax(0, var(--home-share)) 12px minmax(0, 1fr); flex: 1; min-height: 0; padding: 16px; }
+.workspace-dashboard, .workspace-simulator { display: flex; width: min(100%, 1440px); }
+.workspace-dashboard > .dashboard-panel, .workspace-simulator > .home-panel { flex: 1; }
+.view-navigation { display: flex; align-items: center; gap: 5px; margin-left: auto; padding: 4px; border: 1px solid #dce4e1; border-radius: 999px; background: #f2f5f4; }
+.view-navigation a { padding: 8px 12px; border-radius: 999px; color: #51665b; font-size: 12px; font-weight: 700; text-decoration: none; white-space: nowrap; }
+.view-navigation a[aria-current="page"] { background: #fff; color: #245a40; box-shadow: 0 1px 5px #173e271a; }
+.view-navigation a:hover { color: #245a40; }
+.view-navigation a:focus-visible { outline: 2px solid #287b61; outline-offset: 2px; }
 .home-panel, .dashboard-panel { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; border: 1px solid #dce4e1; border-radius: 16px; background: #fff; }
 .panel-heading, .dashboard-header { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 22px 24px; flex: none; border-bottom: 1px solid #e6ece9; }
 .eyebrow { margin: 0 0 5px; color: #56796b; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .13em; }
 h1, h2, h3, p { margin-top: 0; }
-.panel-heading h1, .dashboard-header h2 { margin-bottom: 0; font-size: clamp(19px, 1.5vw, 25px); line-height: 1.2; font-weight: 720; }
+.panel-heading h1, .dashboard-header h1, .dashboard-header h2 { margin-bottom: 0; font-size: clamp(19px, 1.5vw, 25px); line-height: 1.2; font-weight: 720; }
 .panel-tag { white-space: nowrap; font-size: 11px; font-weight: 700; color: #61736d; padding: 7px 9px; border-radius: 6px; background: #edf2ef; }
 .home-stage { flex: 1; min-height: 0; display: grid; place-items: center; padding: 18px; overflow: auto; background: linear-gradient(145deg, #eef4ef, #e7efeb); }
 .home-stage-3d { position: relative; display: flex; padding: 0; overflow: hidden; container-type: inline-size; }
@@ -263,4 +270,15 @@ h1, h2, h3, p { margin-top: 0; }
   .caregiver-portrait { width: min(65%, 190px); justify-self: start; }
   .caregiver-status-side { gap: 18px; }
   .caregiver-status-indicator { top: 18px; right: 18px; max-width: 45%; }
+}
+@media (max-width: 800px) {
+  .app-header { height: auto; min-height: 74px; flex-wrap: wrap; padding-top: 10px; padding-bottom: 10px; }
+  .view-navigation { order: 3; width: 100%; justify-content: center; margin-left: 0; }
+  .workspace-dashboard > .dashboard-panel, .workspace-simulator > .home-panel { min-height: 0; }
+}
+@media (max-width: 960px) {
+  .app-shell:has(.workspace-simulator) { height: auto; min-height: 100vh; overflow: visible; }
+  .workspace-simulator > .home-panel, .workspace-simulator .home-stage-3d { overflow: visible; }
+  .workspace-simulator .home-stage-3d { height: auto; }
+  .workspace-simulator .home-environment { height: auto; }
 }

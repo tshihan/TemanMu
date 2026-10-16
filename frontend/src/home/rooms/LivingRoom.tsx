@@ -29,7 +29,7 @@ function Telephone({ state, paused }: { state: TelephoneState; paused?: boolean 
       {[-.13, .13].map(z => <Ball key={z} at={[0, -.02, z]} size={[.075, .055, .065]} mat={m.dark} />)}
     </group>
     <Pipe points={[[-.17, .04, -.12], [-.29, -.03, -.15], [-.29, -.03, .15], [-.15, .06, .17]]} radius={.012} mat={m.dark} />
-    {state === 'ringing' && <Html position={[0, .44, 0]} center distanceFactor={9} style={{ pointerEvents: 'none' }}><span className="home-object-tip">♪ Incoming call</span></Html>}
+    {state === 'ringing' && <Html position={[0, .44, 0]} center style={{ pointerEvents: 'none' }}><span className="home-object-tip">♪ Incoming call</span></Html>}
   </group>
 }
 

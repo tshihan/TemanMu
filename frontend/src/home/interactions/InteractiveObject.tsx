@@ -23,7 +23,7 @@ export function InteractiveObject({ id, label, selected, hovered, disabled, onSe
         <ringGeometry args={[Math.min(hitboxSize[0], hitboxSize[2]) * .42, Math.min(hitboxSize[0], hitboxSize[2]) * .49, 32]} />
         <meshBasicMaterial color={selected ? '#d99d4d' : '#92b484'} transparent opacity={.78} depthWrite={false} />
       </mesh>
-      <Html position={tooltip} center distanceFactor={9} style={{ pointerEvents: 'none' }}>
+      <Html position={tooltip} center style={{ pointerEvents: 'none' }}>
         <span className={`home-object-tip${selected ? ' is-selected' : ''}`}>{disabled ? 'Scenario playing' : selected ? 'Selected · ' + label : label}</span>
       </Html>
     </>}

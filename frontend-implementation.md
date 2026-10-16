@@ -4,9 +4,9 @@
 
 ## What we are building
 
-One browser page has a simulated home on the left and a dashboard on the right. The dashboard switches between **Township Operator** and **Caregiver**. It reads water, electricity and front-door data for enrolled homes, shows why a status changed, and supports a human incident response. The demo has six enrolled units, A-101 through A-106. A-105 is the controllable home.
+The product dashboard opens by default and switches between **Township Operator** and **Caregiver**. The 3D home is a separate **Presenter Simulator** tab, clearly labelled as a demo input tool. Both tabs share the same API session, so simulator readings appear on the dashboard. The dashboard reads water, electricity and front-door data for six enrolled homes, A-101 through A-106. A-105 is the controllable home.
 
-The **3D viewer is a reusable component** mounted in the left panel. Missions 1–4 supply the furnished scene, animated resident, interactive objects and automated 3D scenarios. These scenarios run only inside the viewer. The existing dashboard mock controls and meter strip stay in the app shell; future integration will connect sensor objects and companion-call events to backend-owned unit status.
+The **3D viewer is a reusable component** mounted only in the presenter tab. Missions 1–4 supply the furnished scene, animated resident, interactive objects and automated 3D scenarios. Mission 5 connects the viewer's sensor changes, meter, reset and companion phone to the shared frontend API and event store. In mock mode a SharedWorker owns the session across tabs; in live mode both tabs use backend REST and WebSocket. Backend-owned status rules remain outside the viewer; live ingestion and WebSocket handlers are not yet present in this repository.
 
 For the current Township navigation, the housing block has four visible floors. Only **Floor 1** opens; it contains all six enrolled homes. Floors 2–4 show no enrolled homes. The API has no `floor` field yet, so this is a frontend demo assumption. Add a shared floor field to the seed and API before distributing units across floors.
 
@@ -15,10 +15,10 @@ For the current Township navigation, the housing block has four visible floors. 
 | Phase | Deliverable | Current state |
 | --- | --- | --- |
 | 1. Foundation | App scaffold, shared types, mock and live data clients | Built; build, lint and browser smoke check passed |
-| 2. App shell | Split screen, home slot, role switcher and notification badge | Built; checked at 1366×768 |
+| 2. App shell | Separate product dashboard and presenter simulator tabs, role switcher and notification badge | Built; two-tab mock reading sync browser checked |
 | 3. Township view | Floors → illustrated homes → unit detail | Built against seed/mock data; live safety transitions still depend on the backend |
 | 4. Caregiver and incident flow | Caregiver safety view and shared response actions | Built and browser checked in mock mode |
-| 5. 3D viewer handoff | Embed and connect the separately built viewer | Missions 1–4 embedded and browser checked; sensor/backend integration pending |
+| 5. 3D viewer handoff | Embed and connect the separately built viewer | Mission 5 frontend bridge built and mock browser checked; live backend handlers pending |
 | 6. Backend integration | Replace mocks with live REST/WebSocket data | Pending backend safety endpoints |
 | 7. Companionship, polish and demo QA | Normal-day features and full demo run | Pending |
 
@@ -32,9 +32,9 @@ For the current Township navigation, the housing block has four visible floors. 
 
 ## Phase 2 — App shell
 
-**Build:** A single-screen split layout, a left slot for the viewer, Township/Caregiver tabs, and an unread badge on the inactive role. The divider is draggable, keyboard adjustable, resettable and saved across refreshes. Keep both panels usable at 1366×768; let panel content scroll internally.
+**Build:** A product dashboard with Township/Caregiver tabs and an unread badge on the inactive role, plus a separate presenter tab for the simulator. Keep both views usable at 1366×768 and let content scroll internally.
 
-**Done when:** Switching roles changes only the right panel, a new inactive-role notification shows a badge until that role is viewed, and resizing does not hide controls. **Current status:** done with the furnished 3D viewer mounted. Mock mode has a temporary water-use preview control to exercise the badge.
+**Done when:** Switching roles changes the product view, a new inactive-role notification shows a badge until that role is viewed, and the simulator is clearly separate. **Current status:** done. The mock API is shared across tabs through a SharedWorker; a tap action in the presenter tab updated A-105's water timeline and caregiver badge in the already-open dashboard tab.
 
 ## Phase 3 — Township view
 
@@ -50,15 +50,15 @@ Extend mock scenarios so the dashboard can demonstrate detection → grace → n
 
 **Done when:** Both roles can follow and act on one mock incident, a new alert is visible in the inactive-role badge, reminders stop after acknowledgement, and both views show the same outcome.
 
-**Current status:** Built in mock mode. The Caregiver view includes a chronological activity timeline above incident response, based on reassurance notifications and status changes received during the current page session. The left-panel controls run the four PRD scenarios; each run starts from a fresh seed snapshot. The simulated grace and reminder intervals are 15 seconds, while the resident's quiet-gap baseline comes from the seed. Browser checks covered morning reassurance, the simulated call, grace and alert escalation, reminders, acknowledgement and closure, silent Going Out, and False Alarm Recovery. Mock state and timers live only in the page session; refreshing clears them. Backend-owned timers and persistence are Phase 6.
+**Current status:** Built in mock mode. The Caregiver view includes a chronological activity timeline above incident response, based on reassurance notifications and status changes received during the current tab session. Earlier dashboard-only mock scenario buttons were removed from the product view to keep presenter controls separate. After a 3D collapse, a presenter-only mock command starts a simulated quiet-gap detection and grace period in the SharedWorker; live mode still waits for backend events. Mock state and timers live in the SharedWorker while at least one app tab remains open; backend-owned timers and persistence are Phase 6.
 
 ## Phase 5 — Separate 3D viewer handoff
 
-**Viewer owner builds separately:** The furnished home scene is embedded. Mission 2 adds Madam Lee's rigged avatar, idle/walk animation and room-to-room movement. Mission 3 adds clickable tap, kettle, door and telephone interactions, plus local test controls. Mission 4 adds scripted Normal Morning, Going Out, Unusual Inactivity and False Alarm Recovery sequences with pause/resume/stop/reset and configurable outdoor/recovery waits. Their visual states stay inside the viewer and do not send sensor readings or update the dashboard. The app retains its separate mock meter panel, scenario buttons and reset control. The character is audience-only and never sends movement data.
+**Viewer owner builds separately:** The furnished home scene is embedded in the presenter tab. Mission 2 adds Madam Lee's rigged avatar, idle/walk animation and room-to-room movement. Mission 3 adds clickable tap, kettle, door and telephone interactions, plus local test controls. Mission 4 adds scripted Normal Morning, Going Out, Unusual Inactivity and False Alarm Recovery sequences with pause/resume/stop/reset. Mission 5 sends sensor-object changes through the shared API and reads confirmed values from the shared store. The character is audience-only and never sends movement data.
 
-**Frontend team integrates:** The viewer is mounted in the existing left `home-stage` slot. A later integration will connect its interactive objects to the shared API/realtime interface for A-105. At that stage, sensor objects and dashboard scenarios send `POST /api/readings`; the viewer receives `snapshot` after reset and `companion.message_delivered` for the phone animation. The viewer must not use dashboard state as a substitute for sending readings. Keep the permanent audience-only privacy label visible.
+**Frontend team integrates:** The viewer is mounted in the presenter view and posts A-105 sensor changes through the shared API client. Both tabs receive snapshots, readings, unit/incident changes and `companion.message_delivered`; the viewer calls demo reset after confirmation. The meter and scenario progress reflect API data, while the permanent audience-only privacy label remains visible. The remaining live handoff needs Backend 1's missing reading ingestion, WebSocket broadcaster and monitoring rules; no 3D code assigns a status or incident.
 
-**Done when:** A tap, kettle or door action changes the A-105 meter readout and dashboard through the API, reset restores both sides, and the viewer fits the resizable panel at the demo screen sizes. The scene can be developed in parallel with Phases 3–4; integration waits for its handoff.
+**Done when:** A tap, kettle or door action changes the A-105 meter readout and dashboard through the API, reset restores both tabs, and the viewer fits the presenter view at the demo screen sizes.
 
 ## Phase 6 — Live backend integration
 
@@ -80,11 +80,11 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:5173`. Mock mode is the current default. To use the real backend, copy `frontend/.env.example` to `frontend/.env.local`, set `VITE_USE_MOCK=false`, start FastAPI on port 8000, then restart Vite.
+Open `http://localhost:5173` for the product dashboard, then open **Presenter simulator ↗** in a second tab. Mock mode is the current default and shares one session across tabs in the same browser profile and origin. To use the real backend, copy `frontend/.env.example` to `frontend/.env.local`, set `VITE_USE_MOCK=false`, start FastAPI on port 8000, then restart Vite.
 
 | Area | File |
 | --- | --- |
-| App shell and viewer slot | `frontend/src/App.tsx` |
+| App shell and separate views | `frontend/src/App.tsx` |
 | Furnished 3D viewer | `frontend/src/home/HomeEnvironment.tsx` |
 | Township navigation and detail | `frontend/src/dashboard/TownshipView.tsx` |
 | Caregiver status and notification feed | `frontend/src/dashboard/CaregiverView.tsx` |
@@ -93,6 +93,7 @@ Open `http://localhost:5173`. Mock mode is the current default. To use the real 
 | Reusable home artwork | `frontend/src/dashboard/HomeIllustration.tsx` |
 | Shared contract types | `frontend/src/api/types.ts` |
 | Mock and live clients | `frontend/src/mocks/api.ts`, `frontend/src/api/live.ts` |
+| Shared mock tab session | `frontend/src/mocks/shared-worker.ts`, `frontend/src/mocks/shared-client.ts` |
 | Shared realtime state | `frontend/src/api/store.ts` |
 | Seed fixtures | `shared/seed.json` |
 

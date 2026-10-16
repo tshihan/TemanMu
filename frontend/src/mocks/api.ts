@@ -79,6 +79,19 @@ let responses: { activity_id: string; action: string }[] = []
 let morningSent = false
 let scenarioTimers = new Set<ReturnType<typeof setTimeout>>()
 
+export const mockSnapshot = (): Snapshot => clone(state)
+
+// Presenter-only trigger: simulate the quiet-gap detector after the 3D collapse.
+// It never runs in live mode; real status decisions belong to the backend.
+export function primeMockInactivity(): void {
+  const unit = unitOrThrow('A-105')
+  if (latestIncident(unit.unit_id)) return
+  morningSent = true
+  unit.quiet_gap.last_water_activity_at = new Date(Date.now() - unit.baseline.usual_quiet_gap_seconds * 1000).toISOString()
+  publish('unit.updated', clone(unit))
+  later(() => { if (!latestIncident(unit.unit_id)) startGrace(unit) }, 1000)
+}
+
 function later(action: () => void, milliseconds: number): void {
   const timer = setTimeout(() => { scenarioTimers.delete(timer); action() }, milliseconds)
   scenarioTimers.add(timer)
@@ -276,7 +289,10 @@ export const mockApi: Api = {
     return clone(incident)
   },
   async markNotificationsRead(role) {
-    for (const item of state.notifications) if (item.role === role) item.read = true
+    for (const item of state.notifications) if (item.role === role && !item.read) {
+      item.read = true
+      publish('notification.updated', clone(item))
+    }
   },
   async respondToActivity(id, action) {
     if (!activities().some(item => item.activity_id === id)) throw new ApiError(404, 'Activity not found')

@@ -14,6 +14,11 @@ import { ROOM_LABELS, type RoomId, type Waypoint } from './character/navigation'
 import { INITIAL_OBJECT_STATES, INTERACTIONS, interactionPrompt, type InteractionBindings, type InteractionId, type ObjectStates } from './interactions/registry'
 import { ScenarioController, type ScenarioActions } from './scenarios/ScenarioController'
 import { DEFAULT_TIMING, SCENARIO_LABELS, scenarioSteps, type ScenarioId, type ScenarioStep, type ScenarioTiming } from './scenarios/definitions'
+import { api, usingMock } from '../api'
+import { primeSharedMockInactivity } from '../mocks/shared-client'
+import { getAppState, subscribeAppEvents, useAppState } from '../api/store'
+import type { CompanionMessage, Config, Incident, Reading, Unit } from '../api/types'
+import { HOME_UNIT_ID, SensorGateway, readingForObject } from './integration/sensorGateway'
 import './home.css'
 
 type Command = { action: 'reset' | 'in' | 'out' | 'left' | 'right' | 'plan'; id: number }
@@ -26,8 +31,8 @@ export function HouseModel({ interaction }: { interaction?: InteractionBindings 
     <Architecture interaction={interaction} /><Bedroom /><Bathroom interaction={interaction} /><Kitchen interaction={interaction} /><LivingRoom interaction={interaction} /><DiningArea />
   </group>
 }
-function Scene({ command, characterCommand, interaction, pose, speech, visible, paused, onCharacterStatus, onReached, onArrived, onAnimationComplete, onReady }: {
-  command: Command; characterCommand: CharacterCommand; interaction: InteractionBindings; pose: InteractionPose; speech: boolean; visible: boolean; paused: boolean
+function Scene({ command, characterCommand, interaction, pose, speech, visible, paused, urgent, onCharacterStatus, onReached, onArrived, onAnimationComplete, onReady }: {
+  command: Command; characterCommand: CharacterCommand; interaction: InteractionBindings; pose: InteractionPose; speech: string | null; visible: boolean; paused: boolean; urgent: boolean
   onCharacterStatus: (status: CharacterStatus) => void; onReached: (id: number, target: InteractionId) => void
   onArrived: (id: number, target: Waypoint) => void; onAnimationComplete: (id: number, animation: CharacterAnimation) => void; onReady: () => void
 }) {
@@ -89,7 +94,7 @@ function Scene({ command, characterCommand, interaction, pose, speech, visible, 
       shadow-camera-top={9} shadow-camera-bottom={-9} shadow-normalBias={.035} shadow-bias={-.0001} />
     <directionalLight position={[5, 8, -7]} intensity={.8} color="#e8efff" />
     <HouseModel interaction={interaction} />
-    <ElderlyCharacter command={characterCommand} pose={pose} speech={speech} visible={visible} paused={paused}
+    <ElderlyCharacter command={characterCommand} pose={pose} speech={speech} visible={visible} paused={paused} urgent={urgent}
       onStatus={onCharacterStatus} onReached={onReached} onArrived={onArrived} onAnimationComplete={onAnimationComplete} />
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -.48, 0]} receiveShadow>
       <planeGeometry args={[200, 200]} /><meshStandardMaterial color="#eeeae1" roughness={1} />
@@ -105,9 +110,30 @@ class SceneBoundary extends Component<{ children: ReactNode }, { failed: boolean
   }
 }
 const ready = () => { /* Stable callback: resizing must not create a render loop. */ }
+const isDeadlinePast = (deadline: string) => Date.now() >= Date.parse(deadline)
 
 /** Self-contained viewer. The parent controls its dimensions; no API or store dependency. */
 export function HomeEnvironment({ className = '' }: { className?: string }) {
+  const appState = useAppState()
+  const storeUnit = appState.units.find(item => item.unit_id === HOME_UNIT_ID)
+  const [fetchedUnit, setFetchedUnit] = useState<Unit | null>(null)
+  const [fetchedConfig, setFetchedConfig] = useState<Config | null>(null)
+  const [lastReading, setLastReading] = useState<Reading | null>(null)
+  const [recentReadings, setRecentReadings] = useState<Reading[]>([])
+  const [transmission, setTransmission] = useState<'idle' | 'sending' | 'confirmed' | 'error'>('idle')
+  const [integrationError, setIntegrationError] = useState<string | null>(null)
+  const [resetBusy, setResetBusy] = useState(false)
+  const [queuedCalls, setQueuedCalls] = useState<CompanionMessage[]>([])
+  const gateway = useRef(new SensorGateway(api))
+  const localStates = useRef<ObjectStates>(INITIAL_OBJECT_STATES)
+  const latestUnit = useRef<Unit | null>(null)
+  const seenSnapshot = useRef(appState.snapshotRevision > 0)
+  const reconnecting = useRef(false)
+  const deliveredCalls = useRef(new Set<string>())
+  const graceIncident = useRef<string | null>(null)
+  const graceDeadline = useRef<string | null>(null)
+  const lastPositiveWaterAt = useRef<string | null>(null)
+  const scenarioRef = useRef<ScenarioId | null>(null)
   const [command, setCommand] = useState<Command>({ action: 'reset', id: 0 })
   const [characterCommand, setCharacterCommand] = useState<CharacterCommand>({ destination: 'reset', id: 0 })
   const [characterStatus, setCharacterStatus] = useState<CharacterStatus>({ room: 'bedroom', destination: null, phase: 'loading' })
@@ -116,7 +142,7 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
   const [selected, setSelected] = useState<InteractionId | null>(null)
   const [hovered, setHovered] = useState<InteractionId | null>(null)
   const [pose, setPose] = useState<InteractionPose>('none')
-  const [speech, setSpeech] = useState(false)
+  const [speech, setSpeech] = useState<string | null>(null)
   const [visible, setVisible] = useState(true)
   const [paused, setPaused] = useState(false)
   const [scenario, setScenario] = useState<ScenarioId | null>(null)
@@ -129,13 +155,22 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
   const runner = useRef<ScenarioController | null>(null)
   const clock = useRef(new ScenarioController())
   const scenarioActive = scenarioState === 'running' || scenarioState === 'paused'
+  const homeUnit = fetchedUnit ?? storeUnit ?? null
+  const setVisualStates = (next: ObjectStates) => { localStates.current = next; setStates(next) }
+  const syncUnit = (unit: Unit) => {
+    latestUnit.current = unit
+    gateway.current.sync(unit)
+    setFetchedUnit(unit)
+    setVisualStates({ bathroomTap: unit.latest.water_lpm > 0, kitchenKettle: unit.latest.power_kw > unit.baseline.standby_power_kw,
+      mainDoor: unit.latest.door === 'open', telephone: localStates.current.telephone })
+  }
   const cancelSequence = () => {
     active.current?.aborter.abort()
-    if (active.current?.target === 'telephone') setStates(value => ({ ...value, telephone: 'idle' }))
+    if (active.current?.target === 'telephone') setVisualStates({ ...localStates.current, telephone: 'idle' })
     active.current = null
     setSelected(null)
     setPose('none')
-    setSpeech(false)
+    setSpeech(null)
   }
   useEffect(() => () => {
     runner.current?.stop()
@@ -173,7 +208,36 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
     const id = nextCharacterCommand(animation, undefined, 'animate')
     return waitForCharacter(id, signal)
   }
-  const interactWith = async (target: InteractionId, incomingCall = false, approach?: Waypoint, externalSignal?: AbortSignal) => {
+  const sendObjectState = async (target: Exclude<InteractionId, 'telephone'>, on: boolean) => {
+    const unit = latestUnit.current
+    if (!unit) throw new Error('A-105 has not loaded from the backend')
+    if (scenarioRef.current === 'falseAlarmRecovery' && target === 'bathroomTap' && on) {
+      const incident = getAppState().incidents.find(item => item.incident_id === graceIncident.current)
+      if (incident?.state !== 'grace') throw new Error('The backend incident left grace before Madam Lee reached the tap')
+      if (graceDeadline.current && isDeadlinePast(graceDeadline.current))
+        throw new Error('The backend grace period expired before Madam Lee reached the tap')
+    }
+    const reading = readingForObject(target, on, unit)
+    setTransmission('sending')
+    setIntegrationError(null)
+    try {
+      const confirmed = await gateway.current.sendSensorReading(reading.sensor, reading.value)
+      if (confirmed) syncUnit(confirmed)
+      setTransmission('confirmed')
+      const refreshReadings = api.getReadings(HOME_UNIT_ID).then(items => {
+        setLastReading(items.at(-1) ?? null)
+        if (scenarioRef.current === 'falseAlarmRecovery' && target === 'bathroomTap' && on)
+          lastPositiveWaterAt.current = items.filter(item => item.sensor === 'water' && item.value === 6).at(-1)?.recorded_at ?? null
+      }).catch(() => { /* WebSocket reading event may supply the timestamp. */ })
+      if (scenarioRef.current === 'falseAlarmRecovery' && target === 'bathroomTap' && on) await refreshReadings
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') throw error
+      setTransmission('error')
+      setIntegrationError(error instanceof Error ? error.message : 'Reading failed')
+      throw error
+    }
+  }
+  const interactWith = async (target: InteractionId, incomingCall = false, approach?: Waypoint, externalSignal?: AbortSignal, desired?: boolean, message?: string) => {
     if (active.current?.target === target) return
     cancelSequence()
     const aborter = new AbortController()
@@ -183,7 +247,7 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
     if (aborter.signal.aborted) throw new DOMException('Action cancelled', 'AbortError')
     setHovered(null)
     setSelected(target)
-    if (target === 'telephone') setStates(value => ({ ...value, telephone: incomingCall ? 'ringing' : 'idle' }))
+    if (target === 'telephone') setVisualStates({ ...localStates.current, telephone: incomingCall ? 'ringing' : 'idle' })
     const id = nextCharacterCommand(target, approach, 'interact')
     active.current = { id, target, aborter }
     const actionClock = clock.current
@@ -191,17 +255,17 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
       await waitForCharacter(id, aborter.signal)
       await actionClock.wait(.65, aborter.signal)
       if (target === 'telephone') {
-        setStates(value => ({ ...value, telephone: 'answering' }))
+        setVisualStates({ ...localStates.current, telephone: 'answering' })
         setPose('phone')
-        setSpeech(true)
+        setSpeech(message ?? 'Thinking of you, Mum!')
         await actionClock.wait(3.55, aborter.signal)
-        setStates(value => ({ ...value, telephone: 'finished' }))
+        setVisualStates({ ...localStates.current, telephone: 'finished' })
         setPose('none')
-        setSpeech(false)
+        setSpeech(null)
         await actionClock.wait(.7, aborter.signal)
-        setStates(value => ({ ...value, telephone: 'idle' }))
+        setVisualStates({ ...localStates.current, telephone: 'idle' })
       } else {
-        setStates(value => ({ ...value, [target]: !value[target] }))
+        await sendObjectState(target, desired ?? !localStates.current[target])
         await actionClock.wait(.8, aborter.signal)
       }
       if (active.current?.id === id) {
@@ -216,23 +280,59 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
     }
   }
   const manualInteract = (target: InteractionId, incomingCall = false) => {
-    if (scenarioActive || characterStatus.phase === 'loading' || characterStatus.phase === 'error') return
-    void interactWith(target, incomingCall).catch(() => { /* Superseded by another manual action. */ })
+    if (scenarioActive || resetBusy || characterStatus.phase === 'loading' || characterStatus.phase === 'error' || !homeUnit) return
+    void interactWith(target, incomingCall).catch(error => { if (!(error instanceof DOMException && error.name === 'AbortError')) console.error('Interaction failed', error) })
   }
-  const interaction: InteractionBindings = { states, selected, hovered, paused, disabled: scenarioActive,
+  const interaction: InteractionBindings = { states, selected, hovered, paused, disabled: scenarioActive || resetBusy || !homeUnit,
     onSelect: id => manualInteract(id), onHover: setHovered }
-  const resetObjects = () => {
+  const resetLocalObjects = () => {
     cancelSequence()
     setHovered(null)
-    setStates(INITIAL_OBJECT_STATES)
+    setVisualStates(INITIAL_OBJECT_STATES)
   }
-  const setObject = (target: InteractionId, value: boolean) => {
-    if (target === 'telephone') setStates(current => ({ ...current, telephone: value ? 'ringing' : 'idle' }))
-    else setStates(current => ({ ...current, [target]: value }))
+  const setObject = async (target: InteractionId, value: boolean) => {
+    if (target === 'telephone') setVisualStates({ ...localStates.current, telephone: value ? 'ringing' : 'idle' })
+    else await sendObjectState(target, value)
+  }
+  const waitForIncident = (predicate: (incidents: Incident[]) => boolean, signal: AbortSignal) => new Promise<void>((resolve, reject) => {
+    if (signal.aborted) { reject(new DOMException('Scenario stopped', 'AbortError')); return }
+    const check = () => {
+      const incidents = getAppState().incidents.filter(item => item.unit_id === HOME_UNIT_ID)
+      if (!predicate(incidents)) return
+      cleanup()
+      resolve()
+    }
+    const abort = () => { cleanup(); reject(new DOMException('Scenario stopped', 'AbortError')) }
+    const unsubscribe = subscribeAppEvents(check)
+    const cleanup = () => { unsubscribe(); signal.removeEventListener('abort', abort) }
+    signal.addEventListener('abort', abort, { once: true })
+    check()
+  })
+  const waitForGrace = async (signal: AbortSignal) => {
+    await waitForIncident(items => items.some(item => item.state === 'grace'), signal)
+    const incident = getAppState().incidents.find(item => item.unit_id === HOME_UNIT_ID && item.state === 'grace')
+    if (!incident) throw new Error('The backend grace state ended before recovery could begin')
+    graceIncident.current = incident.incident_id
+    graceDeadline.current = incident.grace_ends_at
+  }
+  const waitForResolution = async (signal: AbortSignal) => {
+    const id = graceIncident.current
+    if (!id) throw new Error('No backend incident was observed')
+    await waitForIncident(items => items.some(item => item.incident_id === id && ['auto_resolved', 'notified', 'closed'].includes(item.state)), signal)
+    const incident = getAppState().incidents.find(item => item.incident_id === id)
+    if (incident?.state !== 'auto_resolved') throw new Error(`The backend did not auto-resolve the incident${incident ? ` (state: ${incident.state})` : ''}`)
+    const readingAt = lastPositiveWaterAt.current ?? getAppState().readingsByUnit[HOME_UNIT_ID]?.filter(item => item.sensor === 'water' && item.value === 6).at(-1)?.recorded_at
+    if (!readingAt || !graceDeadline.current || Date.parse(readingAt) >= Date.parse(graceDeadline.current))
+      throw new Error('The activity was not confirmed within the backend grace period')
   }
   const startScenario = (id: ScenarioId) => {
-    if (scenarioActive || characterStatus.phase === 'loading' || characterStatus.phase === 'error') return
-    resetObjects()
+    if (scenarioActive || resetBusy || !homeUnit || (!usingMock && !appState.connected) || characterStatus.phase === 'loading' || characterStatus.phase === 'error') return
+    cancelSequence()
+    graceIncident.current = null
+    graceDeadline.current = null
+    lastPositiveWaterAt.current = null
+    scenarioRef.current = id
+    setIntegrationError(null)
     setVisible(true)
     setPaused(false)
     const steps = scenarioSteps(id, timing)
@@ -243,24 +343,32 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
     setScenarioState('running')
     setScenarioProgress(null)
     const actions: ScenarioActions = {
-      moveTo, playAnimation,
-      interactWith: (object, approach, signal) => interactWith(object, false, approach, signal),
-      setCharacterVisible: setVisible,
-      setObject,
+      moveTo,
+      playAnimation: async (animation, signal) => {
+        await playAnimation(animation, signal)
+        if (usingMock && animation === 'collapse') await primeSharedMockInactivity()
+      },
+      interactWith: (object, value, approach, signal) => interactWith(object, false, approach, signal, value),
+      setCharacterVisible: setVisible, setObject, waitForGrace, waitForResolution,
     }
     void controller.play(steps, actions, (index: number, step: ScenarioStep) =>
       setScenarioProgress({ index: index + 1, total: steps.length, label: step.label }))
       .then(() => {
         if (runner.current !== controller) return
         runner.current = null
+        scenarioRef.current = null
         clock.current = new ScenarioController()
         setScenarioState('complete')
       }).catch(error => {
         if (runner.current !== controller) return
-        console.error('Scenario playback stopped unexpectedly', error)
+        if (!(error instanceof DOMException && error.name === 'AbortError')) {
+          console.error('Scenario playback stopped unexpectedly', error)
+          setIntegrationError(error instanceof Error ? error.message : 'Scenario could not complete')
+        }
         runner.current = null
+        scenarioRef.current = null
         clock.current = new ScenarioController()
-        resetObjects()
+        cancelSequence()
         setVisible(true)
         nextCharacterCommand('reset')
         setScenarioState('stopped')
@@ -278,17 +386,18 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
     setPaused(false)
     setScenarioState('running')
   }
-  const stopScenario = (clearProgress = false) => {
+  const stopScenario = (clearProgress = false, resetCharacter = true) => {
     runner.current?.stop()
     runner.current = null
+    scenarioRef.current = null
     clock.current = new ScenarioController()
-    resetObjects()
+    cancelSequence()
     pending.current.forEach(item => item.reject(new DOMException('Scenario stopped', 'AbortError')))
     pending.current.clear()
     setPaused(false)
     setVisible(true)
     setPose('none')
-    nextCharacterCommand('reset')
+    nextCharacterCommand(resetCharacter ? 'reset' : 'stop')
     if (clearProgress) { setScenario(null); setScenarioProgress(null); setScenarioState('idle') }
     else setScenarioState('stopped')
   }
@@ -304,9 +413,106 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
   }
   const resetInteractions = () => {
     if (scenarioActive) return
-    resetObjects()
+    cancelSequence()
+    setVisualStates({ ...localStates.current, telephone: 'idle' })
     if (characterStatus.phase !== 'loading' && characterStatus.phase !== 'error') nextCharacterCommand('stop')
   }
+  const restoreScene = (unit: Unit) => {
+    runner.current?.stop()
+    runner.current = null
+    scenarioRef.current = null
+    gateway.current.cancelQueued()
+    resetLocalObjects()
+    pending.current.forEach(item => item.reject(new DOMException('Scene reset', 'AbortError')))
+    pending.current.clear()
+    setPaused(false)
+    setVisible(true)
+    setPose('none')
+    setQueuedCalls([])
+    setIntegrationError(null)
+    graceIncident.current = null
+    graceDeadline.current = null
+    lastPositiveWaterAt.current = null
+    nextCharacterCommand('reset')
+    syncUnit(unit)
+    setScenario(null)
+    setScenarioProgress(null)
+    setScenarioState('idle')
+  }
+  const resetDemo = async () => {
+    if (resetBusy || !window.confirm('Reset the 3D demo and backend data for all units?')) return
+    setResetBusy(true)
+    setIntegrationError(null)
+    stopScenario(false, false)
+    gateway.current.cancelQueued()
+    try {
+      await gateway.current.drain()
+      const response = await api.resetDemo()
+      const unit = response.units.find(item => item.unit_id === HOME_UNIT_ID) ?? await api.getUnit(HOME_UNIT_ID)
+      restoreScene(unit)
+      setLastReading(null)
+      setRecentReadings([])
+      setTransmission('idle')
+      setIntegrationError(null)
+    } catch (error) {
+      setIntegrationError(error instanceof Error ? `Reset failed: ${error.message}` : 'Reset failed')
+    } finally { setResetBusy(false) }
+  }
+  useEffect(() => {
+    let cancelled = false
+    Promise.allSettled([api.getUnit(HOME_UNIT_ID), api.getConfig(), api.getReadings(HOME_UNIT_ID)]).then(results => {
+      if (cancelled) return
+      if (results[0].status === 'fulfilled') syncUnit(results[0].value)
+      else { if (!usingMock) setFetchedUnit(null); setIntegrationError('Could not load A-105 from the backend') }
+      if (results[1].status === 'fulfilled') setFetchedConfig(results[1].value)
+      if (results[2].status === 'fulfilled') {
+        setLastReading(results[2].value.at(-1) ?? null)
+        setRecentReadings(results[2].value.slice(-5).reverse())
+      }
+    })
+    return () => { cancelled = true }
+  }, [appState.connected])
+  useEffect(() => {
+    if (!appState.connected && seenSnapshot.current) {
+      reconnecting.current = true
+      if (!usingMock && runner.current) {
+        stopScenario()
+        setIntegrationError('Realtime connection lost; scenario stopped. Reconnect before replaying.')
+      }
+    }
+  }, [appState.connected])
+  useEffect(() => subscribeAppEvents(event => {
+    if (event.type === 'snapshot') {
+      const unit = event.data.units.find(item => item.unit_id === HOME_UNIT_ID)
+      if (unit) {
+        if (seenSnapshot.current && !reconnecting.current) restoreScene(unit)
+        else syncUnit(unit)
+      }
+      seenSnapshot.current = true
+      reconnecting.current = false
+      setFetchedConfig(event.data.config)
+      setLastReading(null)
+      setRecentReadings([])
+    } else if (event.type === 'unit.updated' && event.data.unit_id === HOME_UNIT_ID) syncUnit(event.data)
+    else if (event.type === 'reading.received' && event.data.unit_id === HOME_UNIT_ID) {
+      setLastReading(event.data)
+      setRecentReadings(items => [event.data, ...items.filter(item =>
+        item.recorded_at !== event.data.recorded_at || item.sensor !== event.data.sensor || item.value !== event.data.value)].slice(0, 5))
+      if (scenarioRef.current === 'falseAlarmRecovery' && event.data.sensor === 'water' && event.data.value === 6) lastPositiveWaterAt.current = event.data.recorded_at
+    }
+    else if (event.type === 'companion.message_delivered' && event.data.unit_id === HOME_UNIT_ID && !deliveredCalls.current.has(event.data.message_id)) {
+      deliveredCalls.current.add(event.data.message_id)
+      setQueuedCalls(items => [...items, event.data])
+    }
+  }), [])
+  useEffect(() => {
+    if (!queuedCalls.length || scenarioActive || resetBusy || !visible || characterStatus.phase !== 'idle' || active.current) return
+    const message = queuedCalls[0]
+    setQueuedCalls(items => items.slice(1))
+    void interactWith('telephone', true, undefined, undefined, undefined, message.text).catch(error => {
+      if (!(error instanceof DOMException && error.name === 'AbortError')) setIntegrationError(error instanceof Error ? error.message : 'Companion call failed')
+    })
+  }, [queuedCalls, scenarioActive, resetBusy, visible, characterStatus.phase])
   return <section className={`home-environment ${className}`} aria-label="Interactive furnished 3D home">
     <div className="home-scene-body">
     <div className="home-canvas" tabIndex={0} aria-label="3D home. Drag to rotate, scroll to zoom. Arrow keys rotate; plus and minus zoom; Home resets the camera."
@@ -317,6 +523,7 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
       <SceneBoundary><Canvas shadows={{ type: PCFShadowMap }} frameloop="demand" dpr={[1, 1.7]} gl={{ antialias: true, toneMapping: ACESFilmicToneMapping, toneMappingExposure: 1 }}
         fallback={<div className="home-fallback">This home needs a browser with WebGL enabled.</div>}>
         <Suspense fallback={null}><Scene command={command} characterCommand={characterCommand} interaction={interaction} pose={pose} speech={speech} visible={visible} paused={paused}
+          urgent={scenario === 'falseAlarmRecovery' && (scenarioProgress?.index ?? 0) >= 4}
           onCharacterStatus={setCharacterStatus} onReached={onReached} onArrived={onArrived} onAnimationComplete={onAnimationComplete} onReady={ready} /></Suspense>
       </Canvas></SceneBoundary>
     </div>
@@ -336,41 +543,68 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
       <button className="home-reset" onClick={() => send('reset')}><span aria-hidden="true">↺</span> Reset camera</button>
     </div>
     </div>
+    <aside className="home-controls" aria-label="Presenter controls">
     <details className="character-panel" aria-label="Character movement test controls" data-character-state={characterStatus.phase}>
       <summary className="character-panel-heading"><span className="character-avatar" aria-hidden="true">ML</span><span><strong>Madam Lee Mei Ling</strong><span role="status">{characterStatus.phase === 'loading' ? 'Loading character…' : characterStatus.phase === 'error' ? 'Character could not load' : scenarioActive ? scenarioProgress?.label ?? 'Scenario starting' : selected && characterStatus.phase === 'walking' ? `Walking to ${INTERACTIONS[selected].label}` : selected && characterStatus.phase === 'interacting' ? `Using ${INTERACTIONS[selected].label}` : characterStatus.destination ? `Walking to ${ROOM_LABELS[characterStatus.destination as RoomId] ?? 'next point'}` : `At ${ROOM_LABELS[characterStatus.room] ?? 'home'}`}</span></span><span className="character-panel-toggle">Movement controls ▾</span></summary>
       <div className="character-moves">
-        {(Object.keys(ROOM_LABELS) as RoomId[]).map(room => <button key={room} onClick={() => moveCharacter(room)} disabled={scenarioActive || characterStatus.phase === 'loading' || characterStatus.phase === 'error'}>Go to {ROOM_LABELS[room]}</button>)}
-        <button className="character-reset" onClick={() => moveCharacter('reset')} disabled={scenarioActive || characterStatus.phase === 'loading' || characterStatus.phase === 'error'}>Reset Character</button>
+        {(Object.keys(ROOM_LABELS) as RoomId[]).map(room => <button key={room} onClick={() => moveCharacter(room)} disabled={scenarioActive || resetBusy || characterStatus.phase === 'loading' || characterStatus.phase === 'error'}>Go to {ROOM_LABELS[room]}</button>)}
+        <button className="character-reset" onClick={() => moveCharacter('reset')} disabled={scenarioActive || resetBusy || characterStatus.phase === 'loading' || characterStatus.phase === 'error'}>Reset Character</button>
       </div>
     </details>
-    <details className="interaction-panel" aria-label="Household interaction development controls">
+    <details className="interaction-panel" aria-label="Household interaction development controls" open>
       <summary className="interaction-panel-heading"><strong>INTERACTION TEST</strong><span>Development controls · local only ▾</span></summary>
       <div className="interaction-actions">
-        {(['bathroomTap', 'kitchenKettle', 'mainDoor'] as const).map(id => <button key={id} onClick={() => manualInteract(id)} disabled={scenarioActive || characterStatus.phase === 'loading' || characterStatus.phase === 'error' || selected === id} aria-pressed={states[id]}>{interactionPrompt(id, states)}</button>)}
-        <button onClick={() => manualInteract('telephone', true)} disabled={scenarioActive || characterStatus.phase === 'loading' || characterStatus.phase === 'error' || selected === 'telephone'}>Test Incoming Call</button>
-        <button className="interaction-reset" onClick={resetInteractions} disabled={scenarioActive}>Reset Interactions</button>
+        {(['bathroomTap', 'kitchenKettle', 'mainDoor'] as const).map(id => <button key={id} onClick={() => manualInteract(id)} disabled={scenarioActive || resetBusy || !homeUnit || characterStatus.phase === 'loading' || characterStatus.phase === 'error' || selected === id} aria-pressed={states[id]}>{interactionPrompt(id, states)}</button>)}
+        <button onClick={() => manualInteract('telephone', true)} disabled={scenarioActive || resetBusy || characterStatus.phase === 'loading' || characterStatus.phase === 'error' || selected === 'telephone'}>Test Incoming Call</button>
+        <button className="interaction-reset" onClick={resetInteractions} disabled={scenarioActive || resetBusy}>Stop Interaction</button>
       </div>
       <div className="interaction-states" role="status">
         <span>Tap <b>{states.bathroomTap ? 'ON' : 'OFF'}</b></span><span>Kettle <b>{states.kitchenKettle ? 'ON' : 'OFF'}</b></span><span>Door <b>{states.mainDoor ? 'OPEN' : 'CLOSED'}</b></span><span>Telephone <b>{states.telephone.toUpperCase()}</b></span>
       </div>
     </details>
     <div className="scenario-panel" aria-label="Demo scenarios">
-      <div className="scenario-panel-heading"><strong>DEMO SCENARIOS</strong><span>3D playback only · local simulation</span></div>
+      <div className="scenario-panel-heading"><strong>DEMO SCENARIOS</strong><span>Sensor actions use {usingMock ? 'the mock API' : 'the live API'}</span></div>
       <div className="home-scenario-buttons">
         {(Object.keys(SCENARIO_LABELS) as ScenarioId[]).map(id => <button key={id} className={scenario === id ? 'is-current' : ''}
-          onClick={() => startScenario(id)} disabled={scenarioActive || characterStatus.phase === 'loading' || characterStatus.phase === 'error'}>{SCENARIO_LABELS[id]}</button>)}
+          onClick={() => startScenario(id)} disabled={scenarioActive || resetBusy || !homeUnit || (!usingMock && !appState.connected) || characterStatus.phase === 'loading' || characterStatus.phase === 'error'}>{SCENARIO_LABELS[id]}</button>)}
       </div>
       <div className="scenario-transport">
         <button onClick={pauseScenario} disabled={scenarioState !== 'running'}>Pause</button>
         <button onClick={resumeScenario} disabled={scenarioState !== 'paused'}>Resume</button>
         <button onClick={() => stopScenario()} disabled={!scenarioActive}>Stop</button>
-        <button onClick={() => stopScenario(true)}>Reset Demo</button>
+        <button onClick={() => void resetDemo()} disabled={resetBusy}>{resetBusy ? 'Resetting…' : 'Reset Demo'}</button>
         <span role="status">{scenario ? `${SCENARIO_LABELS[scenario]} · ${scenarioState}${scenarioProgress ? ` · ${scenarioProgress.label} · Step ${scenarioProgress.index} of ${scenarioProgress.total}` : ''}` : 'Ready to play'}</span>
       </div>
       <details className="scenario-timing"><summary>Timing</summary>
         <label>Outside stay <input type="number" min="1" max="15" value={timing.outsideSeconds} disabled={scenarioActive} onChange={event => setTiming(value => ({ ...value, outsideSeconds: Math.min(15, Math.max(1, Number(event.target.value) || 1)) }))} /> s</label>
-        <label>Recovery pause <input type="number" min="1" max="15" value={timing.recoverySeconds} disabled={scenarioActive} onChange={event => setTiming(value => ({ ...value, recoverySeconds: Math.min(15, Math.max(1, Number(event.target.value) || 1)) }))} /> s</label>
       </details>
+      <p className="home-meter-heading">Current sensor values <span>Live A-105 readings</span></p>
+      <div className="home-live-meter" aria-label="Current 3D home sensor values">
+        <span>WATER <b>{homeUnit ? `${homeUnit.latest.water_lpm.toFixed(1)} L/min` : '—'}</b></span>
+        <span>ELECTRICITY <b>{homeUnit ? `${homeUnit.latest.power_kw.toFixed(2)} kW` : '—'}</b></span>
+        <span>DOOR <b>{homeUnit ? homeUnit.latest.door.toUpperCase() : '—'}</b></span>
+      </div>
+      <div className="home-reading-history" aria-label="Recent sensor changes">
+        <strong>Recent sensor changes</strong>
+        {recentReadings.length ? <ol>{recentReadings.map((reading, index) =>
+          <li key={`${reading.recorded_at}-${reading.sensor}-${index}`}>
+            <span>{reading.sensor === 'water' ? 'Water' : reading.sensor === 'electricity' ? 'Electricity' : 'Door'}</span>
+            <b>{reading.sensor === 'door' ? String(reading.value).toUpperCase() : `${Number(reading.value).toFixed(reading.sensor === 'water' ? 1 : 2)} ${reading.sensor === 'water' ? 'L/min' : 'kW'}`}</b>
+            <time dateTime={reading.recorded_at}>{new Date(reading.recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</time>
+          </li>)}
+        </ol> : <p>No sensor changes yet. Use an object or run a scenario.</p>}
+      </div>
+      <div className="home-integration-status" role="status">
+        <span>{usingMock ? 'Mock connected' : appState.connected ? 'Backend connected' : 'Realtime disconnected'}</span>
+        <span>Reading: {transmission}</span>
+        <span>Last reading: {lastReading ? new Date(lastReading.recorded_at).toLocaleTimeString() : 'none since reset'}</span>
+      </div>
+      {(appState.config ?? fetchedConfig) && <div className="home-backend-baseline">Backend grace {(appState.config ?? fetchedConfig)!.grace_period_seconds}s · Quiet gap {homeUnit?.quiet_gap.usual_max_seconds ?? '—'}s · Outing {homeUnit?.baseline.usual_outing_seconds ?? '—'}s</div>}
+      {scenario === 'unusualInactivity' && <div className="home-backend-baseline">Backend status: {homeUnit?.status ?? 'unavailable'} · Incident: {appState.incidents.find(item => item.incident_id === homeUnit?.active_incident_id)?.state ?? 'none'}</div>}
+      {queuedCalls.length > 0 && <div className="home-backend-baseline">{queuedCalls.length} companion call{queuedCalls.length > 1 ? 's' : ''} queued until Madam Lee is available.</div>}
+      {integrationError && <p className="home-integration-error" role="alert">{integrationError}</p>}
+      <p className="home-privacy">3D simulation for demonstration only. TemanMu receives only water, electricity and door data.</p>
     </div>
+    </aside>
   </section>
 }

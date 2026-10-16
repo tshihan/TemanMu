@@ -2,10 +2,12 @@ import type { ScenarioStep } from './definitions'
 
 export type ScenarioActions = {
   moveTo: (to: Extract<ScenarioStep, { kind: 'move' }>['to'], signal: AbortSignal) => Promise<void>
-  interactWith: (object: Extract<ScenarioStep, { kind: 'interact' }>['object'], approach: Extract<ScenarioStep, { kind: 'interact' }>['approach'], signal: AbortSignal) => Promise<void>
+  interactWith: (object: Extract<ScenarioStep, { kind: 'interact' }>['object'], value: boolean, approach: Extract<ScenarioStep, { kind: 'interact' }>['approach'], signal: AbortSignal) => Promise<void>
   playAnimation: (animation: Extract<ScenarioStep, { kind: 'animate' }>['animation'], signal: AbortSignal) => Promise<void>
   setCharacterVisible: (visible: boolean) => void
-  setObject: (object: Extract<ScenarioStep, { kind: 'object' }>['object'], value: boolean) => void
+  setObject: (object: Extract<ScenarioStep, { kind: 'object' }>['object'], value: boolean) => Promise<void>
+  waitForGrace: (signal: AbortSignal) => Promise<void>
+  waitForResolution: (signal: AbortSignal) => Promise<void>
 }
 
 export class ScenarioController {
@@ -62,11 +64,13 @@ export class ScenarioController {
       onStep(index, step)
       switch (step.kind) {
         case 'move': await actions.moveTo(step.to, this.signal); break
-        case 'interact': await actions.interactWith(step.object, step.approach, this.signal); break
+        case 'interact': await actions.interactWith(step.object, step.value, step.approach, this.signal); break
         case 'animate': await actions.playAnimation(step.animation, this.signal); break
         case 'wait': await this.wait(step.seconds); break
         case 'visible': actions.setCharacterVisible(step.value); break
-        case 'object': actions.setObject(step.object, step.value); break
+        case 'object': await actions.setObject(step.object, step.value); break
+        case 'grace': await actions.waitForGrace(this.signal); break
+        case 'resolution': await actions.waitForResolution(this.signal); break
         case 'hold': await new Promise<void>((_, reject) => this.signal.addEventListener('abort', () => reject(new DOMException('Scenario stopped', 'AbortError')), { once: true })); break
       }
     }

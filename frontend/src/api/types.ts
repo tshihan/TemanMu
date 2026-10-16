@@ -135,6 +135,7 @@ export type RealtimeEvent =
   | { type: 'unit.updated'; at: string; data: Unit }
   | { type: 'incident.updated'; at: string; data: Incident }
   | { type: 'notification.created'; at: string; data: Notification }
+  | { type: 'notification.updated'; at: string; data: Notification }
   | { type: 'companion.message_delivered'; at: string; data: CompanionMessage }
 
 export interface Api {
