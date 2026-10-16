@@ -36,7 +36,7 @@ export default function App() {
 
   if (page === 'landing') return <Suspense fallback={null}><Landing /></Suspense>
 
-  return <div className="app-shell">
+  return <div className={`app-shell ${page === 'dashboard' && role === 'caregiver' ? 'caregiver-shell' : ''}`}>
     <header className="app-header">
       <a className="brand-block" href="#" aria-label="TemanMu home" style={{ color: 'inherit', textDecoration: 'none' }}>
         <span className="brand-mark" aria-hidden="true">
@@ -99,10 +99,10 @@ export default function App() {
         <div className="dashboard-content" role="tabpanel" id={`panel-${role}`} aria-labelledby={`tab-${role}`}>
           {!loaded ? <p className="loading-state" role="status">Waiting for the first snapshot…</p> : role === 'township' ? <TownshipView /> : <CaregiverView />}
         </div>
-        <div className="dashboard-footer">
+        {role === 'township' && <div className="dashboard-footer">
           <span>{inactiveUnread ? `${inactiveUnread} unread for ${inactiveRole}` : 'Both roles are up to date'}</span>
           <span>Grace {config?.grace_period_seconds ?? '—'}s · Reminder {config?.reminder_interval_seconds ?? '—'}s</span>
-        </div>
+        </div>}
       </section>
     </main>}
   </div>
