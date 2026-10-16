@@ -38,13 +38,19 @@ export default function App() {
 
   return <div className="app-shell">
     <header className="app-header">
-      <div className="brand-block">
-        <span className="brand-mark" aria-hidden="true">T</span>
+      <a className="brand-block" href="#" aria-label="TemanMu home" style={{ color: 'inherit', textDecoration: 'none' }}>
+        <span className="brand-mark" aria-hidden="true">
+          <svg width="34" height="34" viewBox="0 0 64 64">
+            <path d="M14 29 L32 15 L50 29 V50 H14 Z" fill="none" stroke="#fef9ef" strokeWidth="3.6" strokeLinejoin="round" />
+            <path d="M14 31 H50 M32 31 V50" stroke="#fef9ef" strokeWidth="3.6" />
+            <rect x="35" y="34" width="12" height="13" fill="#f0b25a" />
+          </svg>
+        </span>
         <div>
           <p className="brand-name">TemanMu</p>
           <p className="brand-caption">Township care prototype</p>
         </div>
-      </div>
+      </a>
       <nav className="view-navigation" aria-label="Presentation views">
         <a href="#dashboard" target="_blank" rel="noopener" aria-current={page === 'dashboard' ? 'page' : undefined}>Product dashboard</a>
         <a href="#simulator" target="_blank" rel="noopener" aria-current={page === 'simulator' ? 'page' : undefined}>Presenter simulator <span aria-hidden="true">↗</span></a>
