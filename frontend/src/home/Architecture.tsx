@@ -31,7 +31,7 @@ function EntranceDoor({ interaction }: { interaction?: InteractionBindings }) {
   const leaf = useRef<Group>(null)
   useFrame((_, delta) => {
     if (interaction?.paused) return
-    if (leaf.current) leaf.current.rotation.y = MathUtils.damp(leaf.current.rotation.y, interaction?.states.mainDoor ? .85 : 0, 4.5, delta)
+    if (leaf.current) leaf.current.rotation.y = MathUtils.damp(leaf.current.rotation.y, interaction?.states.mainDoor || interaction?.responderDoorOpen ? .85 : 0, 4.5, delta)
   })
   const model = <group ref={leaf} name="main-door" position={[2.3, .03, 5]}>
     <Box at={[-.56, 1.07, 0]} size={[1.12, 2.14, .075]} mat={getMaterials().walnut} />

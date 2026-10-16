@@ -77,11 +77,18 @@
 .home-scenario-buttons button { min-height: 30px; padding: 5px; border: 1px solid #cad7c6; border-radius: 7px; background: #fffefa; color: #3f5d3b; font-size: 9px; font-weight: 600; }
 .home-scenario-buttons button.is-current { border-color: #9db78f; background: #dfead8; }
 .home-scenario-buttons button:disabled { opacity: .55; cursor: default; }
+.scenario-progress { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px 12px; padding: 12px; border: 1px solid #cad7c6; border-radius: 9px; background: #fbfcf7; }
+.scenario-progress > div { min-width: 0; }
+.scenario-progress span { display: block; margin-bottom: 3px; color: #7c8d76; font-size: 9px; font-weight: 700; letter-spacing: .08em; }
+.scenario-progress strong { display: block; color: #354d32; font-size: 11px; line-height: 1.3; overflow-wrap: anywhere; }
+.scenario-progress .scenario-playback-paused, .scenario-progress .scenario-playback-stopped { color: #936949; }
+.scenario-progress .scenario-playback-complete { color: #3c7948; }
+.scenario-progress progress { grid-column: 1 / -1; width: 100%; height: 6px; accent-color: #72956b; }
+.home-demo-time-note { margin: 0; padding: 9px 11px; border: 1px solid #d9d4c3; border-radius: 7px; background: #fffaf0; color: #675b40; font-size: 10px; line-height: 1.45; }
 .scenario-transport { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
 .scenario-transport button { padding: 5px 8px; border: 1px solid #c9d5c4; border-radius: 6px; background: #fbfcf6; color: #4d6148; font-size: 9px; }
 .scenario-transport button:disabled { opacity: .45; cursor: default; }
 .scenario-transport button:nth-child(4) { color: #795b48; border-color: #ddcdbd; background: #f8f1ea; }
-.scenario-transport [role="status"] { flex-basis: 100%; color: #5b7055; font-size: 10px; line-height: 1.2; }
 .scenario-timing { color: #86917f; font-size: 9px; }
 .scenario-timing[open] { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .scenario-timing label { display: inline-flex; align-items: center; gap: 4px; }
@@ -115,12 +122,12 @@
 .home-controls .home-scenario-buttons button { min-height: 37px; font-size: 11px; }
 .home-controls .scenario-transport { gap: 7px; }
 .home-controls .scenario-transport button { min-height: 30px; font-size: 10px; }
-.home-controls .scenario-transport [role="status"] { line-height: 1.35; }
 .home-controls .home-live-meter { grid-template-columns: 1fr; gap: 6px; }
 .home-controls .home-live-meter span { padding: 8px 10px; font-size: 10px; }
 .home-controls .home-integration-status, .home-controls .home-backend-baseline, .home-controls .home-privacy { font-size: 10px; line-height: 1.4; }
 .home-object-tip, .home-character-speech { display: block; padding: 7px 10px; border: 1px solid #d5d9c8; border-radius: 8px; background: #fffdf3f2; box-shadow: 0 3px 12px #242c241c; color: #354b36; font: 600 11px 'Avenir Next', 'Segoe UI', sans-serif; white-space: nowrap; }
 .home-object-tip.is-selected { border-color: #d8b782; color: #856235; }
+.home-responder-label { display: block; padding: 7px 10px; border: 1px solid #d1bf89; border-radius: 8px; background: #fff9e9f2; box-shadow: 0 3px 12px #242c241c; color: #233e54; font: 700 11px 'Avenir Next', 'Segoe UI', sans-serif; white-space: nowrap; }
 .home-character-speech { padding: 9px 13px; border-color: #b9caa9; font-size: 12px; }
 @media (max-width: 750px) {
   .home-experience { padding: 0 16px; }

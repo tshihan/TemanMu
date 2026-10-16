@@ -16,11 +16,21 @@ export type ScenarioStep =
   | { kind: 'wait'; seconds: number; label: string }
   | { kind: 'visible'; value: boolean; label: string }
   | { kind: 'object'; object: InteractionId; value: boolean; label: string }
-  | { kind: 'grace'; label: string }
+  | { kind: 'quietGap'; label: string }
+  | { kind: 'noAnswer'; label: string }
+  | { kind: 'alert'; label: string }
+  | { kind: 'dispatchResponder'; label: string }
+  | { kind: 'responderVisible'; label: string }
+  | { kind: 'responderDoor'; open: boolean; label: string }
+  | { kind: 'responderMove'; to: Waypoint; label: string }
+  | { kind: 'responderCheck'; label: string }
   | { kind: 'resolution'; label: string }
   | { kind: 'hold'; label: string }
 
-export function scenarioSteps(id: ScenarioId, timing: ScenarioTiming): ScenarioStep[] {
+export function scenarioSteps(id: ScenarioId, timing: ScenarioTiming, compressedDemoTime = false): ScenarioStep[] {
+  const quietGapLabel = compressedDemoTime
+    ? 'Demo time jump: usual water quiet gap has elapsed; no outing evidence'
+    : 'Waiting for the real water quiet gap and backend check'
   switch (id) {
     case 'normalMorning': return [
       { kind: 'move', to: 'bedside', label: 'Returning to the bedside' },
@@ -52,13 +62,25 @@ export function scenarioSteps(id: ScenarioId, timing: ScenarioTiming): ScenarioS
     ]
     case 'unusualInactivity': return [
       { kind: 'move', to: 'collapseSpot', label: 'Walking beside the sofa' },
-      { kind: 'animate', animation: 'collapse', label: 'Becoming unsteady and collapsing' },
-      { kind: 'hold', label: 'Lying still until stopped' },
+      { kind: 'animate', animation: 'collapse', label: 'Audience-only fall; no sensor event' },
+      { kind: 'wait', seconds: 2, label: 'No water use; the home remains quiet' },
+      { kind: 'quietGap', label: quietGapLabel },
+      { kind: 'noAnswer', label: 'Simulated call to Mum; waiting for an answer' },
+      { kind: 'alert', label: 'No answer; waiting for caregiver and township alert' },
+      { kind: 'dispatchResponder', label: compressedDemoTime ? 'Guard Ali accepts the township alert (demo)' : 'Waiting for Guard Ali to acknowledge on the township dashboard' },
+      { kind: 'responderVisible', label: 'Guard Ali arrives outside A-105' },
+      { kind: 'responderMove', to: 'porch', label: 'Guard Ali approaches the entrance' },
+      { kind: 'responderDoor', open: true, label: 'Guard Ali opens the door (visual reenactment)' },
+      { kind: 'responderMove', to: 'responderCheck', label: 'Guard Ali enters and walks to Madam Lee' },
+      { kind: 'responderDoor', open: false, label: 'Guard Ali closes the door' },
+      { kind: 'responderCheck', label: 'Guard Ali checks Madam Lee’s condition' },
+      { kind: 'hold', label: 'Guard Ali is checking; outcome awaits a human report' },
     ]
     case 'falseAlarmRecovery': return [
       { kind: 'move', to: 'collapseSpot', label: 'Walking beside the sofa' },
-      { kind: 'animate', animation: 'collapse', label: 'Becoming unsteady and collapsing' },
-      { kind: 'grace', label: 'Waiting for backend inactivity detection and grace' },
+      { kind: 'animate', animation: 'collapse', label: 'Audience-only fall; no sensor event' },
+      { kind: 'wait', seconds: 2, label: 'No water use; the home remains quiet' },
+      { kind: 'quietGap', label: quietGapLabel },
       { kind: 'animate', animation: 'recover', label: 'Gradually getting up' },
       { kind: 'move', to: 'bathroom', label: 'Walking to the bathroom' },
       { kind: 'interact', object: 'bathroomTap', value: true, label: 'Turning on the bathroom tap' },

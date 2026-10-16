@@ -12,8 +12,10 @@ export type CharacterStatus = { room: RoomId; destination: Waypoint | null; phas
 export type InteractionPose = 'none' | 'reach' | 'phone'
 
 const ASSET_ROOT = '/models/madam-lee/'
-const WALK_SPEED = .57 // metres per second: deliberately unhurried
-const TURN_SPEED = 2.4 // radians per second
+const WALK_SPEED = 1 // metres per second: brisk enough for a short presentation
+const WALK_ANIMATION_SPEED = 1.4 // match the quicker translation to the avatar's gait
+const URGENT_WALK_MULTIPLIER = 1.6
+const TURN_SPEED = 3.1 // radians per second
 
 function inPlace(clip: AnimationClip) {
   const copy = clip.clone()
@@ -113,7 +115,7 @@ export function ElderlyCharacter({ command, pose, speech, visible, paused, urgen
       animationMixer = new AnimationMixer(avatar)
       const idle = animationMixer.clipAction(inPlace(idleFile.animations[0]))
       const walk = animationMixer.clipAction(inPlace(walkFile.animations[0]))
-      walk.timeScale = .8
+      walk.timeScale = WALK_ANIMATION_SPEED
       idle.play()
       actions.current = { idle, walk }
       mixer.current = animationMixer
@@ -219,7 +221,7 @@ export function ElderlyCharacter({ command, pose, speech, visible, paused, urgen
       shellGroup.rotation.y += MathUtils.clamp(difference, -TURN_SPEED * frame, TURN_SPEED * frame)
       const remaining = Math.hypot(dx, dz)
       if (Math.abs(difference) < .42) {
-        const step = Math.min(remaining, WALK_SPEED * (urgent ? 2.4 : 1) * frame)
+        const step = Math.min(remaining, WALK_SPEED * (urgent ? URGENT_WALK_MULTIPLIER : 1) * frame)
         if (remaining > 0) {
           shellGroup.position.x += dx / remaining * step
           shellGroup.position.z += dz / remaining * step
@@ -290,7 +292,7 @@ export function ElderlyCharacter({ command, pose, speech, visible, paused, urgen
       if (motion.current?.kind === 'collapse' && motion.current.elapsed < .7)
         poseGroup.current.rotation.z += Math.sin(motion.current.elapsed * 16) * .07 * (1 - motion.current.elapsed / .7)
     }
-    animation.walk.timeScale = urgent ? 1.9 : .8
+    animation.walk.timeScale = WALK_ANIMATION_SPEED * (urgent ? URGENT_WALK_MULTIPLIER : 1)
     if (fallPose.current < .99) mixer.current?.update(frame)
     reachStrength.current = MathUtils.damp(reachStrength.current, pose === 'none' ? 0 : 1, 6, frame)
     if (arm.current) {

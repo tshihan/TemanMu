@@ -207,8 +207,8 @@ The 3D home both **sends** readings (REST) and **receives** companion call event
 2. The quiet-gap progress bar fills. When water silence exceeds the resident's usual maximum, the backend sets Unusual Inactivity and starts the grace period.
 3. The incident timeline shows the simulated voice call ("Calling Mum... no answer"), and the grace countdown runs.
 4. The grace period ends with no activity. The backend notifies the caregiver and the township at the same time.
-5. Nobody acknowledges, so the backend sets Unresolved Concern and sends reminders at the configured interval.
-6. The scenario stops here. The presenter acknowledges live (see 6.2).
+5. The backend sets Unresolved Concern. If nobody acknowledges, it sends reminders at the configured interval.
+6. In the presenter-only mock, Guard Ali acknowledges the township alert and a 3D responder reenacts arriving from outside, entering, and checking Mum. The staged door movement sends no resident sensor reading. The incident remains acknowledged until a human records the outcome in the dashboard (see 6.2). In live mode the scene waits for a real township acknowledgement; it never dispatches a person automatically.
 
 **Scenario 4: False Alarm Recovery** (shows how false alarms are avoided)
 

@@ -6,7 +6,14 @@ export type ScenarioActions = {
   playAnimation: (animation: Extract<ScenarioStep, { kind: 'animate' }>['animation'], signal: AbortSignal) => Promise<void>
   setCharacterVisible: (visible: boolean) => void
   setObject: (object: Extract<ScenarioStep, { kind: 'object' }>['object'], value: boolean) => Promise<void>
-  waitForGrace: (signal: AbortSignal) => Promise<void>
+  waitForQuietGap: (signal: AbortSignal) => Promise<void>
+  waitForNoAnswer: (signal: AbortSignal) => Promise<void>
+  waitForCaregiverAlert: (signal: AbortSignal) => Promise<void>
+  dispatchResponder: (signal: AbortSignal) => Promise<void>
+  setResponderVisible: () => void
+  setResponderDoor: (open: boolean) => void
+  moveResponder: (to: Extract<ScenarioStep, { kind: 'responderMove' }>['to'], signal: AbortSignal) => Promise<void>
+  checkResident: () => void
   waitForResolution: (signal: AbortSignal) => Promise<void>
 }
 
@@ -69,7 +76,14 @@ export class ScenarioController {
         case 'wait': await this.wait(step.seconds); break
         case 'visible': actions.setCharacterVisible(step.value); break
         case 'object': await actions.setObject(step.object, step.value); break
-        case 'grace': await actions.waitForGrace(this.signal); break
+        case 'quietGap': await actions.waitForQuietGap(this.signal); break
+        case 'noAnswer': await actions.waitForNoAnswer(this.signal); break
+        case 'alert': await actions.waitForCaregiverAlert(this.signal); break
+        case 'dispatchResponder': await actions.dispatchResponder(this.signal); break
+        case 'responderVisible': actions.setResponderVisible(); break
+        case 'responderDoor': actions.setResponderDoor(step.open); break
+        case 'responderMove': await actions.moveResponder(step.to, this.signal); break
+        case 'responderCheck': actions.checkResident(); break
         case 'resolution': await actions.waitForResolution(this.signal); break
         case 'hold': await new Promise<void>((_, reject) => this.signal.addEventListener('abort', () => reject(new DOMException('Scenario stopped', 'AbortError')), { once: true })); break
       }

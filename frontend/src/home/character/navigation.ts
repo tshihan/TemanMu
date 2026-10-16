@@ -21,6 +21,7 @@ export const WAYPOINTS = {
   porch: [1.48, 5.68],
   outside: [1.48, 6.08],
   collapseSpot: [-1.35, 3.4],
+  responderCheck: [-.45, 3.55],
   tapApproach: [.35, -3.18],
   kettleApproach: [4.32, 2.08],
   phoneLane: [-1.42, 3.55],
@@ -50,6 +51,7 @@ const EDGES: [Waypoint, Waypoint][] = [
   ['northLane', 'livingLane'], ['livingLane', 'living'],
   ['living', 'dining'], ['dining', 'entryLane'],
   ['living', 'collapseSpot'], ['collapseSpot', 'phoneLane'],
+  ['dining', 'responderCheck'],
 ]
 
 /** Dijkstra keeps the authored clearances while choosing the shortest available route. */
