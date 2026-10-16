@@ -20,7 +20,7 @@ const obstacles = [
 
 test('all room and object approach pairs have clear, connected walking routes', () => {
   const destinations = [...Object.keys(ROOM_LABELS), ...Object.values(INTERACTIONS).map(value => value.approach),
-    'bedside', 'collapseSpot', 'doorThreshold', 'porch', 'outside']
+    'bedside', 'collapseSpot', 'responderCheck', 'doorThreshold', 'porch', 'outside']
   for (const from of destinations) {
     for (const to of destinations) {
       const route = routeBetween(from, to)

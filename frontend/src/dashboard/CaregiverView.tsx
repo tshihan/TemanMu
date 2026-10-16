@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { useAppState, type StatusChange } from '../api/store'
-import type { Incident, Notification, Status } from '../api/types'
+import { useEffect, useState } from 'react'
+import { loadUnitReadings, useAppState, type StatusChange } from '../api/store'
+import type { Incident, Notification, Reading, Status } from '../api/types'
 import { AcknowledgeButton, IncidentPanel } from './IncidentPanel'
 
 const statusLabels: Record<Status, string> = {
@@ -27,7 +27,7 @@ function newestIncident(incidents: Incident[], unitId: string, activeId: string 
 
 interface TimelineEntry { id: string; at: string; title: string; detail: string; tone: 'calm' | 'away' | 'concern' }
 
-function activityTimeline(unitId: string, notifications: Notification[], changes: StatusChange[]): TimelineEntry[] {
+function activityTimeline(unitId: string, notifications: Notification[], changes: StatusChange[], readings: Reading[], standbyPowerKw: number): TimelineEntry[] {
   const morning = notifications.filter(item => item.unit_id === unitId && item.role === 'caregiver' && item.kind === 'morning_reassurance').map(item => ({
     id: item.notification_id, at: item.created_at, title: 'Mum appears to be up', detail: 'Her first activity of the day was detected at home.', tone: 'calm' as const,
   }))
@@ -38,19 +38,48 @@ function activityTimeline(unitId: string, notifications: Notification[], changes
     if (item.previous_status === 'possible_away') return { id: `status-${item.at}`, at: item.at, title: 'Mum seems to be back home', detail: 'Activity resumed after a possible outing.', tone: 'calm' as const }
     return { id: `status-${item.at}`, at: item.at, title: 'Mum’s routine resumed', detail: 'Her status returned to normal.', tone: 'calm' as const }
   })
-  return [...morning, ...statuses].sort((a, b) => a.at.localeCompare(b.at))
+  const sensorActivity = readings.filter(item => item.unit_id === unitId).flatMap((item, index): TimelineEntry[] => {
+    const entry = { id: `reading-${index}-${item.recorded_at}`, at: item.recorded_at, tone: 'calm' as const }
+    if (item.sensor === 'water' && typeof item.value === 'number') return [{
+      ...entry,
+      title: item.value > 0 ? 'Water use detected' : 'Water use ended',
+      detail: item.value > 0 ? 'The home’s water sensor recorded activity.' : 'Water flow returned to zero.',
+    }]
+    if (item.sensor === 'electricity' && typeof item.value === 'number') return [{
+      ...entry,
+      title: item.value > standbyPowerKw ? 'Electricity use increased' : 'Electricity returned to standby',
+      detail: item.value > standbyPowerKw ? 'Power use rose above the usual standby level.' : 'Power use returned to its usual standby level.',
+    }]
+    if (item.sensor === 'door') return [{
+      ...entry,
+      title: item.value === 'open' ? 'Front door opened' : 'Front door closed',
+      detail: `The front door sensor reported ${item.value}.`,
+    }]
+    return []
+  })
+  return [...morning, ...statuses, ...sensorActivity].sort((a, b) => a.at.localeCompare(b.at)).slice(-30)
 }
 
 export function CaregiverView() {
-  const { units, incidents, notifications, statusHistory } = useAppState()
+  const { units, incidents, notifications, statusHistory, readingsByUnit, snapshotRevision } = useAppState()
   const [callNotice, setCallNotice] = useState(false)
+  const [readingsError, setReadingsError] = useState<string | null>(null)
   const unit = units.find(item => item.controllable)
+  const unitId = unit?.unit_id
+
+  useEffect(() => {
+    if (!unitId) return
+    void loadUnitReadings(unitId, snapshotRevision)
+      .then(() => setReadingsError(null))
+      .catch(() => setReadingsError('Could not load earlier sensor activity.'))
+  }, [unitId, snapshotRevision])
+
   if (!unit) return <p className="empty-state">The caregiver's resident is unavailable.</p>
 
   const incident = newestIncident(incidents, unit.unit_id, unit.active_incident_id)
   const feed = notifications.filter(item => item.role === 'caregiver' && item.unit_id === unit.unit_id)
   const needsResponse = incident && ['grace', 'notified'].includes(incident.state)
-  const timeline = activityTimeline(unit.unit_id, notifications, statusHistory)
+  const timeline = activityTimeline(unit.unit_id, notifications, statusHistory, readingsByUnit[unit.unit_id] || [], unit.baseline.standby_power_kw)
 
   return <div className="caregiver-view">
     <section className="caregiver-status" aria-label="Resident status">
@@ -68,7 +97,7 @@ export function CaregiverView() {
       {callNotice && <p className="simulated-call" role="status">Simulated call to {unit.caregiver_relationship} started. No real phone call is placed.</p>}
     </section>
 
-    {timeline.length > 0 && <section className="caregiver-timeline" aria-labelledby="activity-heading">
+    {(timeline.length > 0 || readingsError) && <section className="caregiver-timeline" aria-labelledby="activity-heading">
       <h3 id="activity-heading">Mum’s day</h3>
       <ol className="daily-timeline" aria-label="Mum’s activity in time order">
         {timeline.map(item => <li key={item.id} className={`daily-timeline-${item.tone}`}>
@@ -77,6 +106,7 @@ export function CaregiverView() {
           <div><strong>{item.title}</strong><p>{item.detail}</p></div>
         </li>)}
       </ol>
+      {readingsError && <p role="alert">{readingsError}</p>}
     </section>}
 
     <IncidentPanel key={incident?.incident_id || 'empty'} incident={incident} unit={unit} role="caregiver" />

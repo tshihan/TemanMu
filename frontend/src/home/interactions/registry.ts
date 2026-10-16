@@ -7,6 +7,7 @@ export type InteractionBindings = {
   states: ObjectStates; selected: InteractionId | null; hovered: InteractionId | null
   paused?: boolean
   disabled?: boolean
+  responderDoorOpen?: boolean
   onSelect: (id: InteractionId) => void; onHover: (id: InteractionId | null) => void
 }
 export const INITIAL_OBJECT_STATES: ObjectStates = { bathroomTap: false, kitchenKettle: false, mainDoor: false, telephone: 'idle' }

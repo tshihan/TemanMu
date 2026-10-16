@@ -81,15 +81,19 @@ let scenarioTimers = new Set<ReturnType<typeof setTimeout>>()
 
 export const mockSnapshot = (): Snapshot => clone(state)
 
-// Presenter-only trigger: simulate the quiet-gap detector after the 3D collapse.
+// Presenter-only time jump: simulate the quiet-gap detector after a visible quiet period.
 // It never runs in live mode; real status decisions belong to the backend.
 export function primeMockInactivity(): void {
   const unit = unitOrThrow('A-105')
-  if (latestIncident(unit.unit_id)) return
+  if (latestIncident(unit.unit_id)) throw new ApiError(409, 'An incident is already active. Reset Demo before the inactivity scenario.')
+  if (unit.status === 'possible_away' || unit.latest.door !== 'closed')
+    throw new ApiError(409, 'The door or away status still suggests an outing. Return home or reset the demo before the inactivity scenario.')
+  if (unit.latest.water_lpm > 0 || unit.latest.power_kw > unit.baseline.standby_power_kw)
+    throw new ApiError(409, 'Household utility use is active. Reset Demo before the inactivity scenario.')
   morningSent = true
   unit.quiet_gap.last_water_activity_at = new Date(Date.now() - unit.baseline.usual_quiet_gap_seconds * 1000).toISOString()
   publish('unit.updated', clone(unit))
-  later(() => { if (!latestIncident(unit.unit_id)) startGrace(unit) }, 1000)
+  startGrace(unit)
 }
 
 function later(action: () => void, milliseconds: number): void {
@@ -170,7 +174,7 @@ function sendReminder(incident: Incident): void {
 }
 
 function notifyConcern(unit: Unit, incident: Incident): void {
-  if (incident.state !== 'grace') return
+  if (incident.state !== 'grace' || !incident.events.some(event => event.type === 'voice_call_no_answer')) return
   incident.state = 'notified'
   incident.grace_ends_at = null
   incident.next_reminder_at = new Date(Date.now() + state.config.reminder_interval_seconds * 1000).toISOString()
@@ -247,7 +251,7 @@ export const mockApi: Api = {
     const activity = reading.sensor === 'door' ? reading.value === 'open' : typeof reading.value === 'number' && reading.value > (reading.sensor === 'electricity' ? unit.baseline.standby_power_kw : 0)
     const incident = latestIncident(unit.unit_id)
     if (activity && incident) autoResolve(unit, incident)
-    else if (activity && reading.sensor !== 'door' && unit.status === 'routine') {
+    else if (activity && reading.sensor !== 'door' && ['routine', 'possible_away'].includes(unit.status)) {
       updateUnit(unit, 'routine', reading.sensor === 'electricity' ? 'Water and electricity activity within usual routine' : 'Water activity detected within usual routine')
     } else publish('unit.updated', clone(unit))
     if (!morningSent && activity && !incident) {
