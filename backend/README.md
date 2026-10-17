@@ -59,6 +59,7 @@ Open `http://localhost:8000/docs`.
 | `DATABASE_URL` | (required) | Supabase session pooler connection string |
 | `GRACE_PERIOD_SECONDS` | 15 | Grace period before notifying (production: 900) |
 | `REMINDER_INTERVAL_SECONDS` | 15 | Reminder interval (production: 900) |
+| `VOICE_CALL_RING_SECONDS` | 2 | How long the simulated voice call rings before "no answer" |
 | `CONTROLLABLE_UNIT_ID` | A-105 | The 3D home unit; must be the one `controllable` unit in seed.json |
 | `SEED_FILE` | ../shared/seed.json | Relative paths resolve from `backend/` |
 | `CORS_ORIGINS` | http://localhost:5173 | Comma-separated. Add the 3D home's origin if it is served elsewhere |
@@ -95,20 +96,53 @@ Tests refuse to run if `TEST_DATABASE_URL` equals the `DATABASE_URL` in `.env`.
 
 ```
 app/
-  main.py            app, CORS, routers, lifespan (DB pool); Backend 1 adds /ws and readings here
+  main.py            app, CORS, routers, lifespan (DB pool, timer restore, timer shutdown)
   settings.py        .env settings
   models.py          Pydantic models for every PRD §8.1 type (shared by both backends)
   seed.py            loads and validates shared/seed.json; activity schedule rule
   timeutil.py        utc_now(), iso(), local_hhmm()
-  api/               REST routes (all under /api)
+  api/               REST routes (all under /api); readings.py and the incident actions are Backend 1
   services/          create_notification(), build_snapshot(), reset_demo(), companion features
+    monitoring.py    readings in → rules → DB → broadcasts; incident lifecycle; restore on startup
   db/                data-access functions (see db/__init__.py), pool, migrations
-  realtime/          broadcast()  (Backend 1)
-  timers/            grace and reminder timers  (Backend 1)
-  rules/             status rules engine  (Backend 1)
+  realtime/
+    broadcast.py     ConnectionManager and broadcast(event_type, data)
+    ws.py            WebSocket /ws: snapshot on connect, then live events
+  rules/
+    engine.py        pure status rules: facts in, decision out (no I/O, no clock)
+    reasons.py       reason lines, timeline details and notification texts
+  timers/            keyed asyncio timers: watch:, voice:, grace:, reminder:
 ```
 
-### For Backend 1
+## Rules and realtime
+
+Status rules follow [PRD §7](../temanmu-prd.md#7-status-rules-prototype). The rules are in
+`app/rules/engine.py` (numbered R1–R6 for readings, T1–T2 for time), and every user-facing text
+is in `app/rules/reasons.py`. Only the controllable unit (`CONTROLLABLE_UNIT_ID`) is evaluated.
+
+- **Activity** is water > 0, electricity above the standby baseline, or a door `open`.
+- **Quiet gap:** `units.last_water_activity_at` is the anchor. A `watch:` timer opens a
+  `quiet_gap` incident when it passes `usual_quiet_gap_seconds`, or an `outing_timeout`
+  incident when Possible Away lasts longer than `usual_outing_seconds`.
+- **Lifecycle:** grace (silent, simulated voice call) → notified (both roles alerted) →
+  reminders → acknowledged → closed. Any activity before closing auto-resolves the incident.
+- **Restarts:** on startup, `monitoring.restore()` reschedules the timers of active incidents;
+  deadlines missed while the server was down fire immediately.
+
+Decisions:
+
+| # | Decision |
+| --- | --- |
+| D1 | Only door **open** counts as a door event. Opening while idle starts Possible Away; opening while Possible Away means back home. A `closed` reading never changes status. |
+| D2 | Returning from Possible Away, closing an incident and auto-resolving one all restart the quiet-gap clock (`last_water_activity_at` = that moment). |
+| D3 | The simulated voice call rings for `VOICE_CALL_RING_SECONDS` before "no answer". |
+| D4 | Activity also auto-resolves an **acknowledged** incident (PRD §6.2: "at any point before closing"). |
+
+WebSocket: `ws://localhost:8000/ws`. Each message is `{"type", "at", "data"}`; the first is a
+`snapshot`. After a reading, events go out in this order: `reading.received`,
+`incident.updated`, `unit.updated`, then `notification.created`.
+
+### Working on the backend
 
 - Read and write the database only through `app/db/*` functions. Each takes an optional `conn`;
   pass one to group calls in a transaction (example in `app/db/__init__.py`).
@@ -117,8 +151,10 @@ app/
   you need to catch one and continue.
 - Create every notification with `services.notifications.create_notification()` (insert +
   broadcast). Send `services.snapshot.build_snapshot()` on WebSocket connect.
-- `broadcast(event_type, data)` receives Pydantic models or lists of them; serialise with
-  `model_dump(mode="json")` so timestamps come out as `...Z`.
+- Call broadcast as a module attribute (`from app.realtime import broadcast as realtime`, then
+  `await realtime.broadcast(...)`) so tests can replace it. It accepts Pydantic models or lists.
+- Every state change for a unit takes `monitoring`'s per-unit lock, writes in one transaction,
+  and broadcasts and notifies after commit.
 - Only evaluate units where `controllable` is true. Background units keep their seeded state.
 
 ## Troubleshooting
