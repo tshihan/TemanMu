@@ -8,6 +8,7 @@ from app.db.pool import get_pool
 from app.models import Unit
 from app.realtime import broadcast as realtime
 from app.seed import SeedUnit, load_seed, next_occurrence
+from app.services import monitoring
 from app.services.snapshot import build_snapshot
 from app.settings import settings
 from app.timeutil import local_hhmm, utc_now
@@ -107,4 +108,6 @@ async def reset_demo() -> list[Unit]:
         # 5. After commit, so connected clients never see a half-reset state.
         snapshot = await build_snapshot()
         await realtime.broadcast("snapshot", snapshot)
+        # 6. Start the controllable unit's quiet-gap clock (Backend 1).
+        await monitoring.arm_watch(settings.controllable_unit_id)
         return snapshot.units

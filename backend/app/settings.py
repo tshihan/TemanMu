@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     database_url: str
     grace_period_seconds: int = 15
     reminder_interval_seconds: int = 15
+    # How long the simulated voice call rings before "no answer" (within the grace period).
+    voice_call_ring_seconds: float = 2
     controllable_unit_id: str = "A-105"
     seed_file: Path = Path("../shared/seed.json")
     # NoDecode stops pydantic-settings from JSON-decoding the env value, so the

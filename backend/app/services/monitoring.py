@@ -2,10 +2,16 @@
 
 Every state-changing path holds the unit's lock for its whole read-decide-write-broadcast
 cycle. Writes happen in one transaction; broadcasts and notifications go out after commit.
+Timer callbacks reload state from the database and do nothing unless the expected state
+still holds, so a stale or duplicate timer is harmless.
 """
 
 import asyncio
 import logging
+from collections.abc import Awaitable, Callable
+from datetime import datetime, timedelta
+
+import asyncpg
 
 from app import rules, timers
 from app.db import incidents as db_incidents
@@ -13,13 +19,16 @@ from app.db import notifications as db_notifications
 from app.db import readings as db_readings
 from app.db import units as db_units
 from app.db.pool import get_pool
-from app.models import Incident, Reading, ReadingIn, Unit
+from app.models import Incident, NotificationKind, Reading, ReadingIn, Role, Unit
 from app.realtime import broadcast as realtime
 from app.rules import reasons
 from app.services.notifications import create_notification
+from app.settings import settings
 from app.timeutil import local_hhmm, utc_now
 
 logger = logging.getLogger(__name__)
+
+BOTH_ROLES: tuple[Role, ...] = ("caregiver", "township")
 
 
 class MonitoringError(Exception): ...
@@ -49,10 +58,23 @@ def _unit_lock(unit_id: str) -> asyncio.Lock:
 # --- helpers -----------------------------------------------------------------------------
 
 
-async def _active_incident(unit: Unit, conn=None) -> Incident | None:
+async def _active_incident(unit: Unit, conn: asyncpg.Connection | None = None) -> Incident | None:
     if unit.active_incident_id is None:
         return None
     return await db_incidents.get_incident(unit.active_incident_id, conn=conn)
+
+
+def _facts(unit: Unit, incident: Incident | None) -> rules.UnitFacts:
+    return rules.facts_from(unit, incident.state if incident else None)
+
+
+def _has_event(incident: Incident, event_type: str) -> bool:
+    return any(e.type == event_type for e in incident.events)
+
+
+async def _notify_both(unit_id: str, kind: NotificationKind, message: str, incident_id: str) -> None:
+    for role in BOTH_ROLES:
+        await create_notification(role, unit_id, kind, message, incident_id=incident_id)
 
 
 async def _morning_reassurance_sent(unit_id: str) -> bool:
@@ -61,11 +83,27 @@ async def _morning_reassurance_sent(unit_id: str) -> bool:
     return any(n.kind == "morning_reassurance" and n.unit_id == unit_id for n in sent)
 
 
-# --- watch timer -------------------------------------------------------------------------
+# --- timer keys and scheduling -----------------------------------------------------------
 
 
 def _watch_key(unit_id: str) -> str:
     return f"watch:{unit_id}"
+
+
+def _schedule_incident_timer(prefix: str, incident_id: str, at: datetime, step: Callable[[str], Awaitable[None]]) -> None:
+    timers.schedule(f"{prefix}:{incident_id}", at, lambda: _run_incident_step(incident_id, step))
+
+
+async def _run_incident_step(incident_id: str, step: Callable[[str], Awaitable[None]]) -> None:
+    """Find the incident's unit, take its lock, then run the step (which reloads the incident)."""
+    incident = await db_incidents.get_incident(incident_id)
+    if incident is None:  # wiped by a reset
+        return
+    async with _unit_lock(incident.unit_id):
+        await step(incident_id)
+
+
+# --- watch timer -------------------------------------------------------------------------
 
 
 async def _arm_watch_locked(unit_id: str) -> None:
@@ -73,8 +111,7 @@ async def _arm_watch_locked(unit_id: str) -> None:
     if unit is None or not unit.controllable:
         timers.cancel(_watch_key(unit_id))
         return
-    incident = await _active_incident(unit)
-    due = rules.next_check_at(rules.facts_from(unit, incident.state if incident else None))
+    due = rules.next_check_at(_facts(unit, await _active_incident(unit)))
     if due is None:
         timers.cancel(_watch_key(unit_id))
     else:
@@ -88,15 +125,138 @@ async def arm_watch(unit_id: str) -> None:
 
 
 async def check_unit(unit_id: str) -> None:
-    """Watch timer callback. Step 4: only logs what on_tick decides; incidents come in step 5."""
+    """Watch timer callback: open an incident if the quiet gap or outing has run out."""
     async with _unit_lock(unit_id):
         unit = await db_units.get_unit(unit_id)
         if unit is None or not unit.controllable:
             return
-        incident = await _active_incident(unit)
-        decision = rules.on_tick(rules.facts_from(unit, incident.state if incident else None), utc_now(), local_hhmm)
-        if decision is not None:
-            logger.info("%s: would open %s incident: %s", unit_id, decision.kind, decision.reason)
+        now = utc_now()
+        decision = rules.on_tick(_facts(unit, await _active_incident(unit)), now, local_hhmm)
+        if decision is None:
+            await _arm_watch_locked(unit_id)  # not due yet (e.g. clock skew): try again later
+            return
+        await _open_incident(unit, decision, now)
+
+
+# --- incident lifecycle ------------------------------------------------------------------
+
+
+async def _open_incident(unit: Unit, decision: rules.TickDecision, now: datetime) -> None:
+    grace_ends_at = now + timedelta(seconds=settings.grace_period_seconds)
+    async with get_pool().acquire() as conn, conn.transaction():
+        incident = await db_incidents.create_incident(unit.unit_id, now, grace_ends_at, conn=conn)
+        await db_incidents.add_incident_event(
+            incident.incident_id, "detected", now, detail=decision.detected_detail, conn=conn
+        )
+        incident = await db_incidents.add_incident_event(
+            incident.incident_id,
+            "voice_call_started",
+            now,
+            detail=reasons.voice_call_started(unit.caregiver_relationship),
+            conn=conn,
+        )
+        unit = await db_units.update_unit_state(
+            unit.unit_id, status="unusual_inactivity", status_reason=decision.reason, status_since=now, conn=conn
+        )
+
+    timers.cancel(_watch_key(unit.unit_id))
+    _schedule_incident_timer(
+        "voice", incident.incident_id, now + timedelta(seconds=settings.voice_call_ring_seconds), _voice_no_answer
+    )
+    _schedule_incident_timer("grace", incident.incident_id, grace_ends_at, _grace_ended)
+    await realtime.broadcast("incident.updated", incident)
+    await realtime.broadcast("unit.updated", unit)
+
+
+async def _voice_no_answer(incident_id: str) -> None:
+    incident = await db_incidents.get_incident(incident_id)
+    if (
+        incident is None
+        or incident.state != "grace"
+        or _has_event(incident, "voice_call_no_answer")
+        or _has_event(incident, "voice_call_cancelled")
+    ):
+        return
+    incident = await db_incidents.add_incident_event(
+        incident_id, "voice_call_no_answer", utc_now(), detail=reasons.VOICE_NO_ANSWER
+    )
+    await realtime.broadcast("incident.updated", incident)
+
+
+async def _grace_ended(incident_id: str) -> None:
+    now = utc_now()
+    next_reminder_at = now + timedelta(seconds=settings.reminder_interval_seconds)
+    async with get_pool().acquire() as conn, conn.transaction():
+        incident = await db_incidents.get_incident_for_update(incident_id, conn)
+        if incident is None or incident.state != "grace":
+            return
+        unit = await db_units.get_unit(incident.unit_id, conn=conn)
+        if not _has_event(incident, "voice_call_no_answer"):
+            await db_incidents.add_incident_event(
+                incident_id, "voice_call_no_answer", now, detail=reasons.VOICE_NO_ANSWER, conn=conn
+            )
+        await db_incidents.update_incident(
+            incident_id, state="notified", grace_ends_at=None, next_reminder_at=next_reminder_at, conn=conn
+        )
+        incident = await db_incidents.add_incident_event(incident_id, "notified", now, detail=reasons.NOTIFIED, conn=conn)
+        unit = await db_units.update_unit_state(
+            unit.unit_id,
+            status="unresolved_concern",
+            status_reason=rules.unresolved_reason(unit.status_reason, unit.caregiver_relationship),
+            status_since=now,
+            conn=conn,
+        )
+
+    timers.cancel(f"voice:{incident_id}")
+    _schedule_incident_timer("reminder", incident_id, next_reminder_at, _send_reminder)
+    await realtime.broadcast("incident.updated", incident)
+    await realtime.broadcast("unit.updated", unit)
+    await _notify_both(
+        unit.unit_id, "alert", reasons.alert_message(unit.unit_id, unit.resident_name), incident_id
+    )
+
+
+async def _send_reminder(incident_id: str) -> None:
+    now = utc_now()
+    next_reminder_at = now + timedelta(seconds=settings.reminder_interval_seconds)
+    async with get_pool().acquire() as conn, conn.transaction():
+        incident = await db_incidents.get_incident_for_update(incident_id, conn)
+        if incident is None or incident.state != "notified":
+            return
+        n = incident.reminder_count + 1
+        await db_incidents.update_incident(
+            incident_id, reminder_count=n, next_reminder_at=next_reminder_at, conn=conn
+        )
+        incident = await db_incidents.add_incident_event(
+            incident_id, "reminder", now, detail=reasons.reminder_detail(n), conn=conn
+        )
+
+    _schedule_incident_timer("reminder", incident_id, next_reminder_at, _send_reminder)
+    await realtime.broadcast("incident.updated", incident)
+    await _notify_both(incident.unit_id, "reminder", reasons.reminder_message(n, incident.unit_id), incident_id)
+
+
+async def _auto_resolve(
+    conn: asyncpg.Connection, incident: Incident, reading_time: datetime, reason: str | None
+) -> Incident:
+    """R1, inside ingest_reading's transaction. The unit's own changes come from the rules engine."""
+    logger.info("Auto-resolving incident %s: %s", incident.incident_id, reason)
+    if incident.state == "grace" and not _has_event(incident, "voice_call_no_answer"):
+        await db_incidents.add_incident_event(
+            incident.incident_id, "voice_call_cancelled", reading_time, detail=reasons.VOICE_CANCELLED, conn=conn
+        )
+    await db_incidents.update_incident(
+        incident.incident_id,
+        state="auto_resolved",
+        outcome="resident_activity_detected",
+        closed_at=reading_time,
+        grace_ends_at=None,
+        next_reminder_at=None,
+        conn=conn,
+    )
+    return await db_incidents.add_incident_event(
+        incident.incident_id, "auto_resolved", reading_time, detail=reasons.AUTO_RESOLVED, conn=conn
+    )
 
 
 # --- readings ----------------------------------------------------------------------------
@@ -118,20 +278,34 @@ async def ingest_reading(body: ReadingIn) -> Unit:
             value=body.value,
             recorded_at=body.recorded_at or utc_now(),
         )
-        decision = rules.on_reading(rules.facts_from(unit, incident.state if incident else None), reading, local_hhmm)
+        decision = rules.on_reading(_facts(unit, incident), reading, local_hhmm)
+        resolving = incident if decision.resolve_incident else None
 
         async with get_pool().acquire() as conn, conn.transaction():
             reading = await db_readings.insert_reading(reading, conn=conn)
+            resolved = None
+            if resolving is not None:
+                resolved = await _auto_resolve(conn, resolving, reading.recorded_at, decision.resolve_reason)
+            # After the incident write, so the unit's derived active_incident_id is current.
             unit = await db_units.update_unit_state(unit.unit_id, **decision.changes.as_kwargs(), conn=conn)
 
+        if resolved is not None:
+            timers.cancel_incident(resolved.incident_id)
         await realtime.broadcast("reading.received", reading)
+        if resolved is not None:
+            await realtime.broadcast("incident.updated", resolved)
         await realtime.broadcast("unit.updated", unit)
 
-        if (
-            decision.is_activity
-            and not decision.resolve_incident
-            and not await _morning_reassurance_sent(unit.unit_id)
-        ):
+        if resolving is not None:
+            # PRD scenario 4: recovery during grace is silent; nobody had been told yet.
+            if resolving.state in ("notified", "acknowledged"):
+                await _notify_both(
+                    unit.unit_id,
+                    "auto_resolved",
+                    reasons.auto_resolved_message(unit.resident_name),
+                    resolving.incident_id,
+                )
+        elif decision.is_activity and not await _morning_reassurance_sent(unit.unit_id):
             await create_notification(
                 "caregiver",
                 unit.unit_id,
@@ -141,3 +315,27 @@ async def ingest_reading(body: ReadingIn) -> Unit:
 
         await _arm_watch_locked(unit.unit_id)
         return unit
+
+
+# --- startup -----------------------------------------------------------------------------
+
+
+async def restore() -> None:
+    """On startup: reschedule timers for active incidents, then arm the watch timer.
+
+    Deadlines that passed while the server was down fire immediately.
+    """
+    for incident in await db_incidents.list_active_incidents():
+        unit = await db_units.get_unit(incident.unit_id)
+        if unit is None or not unit.controllable:
+            continue
+        if incident.state == "grace":
+            if not _has_event(incident, "voice_call_no_answer"):
+                ring_at = incident.opened_at + timedelta(seconds=settings.voice_call_ring_seconds)
+                _schedule_incident_timer("voice", incident.incident_id, ring_at, _voice_no_answer)
+            if incident.grace_ends_at is not None:
+                _schedule_incident_timer("grace", incident.incident_id, incident.grace_ends_at, _grace_ended)
+        elif incident.state == "notified" and incident.next_reminder_at is not None:
+            _schedule_incident_timer("reminder", incident.incident_id, incident.next_reminder_at, _send_reminder)
+        logger.info("Restored timers for %s incident %s", incident.state, incident.incident_id)
+    await arm_watch(settings.controllable_unit_id)
