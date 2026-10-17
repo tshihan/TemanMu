@@ -5,7 +5,7 @@ import asyncpg
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import community, companion, config, demo, incidents, notifications, units
+from app.api import community, companion, config, demo, incidents, notifications, readings, units
 from app.db import pool
 from app.realtime import ws
 from app.settings import settings
@@ -58,12 +58,12 @@ def create_app() -> FastAPI:
     ):
         app.include_router(router, prefix="/api")
 
-    # Backend 1: WebSocket at /ws (no /api prefix).
+    # Backend 1: POST /api/readings, and the WebSocket at /ws (no /api prefix).
+    app.include_router(readings.router, prefix="/api")
     app.include_router(ws.router)
 
     # ------------------------------------------------------------------
     # Backend 1: add here
-    #   - POST /api/readings router
     #   - acknowledge/close routes (in app/api/incidents.py)
     # ------------------------------------------------------------------
 

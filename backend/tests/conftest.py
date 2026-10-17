@@ -16,6 +16,7 @@ os.environ["DATABASE_URL"] = TEST_DATABASE_URL or "postgresql://tests-must-not-u
 
 from httpx import ASGITransport, AsyncClient  # noqa: E402
 
+from app import timers  # noqa: E402
 from app.db import pool  # noqa: E402
 from app.db.migrate import apply_migrations  # noqa: E402
 from app.main import app  # noqa: E402
@@ -46,6 +47,7 @@ async def db(migrated):
     await pool.init_pool(TEST_DATABASE_URL)
     await reset_demo()
     yield
+    await timers.cancel_all()  # Backend 1's timers must not outlive this test's event loop
     await pool.close_pool()
 
 

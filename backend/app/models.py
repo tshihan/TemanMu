@@ -62,12 +62,17 @@ class Reading(ContractModel):
 
     @model_validator(mode="after")
     def _value_matches_sensor(self) -> "Reading":
-        if self.sensor == "door":
-            if not isinstance(self.value, str):
-                raise ValueError('door readings need value "open" or "closed"')
-        elif isinstance(self.value, str) or self.value < 0:
-            raise ValueError(f"{self.sensor} readings need a number >= 0")
+        check_value_matches_sensor(self.sensor, self.value)
         return self
+
+
+def check_value_matches_sensor(sensor: Sensor, value: float | DoorState) -> None:
+    """Shared by Reading and ReadingIn: door takes "open"/"closed", water/electricity a number >= 0."""
+    if sensor == "door":
+        if not isinstance(value, str):
+            raise ValueError('door readings need value "open" or "closed"')
+    elif isinstance(value, str) or value < 0:
+        raise ValueError(f"{sensor} readings need a number >= 0")
 
 
 class Baseline(ContractModel):
@@ -204,6 +209,25 @@ class Config(ContractModel):
 
 # --- Backend 2 request and response bodies (§8.4, §8.5) ---------------------------------
 # Backend 1 adds its own bodies (POST /api/readings, acknowledge, close) here.
+
+
+class ReadingIn(ContractModel):
+    """POST /api/readings body."""
+
+    unit_id: UnitId
+    sensor: Sensor
+    value: float | DoorState
+    recorded_at: UtcDatetime | None = None  # defaults to server time
+
+    @model_validator(mode="after")
+    def _value_matches_sensor(self) -> "ReadingIn":
+        check_value_matches_sensor(self.sensor, self.value)
+        return self
+
+
+class ReadingAccepted(ContractModel):
+    accepted: Literal[True] = True
+    unit: Unit
 
 
 class MarkReadRequest(ContractModel):
