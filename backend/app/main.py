@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import community, companion, config, demo, incidents, notifications, units
 from app.db import pool
+from app.realtime import ws
 from app.settings import settings
 
 logging.basicConfig(level=logging.INFO)
@@ -57,11 +58,13 @@ def create_app() -> FastAPI:
     ):
         app.include_router(router, prefix="/api")
 
+    # Backend 1: WebSocket at /ws (no /api prefix).
+    app.include_router(ws.router)
+
     # ------------------------------------------------------------------
     # Backend 1: add here
     #   - POST /api/readings router
     #   - acknowledge/close routes (in app/api/incidents.py)
-    #   - @app.websocket("/ws")
     # ------------------------------------------------------------------
 
     return app
