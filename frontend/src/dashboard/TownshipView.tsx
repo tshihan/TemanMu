@@ -1,160 +1,310 @@
-import { useEffect, useLayoutEffect, useState } from 'react'
-import { loadUnitReadings, useAppState } from '../api/store'
-import type { Reading, Sensor, Status, Unit } from '../api/types'
-import { HomeIllustration } from './HomeIllustration'
+import { useEffect, useRef, useState } from 'react'
+import seed from '../../../shared/seed.json'
+import { useAppState } from '../api/store'
+import type { Incident, Status, Unit } from '../api/types'
 import { IncidentPanel } from './IncidentPanel'
+import './township.css'
 
-type Screen = 'floors' | 'homes' | 'detail'
-const statusLabels: Record<Status, string> = {
-  routine: 'Normal',
-  possible_away: 'Possible Away',
-  unusual_inactivity: 'Unusual Inactivity',
-  unresolved_concern: 'Unresolved Concern',
+type Shown = Status | 'none'
+interface Look { label: string; glyph: string; glyphColor: string; chipBg: string; chipFg: string; pane: string; glow: string; border: string; tileBg: string; bar: string; mull: string; map: string }
+const STATUS: Record<Shown, Look> = {
+  routine: { label: 'No action needed', glyph: '●', glyphColor: '#8d847a', chipBg: '#ede3d6', chipFg: '#515151', pane: '#cdbda3', glow: 'none', border: '#d1c9bf', tileBg: '#fef9ef', bar: '#b5a68e', mull: '#bba98d', map: '#c3b298' },
+  possible_away: { label: 'Possible Away', glyph: '○', glyphColor: '#5d6872', chipBg: '#e5ded5', chipFg: '#333333', pane: '#3a4f5f', glow: 'none', border: '#d1c9bf', tileBg: '#fef9ef', bar: '#9aa3a8', mull: '#2a3a47', map: '#3a4f5f' },
+  unusual_inactivity: { label: 'Unusual Inactivity', glyph: '▲', glyphColor: '#a95f14', chipBg: '#f6dcc0', chipFg: '#6f321d', pane: '#e8892e', glow: '0 0 14px #e8892e99', border: '#d98a3a', tileBg: '#fbefdf', bar: '#d98a3a', mull: '#c27424', map: '#e8892e' },
+  unresolved_concern: { label: 'Unresolved Concern', glyph: '◆', glyphColor: '#b05a36', chipBg: '#b05a36', chipFg: '#fef9ef', pane: '#b05a36', glow: '0 0 14px #b05a3699', border: '#8b4429', tileBg: '#f4e4d7', bar: '#b05a36', mull: '#8b4429', map: '#b05a36' },
+  none: { label: 'Not enrolled', glyph: '–', glyphColor: '#a89e92', chipBg: '#ede3d6', chipFg: '#515151', pane: 'repeating-linear-gradient(135deg,#e9dfd0 0 6px,#f5eee1 6px 12px)', glow: 'none', border: '#e2d9cb', tileBg: '#f8f2e7', bar: 'transparent', mull: 'transparent', map: '#ddd3c4' },
 }
-const signalLabels: Record<Sensor, string> = { water: 'Water', electricity: 'Electricity', door: 'Front door' }
-const signalSymbols: Record<Sensor, string> = { water: '◉', electricity: 'ϟ', door: '▣' }
+const ORDER: Shown[] = ['unresolved_concern', 'unusual_inactivity', 'possible_away', 'routine', 'none']
+type AlertStatus = 'unresolved_concern' | 'unusual_inactivity'
+const CHIP_LABELS: Record<AlertStatus, string> = { unresolved_concern: 'Concern', unusual_inactivity: 'Inactive' }
+const isAlert = (status: Shown): status is AlertStatus => status === 'unresolved_concern' || status === 'unusual_inactivity'
 
-function timeLabel(iso: string | null): string {
-  if (!iso) return 'No event yet'
-  return new Intl.DateTimeFormat('en-MY', {
-    timeZone: 'Asia/Kuala_Lumpur', hour: '2-digit', minute: '2-digit', second: '2-digit',
-  }).format(new Date(iso))
+// Only floor 1 is backed by the live store; the rest of Block A is illustrative sample data.
+const FLOORS = 24
+const SAMPLE_ALERTS: Record<string, { status: Shown; start: number }> = { 'A-1204': { status: 'unusual_inactivity', start: 70 }, 'A-2106': { status: 'unusual_inactivity', start: 160 } }
+const SAMPLE_REASON = 'No water use for longer than the usual quiet gap. Electricity is at standby.'
+const responder = seed.responders.township
+
+interface Row {
+  id: string; floor: number; name: string; short: string; caregiver: string
+  status: Shown; reason: string; usual: number; elapsed: number
+  water: string; power: string; door: string
+  unit?: Unit; demo: boolean
 }
 
-function duration(seconds: number): string {
-  const safe = Math.max(0, Math.floor(seconds))
-  return `${Math.floor(safe / 60)}:${String(safe % 60).padStart(2, '0')}`
+const pad = (n: number) => String(n).padStart(2, '0')
+const duration = (seconds: number) => { const s = Math.max(0, Math.floor(seconds)); return `${Math.floor(s / 60)}:${pad(s % 60)}` }
+const clockTime = (time: number | string) => new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Asia/Kuala_Lumpur', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+}).format(new Date(time))
+const plural = (count: number, word: string) => `${count} ${word}${count > 1 ? 's' : ''}`
+const TITLES: Record<string, string> = { Madam: 'Mdm', Puan: 'Pn', Encik: 'En' }
+function shortName(name: string): string {
+  const [title, first] = name.split(' ')
+  return first ? `${TITLES[title] || title} ${first}` : name
 }
 
-function currentSignal(unit: Unit, sensor: Sensor): string {
-  if (sensor === 'water') return `${unit.latest.water_lpm} L/min`
-  if (sensor === 'electricity') return `${unit.latest.power_kw} kW`
-  return unit.latest.door === 'open' ? 'Open' : 'Closed'
+function sampleRows(start: number, now: number): Row[] {
+  const rows: Row[] = []
+  for (let floor = 2; floor <= FLOORS; floor++) for (let i = 1; i <= 6; i++) {
+    const id = `A-${floor}${pad(i)}`
+    const alert = SAMPLE_ALERTS[id]
+    const offset = alert?.start ?? (i * 7 + floor * 3) % 30
+    const seconds = offset + (now - start) / 1000
+    rows.push({
+      id, floor, name: alert ? 'Sample resident' : `Unit ${id}`, short: alert ? 'Sample' : '', caregiver: 'caregiver',
+      status: alert?.status ?? 'routine', reason: alert ? SAMPLE_REASON : 'Nothing to check at this unit.',
+      usual: 40, elapsed: alert ? seconds : seconds % 34, water: '0 L/min', power: '0.12 kW', door: 'Closed', demo: false,
+    })
+  }
+  return rows
 }
 
-function readingValue(reading: Reading): string {
-  if (reading.sensor === 'water') return `${reading.value} L/min`
-  if (reading.sensor === 'electricity') return `${reading.value} kW`
-  return String(reading.value)
+function liveRow(unit: Unit, now: number): Row {
+  const lastWater = unit.quiet_gap.last_water_activity_at
+  const usual = unit.quiet_gap.usual_max_seconds
+  const raw = lastWater ? Math.max(0, (now - new Date(lastWater).getTime()) / 1000) : 0
+  const alert = isAlert(unit.status)
+  return {
+    id: unit.unit_id, floor: 1, name: unit.resident_name, short: shortName(unit.resident_name), caregiver: unit.caregiver_name,
+    // Like the design, only units that need a response stand out; everything else reads as "no action needed".
+    status: alert ? unit.status : 'routine',
+    reason: alert || unit.controllable ? unit.status_reason : 'Nothing to check at this unit.',
+    usual, elapsed: alert || unit.controllable ? raw : raw % Math.max(6, usual * 0.85),
+    water: `${unit.latest.water_lpm} L/min`, power: `${unit.latest.power_kw} kW`, door: unit.latest.door === 'open' ? 'Open' : 'Closed',
+    unit, demo: unit.controllable,
+  }
 }
 
 export function TownshipView() {
-  const { units, incidents, notifications, readingsByUnit, snapshotRevision } = useAppState()
-  const [screen, setScreen] = useState<Screen>('floors')
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [clock, setClock] = useState(() => Date.now())
-  const [readingsError, setReadingsError] = useState<string | null>(null)
-  const selected = units.find(unit => unit.unit_id === selectedId)
-  const readings = selectedId ? readingsByUnit[selectedId] || [] : []
+  const { units, incidents } = useAppState()
+  const start = useRef(Date.now())
+  const [now, setNow] = useState(() => Date.now())
+  const [selected, setSelected] = useState(() => units.find(unit => unit.controllable)?.unit_id || 'A-105')
+  const [focus, setFocus] = useState(1)
+  const [filter, setFilter] = useState<AlertStatus | null>(null)
+  const [localAcks, setLocalAcks] = useState<Record<string, number>>({})
+  const [query, setQuery] = useState('')
+  const [queryMsg, setQueryMsg] = useState('')
 
-  useLayoutEffect(() => {
-    document.querySelector('.dashboard-content')?.scrollTo({ top: 0 })
-  }, [screen, selectedId])
-
+  const step = (delta: number) => setFocus(current => Math.max(1, Math.min(FLOORS, current + delta)))
   useEffect(() => {
-    if (screen !== 'detail' || !selectedId) return
-    void loadUnitReadings(selectedId, snapshotRevision).catch(() => setReadingsError('Could not load the reading timeline.'))
-  }, [screen, selectedId, snapshotRevision])
-  useEffect(() => {
-    if (screen !== 'detail') return
-    const timer = window.setInterval(() => setClock(Date.now()), 1000)
-    return () => window.clearInterval(timer)
-  }, [screen])
+    const timer = window.setInterval(() => setNow(Date.now()), 1000)
+    const onKey = (event: KeyboardEvent) => {
+      if (event.target instanceof HTMLElement && /INPUT|TEXTAREA|SELECT/.test(event.target.tagName)) return
+      if (event.key === 'ArrowUp') { event.preventDefault(); step(1) }
+      if (event.key === 'ArrowDown') { event.preventDefault(); step(-1) }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => { window.clearInterval(timer); window.removeEventListener('keydown', onKey) }
+  }, [])
 
-  if (screen === 'floors') return <div className="township-screen">
-    <div className="building-list" aria-label="Floors in housing block A">
-      {[4, 3, 2, 1].map(floor => floor === 1 ?
-        <button key={floor} type="button" className="floor-card floor-active" onClick={() => setScreen('homes')} aria-label={`Open Floor 1, ${units.length} enrolled homes`}>
-          <span className="floor-number">01</span>
-          <span className="floor-windows" aria-hidden="true">{Array.from({ length: 6 }, (_, index) => <span key={index} />)}</span>
-          <span className="floor-copy"><strong>Floor 1</strong><small>{units.length} enrolled homes</small></span>
-          <span className="floor-arrow" aria-hidden="true">→</span>
-        </button> :
-        <div key={floor} className="floor-card floor-empty" aria-label={`Floor ${floor}`}>
-          <span className="floor-number">0{floor}</span>
-          <span className="floor-windows" aria-hidden="true">{Array.from({ length: 6 }, (_, index) => <span key={index} />)}</span>
-          <span className="floor-copy"><strong>Floor {floor}</strong></span>
-          <span className="floor-empty-mark" aria-hidden="true">—</span>
-        </div>)}
-    </div>
-  </div>
+  const rows = [...units.map(unit => liveRow(unit, now)), ...sampleRows(start.current, now)]
+  const byFloor = (floor: number) => rows.filter(row => row.floor === floor)
+  const worst = (list: Row[]) => list.reduce<Shown>((w, row) => ORDER.indexOf(row.status) < ORDER.indexOf(w) ? row.status : w, 'none')
+  const alerts = rows.filter(row => isAlert(row.status))
+  const dim = (row: Row) => filter && filter !== row.status ? 0.28 : 1
+  const select = (row: Row) => { setSelected(row.id); setFocus(row.floor) }
 
-  if (screen === 'homes') {
-    const ordered = [...units].sort((a, b) => Number(b.status === 'unresolved_concern') - Number(a.status === 'unresolved_concern'))
-    return <div className="township-screen">
-      <button type="button" className="back-link" onClick={() => setScreen('floors')}>← All floors</button>
-      <div className="township-intro compact">
-        <p className="eyebrow">Housing block A · Floor 1</p>
-        <h3>Enrolled <em>homes</em></h3>
-        <p>Select a home to see its utility signals and status reason.</p>
-      </div>
-      <div className="home-grid">
-        {ordered.map(unit => <button key={unit.unit_id} type="button" className={`home-card home-card-${unit.status} ${unit.controllable ? 'home-card-demo' : ''}`}
-          onClick={() => { setReadingsError(null); setSelectedId(unit.unit_id); setScreen('detail') }}
-          aria-label={`Open unit ${unit.unit_id}, ${unit.resident_name}, ${statusLabels[unit.status]}`}>
-          <span className="home-art-wrap"><HomeIllustration status={unit.status} unitId={unit.unit_id} /></span>
-          <span className="home-card-info"><strong>{unit.unit_id}</strong>{unit.status !== 'routine' && <span className={`status-pill status-${unit.status}`}>{statusLabels[unit.status]}</span>}</span>
-          <span className="home-card-name">{unit.resident_name}</span>
-          {unit.controllable && <span className="home-card-caption">Simulated home</span>}
-        </button>)}
-      </div>
-    </div>
+  const top = Math.max(3, Math.min(FLOORS, focus + 1))
+  const lensFloors = [top, top - 1, top - 2]
+  const aboveAlerts = alerts.filter(row => row.floor > top).length
+  const belowAlerts = alerts.filter(row => row.floor < top - 2).length
+  const alertFloors = [...new Set(alerts.map(row => row.floor))].sort((a, b) => b - a)
+  const attention = [...alerts].sort((a, b) => ORDER.indexOf(a.status) - ORDER.indexOf(b.status) || b.elapsed - a.elapsed)
+
+  const incidentFor = (row: Row): Incident | undefined => row.unit?.active_incident_id
+    ? incidents.find(item => item.incident_id === row.unit?.active_incident_id) : undefined
+  const ackFor = (row: Row): { name: string; at: number } | null => {
+    const by = incidentFor(row)?.acknowledged_by
+    if (by) return { name: by.name, at: new Date(by.at).getTime() }
+    return localAcks[row.id] ? { name: responder, at: localAcks[row.id] } : null
   }
 
-  if (!selected) return <div className="township-screen"><button type="button" className="back-link" onClick={() => setScreen('homes')}>← Floor 1 homes</button><p>Unit is unavailable.</p></div>
+  const detail = rows.find(row => row.id === selected) || rows[0]
+  const look = detail ? STATUS[detail.status] : STATUS.routine
+  const detailAlert = detail ? isAlert(detail.status) : false
+  const detailAck = detail ? ackFor(detail) : null
+  // Live units run the full incident flow (acknowledge → log outcome → close); falls back to the latest one so a resolution stays visible.
+  const detailIncident = detail?.unit ? incidentFor(detail) ||
+    [...incidents].filter(item => item.unit_id === detail.id).sort((a, b) => b.opened_at.localeCompare(a.opened_at))[0] : undefined
 
-  const lastWater = selected.quiet_gap.last_water_activity_at
-  const elapsed = lastWater ? Math.max(0, (clock - new Date(lastWater).getTime()) / 1000) : 0
-  const maximum = selected.quiet_gap.usual_max_seconds
-  const exceeded = elapsed > maximum
-  const incident = incidents.find(item => item.incident_id === selected.active_incident_id) ||
-    [...incidents].filter(item => item.unit_id === selected.unit_id).sort((a, b) => b.opened_at.localeCompare(a.opened_at))[0] || null
-  const reassurance = notifications.find(item => item.unit_id === selected.unit_id && item.kind === 'morning_reassurance')
+  function jump(value: string) {
+    const digits = value.replace(/\D/g, '')
+    const match = digits.length >= 3 && rows.find(row => row.id.replace(/\D/g, '') === digits)
+    if (match) { select(match); setQueryMsg('') }
+    else setQueryMsg(digits ? `No unit ${digits} in Block A` : '')
+  }
 
-  return <div className="township-screen detail-screen">
-    <button type="button" className="back-link" onClick={() => setScreen('homes')}>← Floor 1 homes</button>
-    <div className="detail-hero">
-      <div className="detail-home-art"><HomeIllustration status={selected.status} unitId={selected.unit_id} /></div>
-      <div className="detail-hero-copy">
-        <p className="eyebrow">Floor 1 · Unit {selected.unit_id}</p>
-        <h3>{selected.resident_name}</h3>
-        <span className={`status-pill status-${selected.status}`}>{statusLabels[selected.status]}</span>
-        {selected.controllable && <small>Connected to the simulated home</small>}
+  return <div className="tm-township">
+    <div className="tm-toolbar">
+      <div className="tm-toolbar-meta">
+        <span className="tm-summary">Housing block A · {FLOORS} floors · {FLOORS * 6} condo units</span>
+        <span className="tm-live">Live {clockTime(now)}</span>
+      </div>
+      <div className="tm-chips">
+        {filter && <button type="button" className="tm-clear" onClick={() => setFilter(null)}>Show all ×</button>}
+        {(['unresolved_concern', 'unusual_inactivity'] as AlertStatus[]).map(key => {
+          const count = rows.filter(row => row.status === key).length
+          return <button key={key} type="button" className={`tm-chip ${filter === key ? 'is-active' : ''}`} aria-pressed={filter === key}
+            style={{ opacity: filter && filter !== key ? 0.45 : 1 }} onClick={() => setFilter(current => current === key ? null : key)}>
+            <span className="tm-chip-swatch" style={{ background: count ? STATUS[key].map : '#efe7da' }} />
+            <span className="tm-chip-count" style={{ color: count ? 'var(--color-ink)' : '#8d847a' }}>{count}</span>
+            <span className="tm-chip-label">{CHIP_LABELS[key]}</span>
+          </button>
+        })}
       </div>
     </div>
 
-    <section className="detail-section reason-card" aria-labelledby="reason-heading">
-      <p className="eyebrow">Current assessment</p>
-      <h4 id="reason-heading">Why this status?</h4>
-      <p>{selected.status_reason}</p>
-      <small>Updated {timeLabel(selected.status_since)}</small>
-    </section>
+    <div className="tm-layout">
+      <section className="tm-card tm-block" aria-label="Block A floor map">
+        <div className="tm-block-head"><span>Block A</span><span>{FLOORS} floors</span></div>
+        <div className="tm-search">
+          <input type="text" value={query} placeholder="Go to unit, e.g. 1204" aria-label="Go to unit"
+            onChange={event => { setQuery(event.target.value); setQueryMsg('') }}
+            onKeyDown={event => { if (event.key === 'Enter') jump(event.currentTarget.value) }} />
+          {queryMsg && <span role="status">{queryMsg}</span>}
+        </div>
+        <div className="tm-roof" aria-hidden="true"><span /><span /></div>
+        <div className="tm-map">
+          {Array.from({ length: FLOORS }, (_, index) => FLOORS - index).map(floor => {
+            const list = byFloor(floor)
+            const w = worst(list)
+            const hasAlert = list.some(row => isAlert(row.status))
+            return <button key={floor} type="button" onClick={() => setFocus(floor)} aria-label={`Floor ${floor}${hasAlert ? ', has alerts' : ''}`}
+              className={`tm-map-row ${lensFloors.includes(floor) ? 'in-lens' : ''} ${floor === focus ? 'is-focus' : ''}`}>
+              <span className="tm-map-num">{pad(floor)}</span>
+              <span className="tm-map-cells" aria-hidden="true">
+                {[...list.slice(0, 3), null, ...list.slice(3)].map((row, index) => row
+                  ? <span key={row.id} style={{ background: STATUS[row.status].map, opacity: filter && filter !== row.status ? 0.25 : 1 }} />
+                  : <span key={`core-${index}`} style={{ background: '#c6ad8f' }} />)}
+              </span>
+              <span className="tm-map-mark" style={{ color: STATUS[w].glyphColor }}>{hasAlert ? STATUS[w].glyph : ''}</span>
+            </button>
+          })}
+        </div>
+        <div className="tm-ground" aria-hidden="true" />
+        <span className="tm-hint">Click a floor or use ↑ ↓ keys. Shaded rows are shown on the right.</span>
+      </section>
 
-    <section className="detail-section" aria-labelledby="gap-heading">
-      <div className="detail-section-title"><h4 id="gap-heading">Water quiet gap</h4><span>{duration(elapsed)} / usual {duration(maximum)}</span></div>
-      <div className={`quiet-track ${exceeded ? 'is-exceeded' : ''}`} role="progressbar" aria-label="Water quiet gap" aria-valuemin={0} aria-valuemax={maximum} aria-valuenow={Math.min(maximum, Math.floor(elapsed))}>
-        <span style={{ width: `${Math.min(100, elapsed / Math.max(maximum, 1) * 100)}%` }} />
-      </div>
-    </section>
+      <section className="tm-card tm-lens" aria-label={`Floors ${top} to ${top - 2}`}>
+        <div className="tm-lens-head">
+          <div className="tm-lens-nav">
+            <button type="button" onClick={() => step(-1)} disabled={focus <= 1} aria-label="Floor below">▼</button>
+            <button type="button" onClick={() => step(1)} disabled={top >= FLOORS} aria-label="Floor above">▲</button>
+            <span>Floors {top}–{top - 2}</span>
+          </div>
+          <div className="tm-alert-floors">
+            <span>Alert floors</span>
+            {alertFloors.map(floor => {
+              const st = STATUS[worst(byFloor(floor))]
+              const on = lensFloors.includes(floor)
+              return <button key={floor} type="button" className="tm-alert-floor"
+                style={{ background: on ? 'var(--color-ink)' : st.chipBg, color: on ? 'var(--color-parchment)' : st.chipFg, borderColor: on ? 'var(--color-ink)' : st.border }}
+                onClick={() => { const first = alerts.find(row => row.floor === floor); if (first) select(first) }}>
+                <span aria-hidden="true">{st.glyph}</span>Floor {floor}
+              </button>
+            })}
+            {alertFloors.length === 0 && <span style={{ color: '#5f7f4f' }}>None</span>}
+          </div>
+        </div>
 
-    <section className="detail-section" aria-labelledby="signals-heading">
-      <div className="detail-section-title"><h4 id="signals-heading">Utility signals</h4><span>Live readings</span></div>
-      {readingsError && <p role="alert" className="reading-error">{readingsError}</p>}
-      <div className="signal-grid">
-        {(['water', 'electricity', 'door'] as Sensor[]).map(sensor => {
-          const events = readings.filter(item => item.sensor === sensor).slice(-3).reverse()
-          return <article className="signal-card" key={sensor}>
-            <div className="signal-head"><span className="signal-symbol" aria-hidden="true">{signalSymbols[sensor]}</span><strong>{signalLabels[sensor]}</strong></div>
-            <p className="signal-current">{currentSignal(selected, sensor)}</p>
-            {events.length > 0 && <div className="signal-events" aria-label={`${signalLabels[sensor]} timeline`}>
-              {events.map((event, index) => <div key={`${event.recorded_at}-${index}`}><time dateTime={event.recorded_at}>{timeLabel(event.recorded_at)}</time><span>{readingValue(event)}</span></div>)}
+        {top === FLOORS && <div className="tm-row" aria-hidden="true"><div /><div className="tm-lens-roof"><span /><span /></div></div>}
+        {top < FLOORS && <button type="button" className="tm-more above" onClick={() => step(1)}>
+          {plural(FLOORS - top, 'floor')} above{aboveAlerts ? ` · ${plural(aboveAlerts, 'alert')}` : ' · all clear'}  ▲
+        </button>}
+        <div>
+          {lensFloors.map(floor => {
+            const list = byFloor(floor)
+            const count = list.filter(row => isAlert(row.status)).length
+            return <div key={floor} className="tm-row">
+              <div className="tm-floor-label">
+                <span>Floor</span>
+                <span className={`tm-floor-num ${floor === focus ? 'is-focus' : ''}`}>{pad(floor)}</span>
+                <span className="tm-floor-units">{list.length} units</span>
+                {count > 0 && <span className="tm-floor-alert">{plural(count, 'alert')}</span>}
+              </div>
+              <div className="tm-floor">
+                {[...list.slice(0, 3), null, ...list.slice(3)].map((row, index) => {
+                  if (!row) return <div key={`core-${index}`} className="tm-core" aria-hidden="true" />
+                  const st = STATUS[row.status]
+                  const alert = isAlert(row.status)
+                  return <button key={row.id} type="button" onClick={() => select(row)}
+                    className={`tm-unit ${selected === row.id ? 'is-selected' : ''}`} aria-pressed={selected === row.id}
+                    aria-label={`Unit ${row.id}, ${st.label}`}
+                    style={{ borderColor: st.border, background: st.tileBg, opacity: dim(row) }}>
+                    {alert && <span className="tm-unit-pulse" style={{ borderColor: st.bar }} aria-hidden="true" />}
+                    <span className="tm-pane" style={{ background: st.pane, boxShadow: st.glow, ['--mull' as string]: st.mull }}>
+                      <i /><i />
+                      <span className="tm-pane-glyph" style={{ color: st.glyphColor }} aria-hidden="true">{st.glyph}</span>
+                    </span>
+                    <span className="tm-unit-id">{row.id}</span>
+                    <span className={`tm-unit-tag ${alert ? 'is-alert' : ''}`}>{row.status === 'unusual_inactivity' ? `⏱ ${duration(row.elapsed)}` : alert ? 'Check' : ''}</span>
+                    <span className="tm-unit-bar"><span style={{ width: `${Math.min(100, row.elapsed / Math.max(row.usual, 1) * 100)}%`, background: st.bar }} /></span>
+                  </button>
+                })}
+              </div>
+            </div>
+          })}
+        </div>
+        {top - 2 > 1 && <button type="button" className="tm-more below" onClick={() => step(-1)}>
+          {plural(top - 3, 'floor')} below{belowAlerts ? ` · ${plural(belowAlerts, 'alert')}` : ' · all clear'}  ▼
+        </button>}
+        {top - 2 === 1 && <div className="tm-row">
+          <div style={{ display: 'flex', alignItems: 'center' }}><span className="tm-floor-num" style={{ color: 'var(--color-graphite)' }}>G</span></div>
+          <div>
+            <div className="tm-lobby"><span>Lobby · {responder} on duty</span><span aria-hidden="true" /></div>
+            <div className="tm-lobby-ground" aria-hidden="true" />
+          </div>
+        </div>}
+      </section>
+
+      <aside className="tm-aside">
+        <section className="tm-card tm-attention" aria-labelledby="tm-attention-heading">
+          <div className="tm-attention-head"><h4 id="tm-attention-heading">Needs attention</h4><span>{attention.length}</span></div>
+          <div className="tm-attention-list">
+            {attention.map(row => {
+              const st = STATUS[row.status]
+              return <button key={row.id} type="button" className="tm-attention-item" onClick={() => select(row)}
+                style={{ borderColor: st.border, background: row.status === 'unresolved_concern' ? 'var(--color-terracotta-wash)' : '#fbefdf' }}>
+                <span style={{ color: st.glyphColor }} aria-hidden="true">{st.glyph}</span>
+                <span className="tm-attention-who"><strong>{row.id}</strong><span>{row.short}{ackFor(row) ? ` · ${ackFor(row)?.name} checking` : ''}</span></span>
+                <span className="tm-attention-tag">{row.status === 'unresolved_concern' ? 'Check' : `⏱ ${duration(row.elapsed)}`}</span>
+                <span aria-hidden="true">→</span>
+              </button>
+            })}
+            {attention.length === 0 && <p className="tm-empty">All enrolled homes are within their usual routine.</p>}
+          </div>
+        </section>
+
+        {detail && <section className="tm-card" aria-label={`Unit ${detail.id} details`}>
+          <p className="tm-detail-eyebrow">Floor {detail.floor} · Unit {detail.id}</p>
+          <div className="tm-detail-head">
+            <h3>{detail.name}</h3>
+            <span className="tm-detail-chip" style={{ background: look.chipBg, color: look.chipFg }}>{look.glyph} {look.label}</span>
+          </div>
+          {(detail.demo || !detail.unit) && <small className="tm-detail-sim">{detail.demo ? 'Connected to the simulated home' : 'Sample unit'}</small>}
+          <p className="tm-detail-reason">{detail.reason}</p>
+          {detailAlert && <>
+            <div className="tm-quiet-head"><span>Water quiet gap</span><span>{duration(detail.elapsed)} / usual {duration(detail.usual)}</span></div>
+            <div className="tm-quiet" role="progressbar" aria-label="Water quiet gap" aria-valuemin={0} aria-valuemax={detail.usual} aria-valuenow={Math.min(detail.usual, Math.floor(detail.elapsed))}>
+              <span style={{ width: `${Math.min(100, detail.elapsed / Math.max(detail.usual, 1) * 100)}%`, background: look.bar }} />
+            </div>
+            <div className="tm-signals">
+              <div><span><span aria-hidden="true">◉</span> Water</span><strong>{detail.water}</strong></div>
+              <div><span><span aria-hidden="true">ϟ</span> Electricity</span><strong>{detail.power}</strong></div>
+              <div><span><span aria-hidden="true">▣</span> Front door</span><strong>{detail.door}</strong></div>
+            </div>
+            {!detail.unit && !detailAck && <div className="tm-actions">
+              <button type="button" onClick={() => setLocalAcks(acks => ({ ...acks, [detail.id]: Date.now() }))}>I’ll check now</button>
+              <button type="button">Call {detail.caregiver}</button>
             </div>}
-          </article>
-        })}
-      </div>
-    </section>
-
-    <IncidentPanel key={incident?.incident_id || 'empty'} incident={incident} unit={selected} role="township" />
-    {!incident && reassurance && <p className="detail-hint">Latest reassurance: {reassurance.message}</p>}
+            {!detail.unit && detailAck && <p className="tm-ack">{detailAck.name} is checking · since {clockTime(detailAck.at)}</p>}
+          </>}
+        </section>}
+        {detail?.unit && (detailIncident || detailAlert) &&
+          <IncidentPanel key={detailIncident?.incident_id || detail.id} incident={detailIncident || null} unit={detail.unit} role="township" />}
+      </aside>
+    </div>
   </div>
 }

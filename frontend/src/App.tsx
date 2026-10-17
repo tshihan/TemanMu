@@ -83,7 +83,7 @@ export default function App() {
         <div className="dashboard-header">
           <div>
             <p className="eyebrow">TemanMu product · {role === 'township' ? 'Township operator' : 'Caregiver'}</p>
-            <h1>{role === 'township' ? <>Township <em>overview</em></> : <>Caregiver <em>view</em></>}</h1>
+            <h1>{role === 'township' ? 'Unit status' : <>Caregiver <em>view</em></>}</h1>
           </div>
           <div className="role-switcher" role="tablist" aria-label="Dashboard role">
             {(['township', 'caregiver'] as Role[]).map(tabRole => {
@@ -100,7 +100,7 @@ export default function App() {
           {!loaded ? <p className="loading-state" role="status">Waiting for the first snapshot…</p> : role === 'township' ? <TownshipView /> : <CaregiverView />}
         </div>
         {role === 'township' && <div className="dashboard-footer">
-          <span>{inactiveUnread ? `${inactiveUnread} unread for ${inactiveRole}` : 'Both roles are up to date'}</span>
+          <span>{inactiveUnread ? `${inactiveUnread} unread for ${inactiveRole}` : 'Both roles are up to date'} · Floors 2–24 use sample data</span>
           <span>Grace {config?.grace_period_seconds ?? '—'}s · Reminder {config?.reminder_interval_seconds ?? '—'}s</span>
         </div>}
       </section>
