@@ -230,6 +230,17 @@ class ReadingAccepted(ContractModel):
     unit: Unit
 
 
+class AcknowledgeRequest(ContractModel):
+    role: Role
+    name: str = Field(min_length=1)
+
+
+class CloseRequest(ContractModel):
+    role: Role
+    name: str = Field(min_length=1)
+    outcome: Literal["resident_ok", "assistance_provided", "resident_away"]
+
+
 class MarkReadRequest(ContractModel):
     role: Role
 

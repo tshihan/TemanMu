@@ -19,7 +19,7 @@ from app.db import notifications as db_notifications
 from app.db import readings as db_readings
 from app.db import units as db_units
 from app.db.pool import get_pool
-from app.models import Incident, NotificationKind, Reading, ReadingIn, Role, Unit
+from app.models import Actor, Incident, NotificationKind, Reading, ReadingIn, Role, Unit
 from app.realtime import broadcast as realtime
 from app.rules import reasons
 from app.services.notifications import create_notification
@@ -38,6 +38,15 @@ class UnitNotFound(MonitoringError): ...
 
 
 class UnitNotControllable(MonitoringError): ...
+
+
+class IncidentNotFound(MonitoringError): ...
+
+
+class IncidentConflict(MonitoringError): ...
+
+
+class NotAcknowledger(MonitoringError): ...
 
 
 # --- locks -------------------------------------------------------------------------------
@@ -257,6 +266,92 @@ async def _auto_resolve(
     return await db_incidents.add_incident_event(
         incident.incident_id, "auto_resolved", reading_time, detail=reasons.AUTO_RESOLVED, conn=conn
     )
+
+
+# --- responder actions -------------------------------------------------------------------
+
+
+async def _incident_unit_id(incident_id: str) -> str:
+    incident = await db_incidents.get_incident(incident_id)
+    if incident is None:
+        raise IncidentNotFound(incident_id)
+    return incident.unit_id
+
+
+async def acknowledge(incident_id: str, role: Role, name: str) -> Incident:
+    """POST /api/incidents/{id}/acknowledge: stops grace and reminders; the unit's status stays."""
+    unit_id = await _incident_unit_id(incident_id)
+    async with _unit_lock(unit_id):
+        now = utc_now()
+        async with get_pool().acquire() as conn, conn.transaction():
+            incident = await db_incidents.get_incident_for_update(incident_id, conn)
+            if incident is None:
+                raise IncidentNotFound(incident_id)
+            if incident.state not in ("grace", "notified"):
+                raise IncidentConflict("Incident already acknowledged or closed")
+            if incident.state == "grace" and not _has_event(incident, "voice_call_no_answer"):
+                await db_incidents.add_incident_event(
+                    incident_id, "voice_call_cancelled", now, detail=reasons.VOICE_CANCELLED, conn=conn
+                )
+            await db_incidents.update_incident(
+                incident_id,
+                state="acknowledged",
+                ack_role=role,
+                ack_name=name,
+                ack_at=now,
+                grace_ends_at=None,
+                next_reminder_at=None,
+                conn=conn,
+            )
+            incident = await db_incidents.add_incident_event(
+                incident_id, "acknowledged", now, actor=Actor(role=role, name=name), conn=conn
+            )
+
+        timers.cancel_incident(incident_id)
+        await realtime.broadcast("incident.updated", incident)
+        await _notify_both(unit_id, "acknowledged", reasons.acknowledged_message(name), incident_id)
+        return incident
+
+
+async def close(incident_id: str, role: Role, name: str, outcome: str) -> Incident:
+    """POST /api/incidents/{id}/close: only the acknowledger; the unit returns to routine."""
+    unit_id = await _incident_unit_id(incident_id)
+    async with _unit_lock(unit_id):
+        now = utc_now()
+        async with get_pool().acquire() as conn, conn.transaction():
+            incident = await db_incidents.get_incident_for_update(incident_id, conn)
+            if incident is None:
+                raise IncidentNotFound(incident_id)
+            if incident.state != "acknowledged":
+                raise IncidentConflict("Incident must be acknowledged first")
+            ack = incident.acknowledged_by
+            if ack is None or ack.role != role or ack.name != name:
+                raise NotAcknowledger("Only the acknowledger can close this incident")
+            await db_incidents.update_incident(incident_id, state="closed", outcome=outcome, closed_at=now, conn=conn)
+            incident = await db_incidents.add_incident_event(
+                incident_id,
+                "closed",
+                now,
+                actor=Actor(role=role, name=name),
+                detail=reasons.OUTCOME_LABELS[outcome],
+                conn=conn,
+            )
+            # Re-anchor the quiet gap (D2), or the old silence would open a new incident at once.
+            unit = await db_units.update_unit_state(
+                unit_id,
+                status="routine",
+                status_reason=reasons.closed_reason(name, outcome),
+                status_since=now,
+                last_water_activity_at=now,
+                conn=conn,
+            )
+
+        timers.cancel_incident(incident_id)
+        await realtime.broadcast("incident.updated", incident)
+        await realtime.broadcast("unit.updated", unit)
+        await _notify_both(unit_id, "closed", reasons.closed_message(outcome), incident_id)
+        await _arm_watch_locked(unit_id)
+        return incident
 
 
 # --- readings ----------------------------------------------------------------------------
