@@ -2,7 +2,7 @@ import seed from '../../../shared/seed.json'
 import { ApiError } from '../api/live'
 import type {
   Api, BuddyMatch, CommunityActivity, CompanionMessage, Config, Incident,
-  MessagePreset, Notification, Reading, RealtimeEvent, Role, Snapshot, Unit,
+  MessagePreset, NeighbourMatch, NeighbourState, Notification, Reading, RealtimeEvent, Role, Snapshot, Unit,
 } from '../api/types'
 
 type SeedActivity = (typeof seed.community_activities)[number]
@@ -46,6 +46,62 @@ function activities(): CommunityActivity[] {
   })).sort((a, b) => a.starts_at.localeCompare(b.starts_at))
 }
 
+// Same-hour neighbours: mirrors backend app/services/neighbours.py (keep the two in step).
+// Thresholds mirror NEIGHBOUR_MIN_OVERLAP_MINUTES and NEIGHBOUR_EARLY_RISER_BEFORE.
+const NEIGHBOUR_MIN_OVERLAP = 30
+const EARLY_RISER_BEFORE = '06:30'
+type Window = [string, string]
+const minutes = (hhmm: string) => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3, 5))
+const localHHMM = (iso: string) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Kuala_Lumpur', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(iso))
+const rhythmOf = (unitId: string) => seed.units.find(item => item.unit_id === unitId)!.rhythm
+
+function overlap(a: string, b: string): [number, Window | null] {
+  let total = 0, longest: Window | null = null, longestLength = 0
+  for (const x of rhythmOf(a).outings) for (const y of rhythmOf(b).outings) {
+    const start = x.start > y.start ? x.start : y.start
+    const end = x.end < y.end ? x.end : y.end
+    const length = minutes(end) - minutes(start)
+    if (length <= 0) continue
+    total += length
+    if (length > longestLength || (length === longestLength && longest && start < longest[0])) { longest = [start, end]; longestLength = length }
+  }
+  return [total, longest]
+}
+
+function findNeighbour(unitId: string): { unitId: string; match: NeighbourMatch } | null {
+  if (!neighbourConsents.has(unitId)) return null
+  const wake = minutes(rhythmOf(unitId).wake)
+  const best = seed.units
+    .filter(item => item.unit_id !== unitId && neighbourConsents.has(item.unit_id))
+    .map(item => { const [total, window] = overlap(unitId, item.unit_id); return { item, total, window, wakeDiff: Math.abs(minutes(item.rhythm.wake) - wake) } })
+    .filter(c => c.window && c.total >= NEIGHBOUR_MIN_OVERLAP)
+    .sort((a, b) => b.total - a.total || a.wakeDiff - b.wakeDiff || a.item.unit_id.localeCompare(b.item.unit_id))[0]
+  if (!best) return null
+  const [start, end] = best.window!
+  const labels = []
+  if (rhythmOf(unitId).wake < EARLY_RISER_BEFORE && best.item.rhythm.wake < EARLY_RISER_BEFORE) labels.push('early risers')
+  labels.push(`${start < '12:00' ? 'morning' : start < '17:00' ? 'afternoon' : 'evening'} outings`)
+  const nowIso = now()
+  const meeting = activities()
+    .filter(item => { const at = localHHMM(item.starts_at); return start <= at && at <= end })
+    .sort((a, b) => Number(a.starts_at < nowIso) - Number(b.starts_at < nowIso) || a.starts_at.localeCompare(b.starts_at))[0] || null
+  return {
+    unitId: best.item.unit_id,
+    match: { name: best.item.resident_name, floor: Number(best.item.unit_id.split('-').pop()!.slice(0, -2) || 0), labels, meeting_activity: meeting, simulated: true },
+  }
+}
+
+function neighbourState(unitId: string): NeighbourState {
+  unitOrThrow(unitId)
+  const optedIn = neighbourConsents.has(unitId)
+  return {
+    unit_id: unitId, opted_in: optedIn, match: optedIn ? findNeighbour(unitId)?.match || null : null,
+    introduction_requested_at: introductions.find(item => item.unit_id === unitId)?.requested_at || null,
+  }
+}
+
+const initialConsents = () => new Set(seed.units.filter(item => item.open_to_neighbours).map(item => item.unit_id))
+
 function initialSnapshot(): Snapshot {
   const resetAt = new Date()
   return {
@@ -82,6 +138,8 @@ let readings: Reading[] = []
 let messages: CompanionMessage[] = []
 let matches: BuddyMatch[] = []
 let responses: { activity_id: string; action: string }[] = []
+let neighbourConsents = initialConsents()
+let introductions: { unit_id: string; neighbour_unit_id: string; requested_at: string }[] = []
 let morningSentOn: string | null = null
 let scenarioTimers = new Set<ReturnType<typeof setTimeout>>()
 
@@ -238,6 +296,7 @@ export const mockApi: Api = {
   async getMessages(unitId) { unitOrThrow(unitId); return clone(messages.filter(item => item.unit_id === unitId)) },
   async getMessagePresets() { return clone(seed.message_presets as MessagePreset[]) },
   async getBuddy(unitId) { unitOrThrow(unitId); return clone(matches.find(item => item.unit_id === unitId) || null) },
+  async getNeighbours(unitId) { return neighbourState(unitId) },
   async postReading(input) {
     const unit = unitOrThrow(input.unit_id)
     if (!unit.controllable) throw new ApiError(403, 'Only the controllable unit accepts readings')
@@ -366,6 +425,25 @@ export const mockApi: Api = {
     notify({ role: 'caregiver', unit_id: unitId, kind: 'buddy_matched', message: `${unitOrThrow(unitId).caregiver_relationship} is matched with ${buddy.name}, who also enjoys ${sharedInterest}`, incident_id: null })
     return clone(match)
   },
+  async setNeighbourConsent(unitId, open) {
+    unitOrThrow(unitId)
+    if (open) neighbourConsents.add(unitId)
+    else {
+      neighbourConsents.delete(unitId)
+      introductions = introductions.filter(item => item.unit_id !== unitId && item.neighbour_unit_id !== unitId)
+    }
+    return neighbourState(unitId)
+  },
+  async requestNeighbourIntroduction(unitId) {
+    const unit = unitOrThrow(unitId)
+    if (!neighbourConsents.has(unitId)) throw new ApiError(409, 'Resident has not agreed to be introduced')
+    if (introductions.some(item => item.unit_id === unitId)) throw new ApiError(409, 'Introduction already requested')
+    const found = findNeighbour(unitId)
+    if (!found) throw new ApiError(404, 'No neighbour keeps the same hours')
+    introductions.push({ unit_id: unitId, neighbour_unit_id: found.unitId, requested_at: now() })
+    notify({ role: 'caregiver', unit_id: unitId, kind: 'neighbour_introduced', message: `Introduction requested. The community coordinator will arrange for ${unit.caregiver_relationship} to meet ${found.match.name}.`, incident_id: null })
+    return neighbourState(unitId)
+  },
   async resetDemo() {
     clearScenarioTimers()
     state = initialSnapshot()
@@ -373,6 +451,8 @@ export const mockApi: Api = {
     messages = []
     matches = []
     responses = []
+    neighbourConsents = initialConsents()
+    introductions = []
     morningSentOn = null
     publish('snapshot', clone(state))
     return { units: clone(state.units) }

@@ -46,6 +46,28 @@ class SeedBaseline(_Strict):
     standby_power_kw: float = Field(ge=0)
 
 
+class SeedOuting(_Strict):
+    start: HHMM
+    end: HHMM
+
+    @model_validator(mode="after")
+    def _check(self) -> "SeedOuting":
+        if self.start >= self.end:
+            raise ValueError(f"outing start {self.start} must be before end {self.end}")
+        return self
+
+
+class SeedRhythm(_Strict):
+    """A resident's typical day, local time, standing in for four weeks of history.
+
+    In production this would be derived from readings: the first water use of the day is the
+    wake time, and door open/close pairs are outing windows (median values over 4 weeks).
+    """
+
+    wake: HHMM
+    outings: list[SeedOuting] = Field(max_length=3)
+
+
 class SeedUnit(_Strict):
     unit_id: str
     resident_name: str
@@ -59,6 +81,8 @@ class SeedUnit(_Strict):
     last_door_event_offset_seconds: int | None
     interests: list[LowercaseText]
     baseline: SeedBaseline
+    rhythm: SeedRhythm
+    open_to_neighbours: bool
 
     @model_validator(mode="after")
     def _check(self) -> "SeedUnit":

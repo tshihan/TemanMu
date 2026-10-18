@@ -70,6 +70,10 @@ export function notificationCopy(n: Notification, ctx: Ctx, incident: Incident |
       const match = n.message.match(/with (.+), who also enjoys (.+)$/)
       return { title: 'Buddy matched', body: match ? `${match[1]} shares ${R}’s interest in ${match[2]} (simulated match).` : `${n.message} (simulated match).`, Icon: Users, tone: 'warm' }
     }
+    case 'neighbour_introduced': {
+      const name = n.message.match(/to meet (.+)\.$/)?.[1]
+      return { title: 'Introduction requested', body: name ? `The community coordinator will arrange for ${R} to meet ${name} (recorded only).` : n.message, Icon: Users, tone: 'warm' }
+    }
   }
   return { title: 'Update', body: n.message, Icon: Bell, tone: 'info' }
 }
@@ -102,4 +106,5 @@ export function eventCopy(event: IncidentEvent, ctx: Ctx, incident: Incident): C
 export const NOTIFICATION_TARGET: Record<Notification['kind'], 'incident' | 'home' | 'together'> = {
   alert: 'incident', reminder: 'incident', acknowledged: 'incident', unable_to_verify: 'incident', emergency_called: 'incident', closed: 'incident', auto_resolved: 'incident',
   morning_reassurance: 'home', message_delivered: 'together', buddy_matched: 'together',
+  neighbour_introduced: 'together',
 }

@@ -1,15 +1,15 @@
-import { CalendarDays, Check, Info, LoaderCircle, MapPin, Sprout, Users } from 'lucide-react'
+import { CalendarDays, Check, Clock, Info, LoaderCircle, MapPin, Sprout, Users } from 'lucide-react'
 import seed from '../../../shared/seed.json'
 import type { Unit } from '../api/types'
 import type { Ctx } from './copy'
-import { initials, weekdayTime } from './format'
+import { initials, neighbourSentence, weekdayTime } from './format'
 import type { ActivityAction, useCompanion } from './useCompanion'
 
 interface Props { unit: Unit; ctx: Ctx; companion: ReturnType<typeof useCompanion>; onToast: (text: string) => void }
 
 export function TogetherTab({ unit, ctx, companion, onToast }: Props) {
   const { R } = ctx
-  const { buddy, activity, responses } = companion
+  const { buddy, activity, responses, neighbours } = companion
   // The API exposes no interests, so the description reads them from the shared seed.
   const interests = seed.units.find(item => item.unit_id === unit.unit_id)?.interests || []
   const interestText = interests.length ? `: ${interests.join(' or ')}` : ''
@@ -23,6 +23,12 @@ export function TogetherTab({ unit, ctx, companion, onToast }: Props) {
       onClick={() => void respond(action)} disabled={state === 'saving' || state === 'saved'}>
       {state === 'saved' && <Check size={16} aria-hidden="true" />}{state === 'saving' ? 'Saving…' : state === 'saved' ? done : idle}
     </button>
+  }
+  async function consent(open: boolean) {
+    if (await companion.setNeighbourConsent(open)) onToast(open ? `Saved: ${R}’s happy to be introduced` : `${R}’s routine is no longer shared`)
+  }
+  async function introduce() {
+    if (await companion.requestIntroduction()) onToast('Introduction requested')
   }
   const notes = [responses.invite_resident === 'saved' && `Invitation for ${R} recorded.`, responses.join_together === 'saved' && 'Your plan to join together is recorded.'].filter(Boolean)
   const respondFailed = responses.invite_resident === 'error' || responses.join_together === 'error'
@@ -60,6 +66,50 @@ export function TogetherTab({ unit, ctx, companion, onToast }: Props) {
           </> : <strong>No upcoming activity yet</strong>}
         </div>
       </>}
+    </section>
+
+    <section className="cg-card" aria-labelledby="cg-neighbours-heading">
+      <div className="cg-card-head">
+        <h2 id="cg-neighbours-heading" className="cg-card-title">Same-hour neighbours</h2>
+        {(neighbours.kind === 'ready' || neighbours.kind === 'saving') && neighbours.state.match && <span className="cg-chip">Simulated match</span>}
+      </div>
+      {neighbours.kind === 'loading' && <div className="cg-pending" role="status"><LoaderCircle className="cg-spin" size={18} aria-hidden="true" />Loading…</div>}
+      {neighbours.kind === 'error' && <>
+        <div className="cg-warning" role="alert"><Info size={18} aria-hidden="true" /><span>We couldn’t load neighbours just now.</span></div>
+        <button type="button" className="cg-btn cg-btn-outline" onClick={() => void companion.reloadNeighbours()}>Try again</button>
+      </>}
+      {(neighbours.kind === 'ready' || neighbours.kind === 'saving') && (() => {
+        const { state } = neighbours
+        const saving = neighbours.kind === 'saving'
+        if (!state.opted_in) return <>
+          <p className="cg-card-lead">Some neighbours keep the same hours as {R}. With {R}’s OK, we can suggest one to meet.</p>
+          <button type="button" className="cg-btn cg-btn-accent" onClick={() => void consent(true)} disabled={saving}>
+            <Clock size={18} aria-hidden="true" />{saving ? 'Saving…' : `${R}’s happy to be introduced`}
+          </button>
+          <p className="cg-fineprint">We only share a rough pattern like “early riser”, never times, and never {R}’s unit number.</p>
+        </>
+        const { match } = state
+        const requested = Boolean(state.introduction_requested_at)
+        return <>
+          {match ? <>
+            <div className="cg-buddy">
+              <span className="cg-avatar">{initials(match.name)}</span>
+              <span><strong>{match.name}</strong><span><Clock size={14} aria-hidden="true" />Floor {match.floor} · {neighbourSentence(match.labels)}</span></span>
+            </div>
+            {match.meeting_activity && <div className="cg-next">
+              <span>A good first meeting</span>
+              <strong>{match.meeting_activity.title}</strong>
+              <span>{weekdayTime(match.meeting_activity.starts_at)} · {match.meeting_activity.location}</span>
+            </div>}
+            <button type="button" className={`cg-btn cg-btn-outline ${requested ? 'cg-activity-action is-saved' : ''}`}
+              onClick={() => void introduce()} disabled={saving || requested}>
+              {requested && <Check size={16} aria-hidden="true" />}{requested ? 'Introduction requested' : saving ? 'Saving…' : 'Ask the coordinator to introduce them'}
+            </button>
+            {requested && <p className="cg-fineprint" role="status">The community coordinator will introduce them in person. Recorded only; nobody is contacted.</p>}
+          </> : <p className="cg-card-lead">No neighbour keeps {R}’s hours yet. We’ll keep looking.</p>}
+          <button type="button" className="cg-link-button" onClick={() => void consent(false)} disabled={saving}>Stop sharing {R}’s routine</button>
+        </>
+      })()}
     </section>
 
     <section className="cg-card" aria-labelledby="cg-near-heading">

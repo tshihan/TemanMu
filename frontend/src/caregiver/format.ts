@@ -38,3 +38,13 @@ export function greeting(now: number): string {
 }
 
 export const initials = (name: string) => name.split(/\s+/).map(part => part[0]).join('').slice(0, 2).toUpperCase()
+
+/** Neighbour labels as a sentence: ["early risers", "morning outings"] →
+ *  "Both early risers who head out in the mornings". */
+export function neighbourSentence(labels: string[]): string {
+  const outing = labels.find(label => label.endsWith(' outings'))?.replace(' outings', '')
+  const rest = labels.filter(label => !label.endsWith(' outings'))
+  const out = outing ? `head out in the ${outing}s` : ''
+  if (!rest.length) return out ? `Both ${out}` : ''
+  return `Both ${rest.join(' and ')}${out ? ` who ${out}` : ''}`
+}

@@ -1,7 +1,8 @@
 """Demo reset (B6, B7, PRD §6.5): wipe runtime data and reload shared/seed.json."""
 
 import asyncio
-from datetime import datetime, timedelta
+import json
+from datetime import datetime, time, timedelta
 
 from app import timers
 from app.db.pool import get_pool
@@ -42,7 +43,7 @@ async def reset_demo() -> list[Unit]:
         seed = load_seed(settings.seed_file)
         now = utc_now()
 
-        unit_rows, profile_rows, interest_rows = [], [], []
+        unit_rows, profile_rows, interest_rows, rhythm_rows = [], [], [], []
         for u in seed.units:
             water_at = _at(now, u.last_water_activity_offset_seconds)
             door_at = _at(now, u.last_door_event_offset_seconds)
@@ -56,18 +57,23 @@ async def reset_demo() -> list[Unit]:
                 u.baseline.usual_outing_seconds, u.baseline.standby_power_kw,
             ))  # fmt: skip
             interest_rows.extend((u.unit_id, interest, i) for i, interest in enumerate(u.interests))
+            rhythm_rows.append((
+                u.unit_id, time.fromisoformat(u.rhythm.wake),
+                json.dumps([o.model_dump() for o in u.rhythm.outings]),
+            ))  # fmt: skip
 
         async with get_pool().acquire() as conn, conn.transaction():
             # 3. Wipe runtime data.
             await conn.execute(
                 """truncate readings, incident_events, incidents, notifications,
-                            community_responses, companion_messages, buddy_matches
+                            community_responses, companion_messages, buddy_matches,
+                            neighbour_introductions, neighbour_consents
                    restart identity cascade"""
             )
             # 4. Wipe and restore seed tables. Truncating (not upserting) means units removed
             #    from seed.json disappear too.
             await conn.execute(
-                """truncate resident_interests, resident_profiles, community_activities,
+                """truncate resident_interests, resident_profiles, resident_rhythms, community_activities,
                             buddies, message_presets, units
                    cascade"""
             )
@@ -88,6 +94,14 @@ async def reset_demo() -> list[Unit]:
             await conn.executemany(
                 "insert into resident_interests (unit_id, interest, position) values ($1, $2, $3)",
                 interest_rows,
+            )
+            await conn.executemany(
+                "insert into resident_rhythms (unit_id, wake_local, outings) values ($1, $2, $3::jsonb)",
+                rhythm_rows,
+            )
+            await conn.executemany(
+                "insert into neighbour_consents (unit_id, consented_at) values ($1, $2)",
+                [(u.unit_id, now) for u in seed.units if u.open_to_neighbours],
             )
             await conn.executemany(
                 "insert into buddies (buddy_id, name, interests) values ($1, $2, $3)",

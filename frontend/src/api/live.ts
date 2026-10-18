@@ -37,6 +37,7 @@ export const liveApi: Api = {
   getMessages: unitId => request(`/api/companion/messages?unit_id=${query(unitId)}`),
   getMessagePresets: () => request('/api/companion/message-presets'),
   getBuddy: unitId => request(`/api/companion/buddy?unit_id=${query(unitId)}`),
+  getNeighbours: unitId => request(`/api/companion/neighbours?unit_id=${query(unitId)}`),
   postReading: reading => post('/api/readings', reading),
   acknowledgeIncident: (id, actor) => post(`/api/incidents/${query(id)}/acknowledge`, actor),
   escalateIncident: (id, actor) => post(`/api/incidents/${query(id)}/escalate`, actor),
@@ -46,6 +47,8 @@ export const liveApi: Api = {
   respondToActivity: (id, action) => post(`/api/community/activities/${query(id)}/respond`, { action }),
   sendMessage: body => post('/api/companion/messages', body),
   requestBuddy: unit_id => post('/api/companion/buddy/request', { unit_id }),
+  setNeighbourConsent: (unit_id, open) => post('/api/companion/neighbours/consent', { unit_id, open }),
+  requestNeighbourIntroduction: unit_id => post('/api/companion/neighbours/introduce', { unit_id }),
   resetDemo: () => post('/api/demo/reset'),
   // keepalive: the 3D home turns monitoring off on pagehide, which must survive the unload.
   setMonitoring: active => request('/api/demo/monitoring', { method: 'POST', body: JSON.stringify({ active }), keepalive: true }),
