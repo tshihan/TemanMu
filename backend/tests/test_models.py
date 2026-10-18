@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from pydantic import ValidationError
 
-from app.models import Actor, CompanionMessage, Incident, IncidentEvent, Reading
+from app.models import Actor, CloseRequest, CompanionMessage, Incident, IncidentEvent, Reading
 
 T = datetime(2026, 10, 15, 1, 2, 3, 123456, tzinfo=timezone.utc)
 
@@ -63,6 +63,17 @@ def test_incident_keeps_explicit_nulls_but_events_omit_them():
     data = incident.model_dump(mode="json")
     assert data["next_reminder_at"] is None and data["acknowledged_by"] is None
     assert data["events"] == [{"type": "detected", "at": "2026-10-15T01:02:03.123Z"}]
+
+
+def test_close_request_trims_and_limits_report():
+    body = {"role": "township", "name": "Guard Ali", "outcome": "resident_ok"}
+    assert CloseRequest(**body, report="  Resident answered the door.  ").report == "Resident answered the door."
+    with pytest.raises(ValidationError):
+        CloseRequest(**body, report="   ")
+    with pytest.raises(ValidationError):
+        CloseRequest(**body, report="x" * 501)
+    with pytest.raises(ValidationError):
+        CloseRequest(**body)
 
 
 def test_companion_message_constants():

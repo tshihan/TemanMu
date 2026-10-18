@@ -29,6 +29,8 @@ IncidentEventType: TypeAlias = Literal[
     "notified",
     "reminder",
     "acknowledged",
+    "unable_to_verify",
+    "emergency_called",
     "closed",
     "auto_resolved",
 ]
@@ -37,6 +39,8 @@ NotificationKind: TypeAlias = Literal[
     "alert",
     "reminder",
     "acknowledged",
+    "unable_to_verify",
+    "emergency_called",
     "closed",
     "auto_resolved",
     "message_delivered",
@@ -147,6 +151,7 @@ class Incident(ContractModel):
     reminder_count: int
     acknowledged_by: Acknowledgement | None
     outcome: Outcome | None
+    report: str | None = None
     closed_at: UtcDatetime | None
     events: list[IncidentEvent]
 
@@ -235,10 +240,27 @@ class AcknowledgeRequest(ContractModel):
     name: str = Field(min_length=1)
 
 
+class EscalateRequest(ContractModel):
+    role: Role
+    name: str = Field(min_length=1)
+    action: Literal["unable_to_verify", "emergency_called"]
+
+
 class CloseRequest(ContractModel):
     role: Role
     name: str = Field(min_length=1)
     outcome: Literal["resident_ok", "assistance_provided", "resident_away"]
+    report: str | None = Field(default=None, min_length=1, max_length=500)
+
+    @model_validator(mode="after")
+    def _clean_report(self) -> "CloseRequest":
+        if self.report is not None:
+            self.report = self.report.strip()
+            if not self.report:
+                raise ValueError("Report description cannot be blank")
+        if self.role == "township" and not self.report:
+            raise ValueError("Township response requires a short report")
+        return self
 
 
 class MarkReadRequest(ContractModel):

@@ -28,7 +28,7 @@ For a separately hosted frontend, set `VITE_API_BASE_URL` to the backend's HTTPS
 - `src/App.tsx`: product dashboard by default, separate `#simulator` presenter view, and Township/Caregiver role switcher.
 - `src/dashboard/TownshipView.tsx`: Township flow from four-floor overview to six illustrated Floor 1 homes, then a unit's status reason, quiet-gap progress, utility timelines and shared incident response.
 - `src/dashboard/CaregiverView.tsx`: resident status, chronological activity timeline built from confirmed A-105 water, electricity and door readings plus reassurance/status events, simulated call and notification feed. Opening the Caregiver view fetches earlier readings from the same API session.
-- `src/dashboard/IncidentPanel.tsx`: shared countdown, timeline, acknowledgement and outcome actions for both roles.
+- `src/dashboard/IncidentPanel.tsx`: shared countdown, three-timestamp incident summary, acknowledgement and outcome actions. The township response opens in a window only for a notified or acknowledged live incident; minimizing it leaves a compact sidebar entry. A township closer must select an outcome and write a short report, which the backend saves with the incident.
 - `src/theme.css`: shared parchment, terracotta and editorial typography styling for the dashboard.
 - `src/dashboard/HomeIllustration.tsx`: reusable SVG home art, tinted by unit status.
 

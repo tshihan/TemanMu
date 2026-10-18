@@ -61,7 +61,16 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
   const unitIncidents = incidents.filter(item => item.unit_id === unitId)
   const incident = unitIncidents.find(item => item.incident_id === unit?.active_incident_id)
     || [...unitIncidents].sort((a, b) => b.opened_at.localeCompare(a.opened_at))[0] || null
-  const feed = notifications.filter(item => item.role === 'caregiver' && item.unit_id === unitId).sort((a, b) => b.created_at.localeCompare(a.created_at))
+  const seenReminders = new Set<string>()
+  const feed = notifications
+    .filter(item => item.role === 'caregiver' && item.unit_id === unitId)
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))
+    .filter(item => {
+      if (item.kind !== 'reminder' || !item.incident_id) return true
+      if (seenReminders.has(item.incident_id)) return false
+      seenReminders.add(item.incident_id)
+      return true
+    })
   const isUnread = (n: Notification) => !n.read && !readIds.has(n.notification_id)
   const unread = feed.filter(isUnread).length
   const showIncident = incidentOpen && !!incident && incident.state !== 'grace'

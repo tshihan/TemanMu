@@ -71,8 +71,32 @@ async def ack(client, iid, actor=ALI):
     return await client.post(f"/api/incidents/{iid}/acknowledge", json=actor)
 
 
-async def close(client, iid, actor=ALI, outcome="resident_ok"):
-    return await client.post(f"/api/incidents/{iid}/close", json={**actor, "outcome": outcome})
+async def close(client, iid, actor=ALI, outcome="resident_ok", report="Resident checked; no further help needed."):
+    return await client.post(f"/api/incidents/{iid}/close", json={**actor, "outcome": outcome, **({"report": report} if report is not None else {})})
+
+
+async def test_emergency_handoff_requires_acknowledger_and_stays_open(client):
+    iid = await notified_incident()
+    path = f"/api/incidents/{iid}/escalate"
+    assert (await client.post(path, json={**ALI, "action": "emergency_called"})).status_code == 409
+    assert (await ack(client, iid)).status_code == 200
+    assert (await client.post(path, json={"role": "caregiver", "name": "Sarah Lee", "action": "emergency_called"})).status_code == 403
+
+    unverified = await client.post(path, json={**ALI, "action": "unable_to_verify"})
+    assert unverified.status_code == 200
+    assert unverified.json()["state"] == "acknowledged"
+    assert (await close(client, iid, outcome="assistance_provided")).status_code == 409
+
+    called = await client.post(path, json={**ALI, "action": "emergency_called"})
+    assert called.status_code == 200
+    assert called.json()["state"] == "acknowledged"
+    assert called.json()["events"][-1]["type"] == "emergency_called"
+    assert (await client.post(path, json={**ALI, "action": "emergency_called"})).status_code == 409
+    assert sorted(n.role for n in await notes("emergency_called")) == ["caregiver", "township"]
+    reading = await client.post("/api/readings", json={"unit_id": UNIT, "sensor": "water", "value": 1.0})
+    assert reading.status_code == 200
+    assert (await incidents.get_incident(iid)).state == "acknowledged"
+    assert (await close(client, iid, outcome="assistance_provided", report="999 contacted; resident handed to ambulance crew.")).status_code == 200
 
 
 async def test_acknowledge_from_notified_stops_reminders(client, broadcasts):
@@ -176,9 +200,18 @@ async def test_successful_close(client, broadcasts):
         "incident.updated", "unit.updated", "notification.created", "notification.created",
     ]
     assert f"watch:{UNIT}" in timers.scheduled_keys()
-
     listed = (await client.get(f"/api/units/{UNIT}/incidents", params={"state": "closed"})).json()
     assert [i["incident_id"] for i in listed] == [iid]
+
+
+async def test_township_report_is_saved_with_outcome(client):
+    iid = await notified_incident()
+    await ack(client, iid)
+    response = await close(client, iid, report="Resident answered. No assistance required.")
+    assert response.status_code == 200
+    assert response.json()["report"] == "Resident answered. No assistance required."
+    saved = await incidents.get_incident(iid)
+    assert saved.report == "Resident answered. No assistance required."
 
 
 @pytest.mark.parametrize(

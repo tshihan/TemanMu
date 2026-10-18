@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 
 from app.db import incidents as db_incidents
-from app.models import AcknowledgeRequest, CloseRequest, Incident
+from app.models import AcknowledgeRequest, CloseRequest, EscalateRequest, Incident
 from app.services import monitoring
 
 router = APIRouter(tags=["incidents"])
@@ -36,6 +36,15 @@ async def acknowledge_incident(incident_id: str, body: AcknowledgeRequest) -> In
 async def close_incident(incident_id: str, body: CloseRequest) -> Incident:
     """The acknowledger logs the outcome. 409 unless acknowledged, 403 for anyone else."""
     try:
-        return await monitoring.close(incident_id, body.role, body.name, body.outcome)
+        return await monitoring.close(incident_id, body.role, body.name, body.outcome, body.report)
+    except (monitoring.IncidentNotFound, monitoring.IncidentConflict, monitoring.NotAcknowledger) as e:
+        raise _http_error(e) from None
+
+
+@router.post("/incidents/{incident_id}/escalate", response_model=Incident)
+async def escalate_incident(incident_id: str, body: EscalateRequest) -> Incident:
+    """Record a human's failed welfare check or completed 999 call; this never places a call."""
+    try:
+        return await monitoring.escalate(incident_id, body.role, body.name, body.action)
     except (monitoring.IncidentNotFound, monitoring.IncidentConflict, monitoring.NotAcknowledger) as e:
         raise _http_error(e) from None

@@ -80,12 +80,15 @@ export function TownshipView() {
   const [filter, setFilter] = useState<AlertStatus | null>(null)
   const [query, setQuery] = useState('')
   const [queryMsg, setQueryMsg] = useState('')
+  const [minimizedResponseId, setMinimizedResponseId] = useState<string | null>(null)
+  const responseHeading = useRef<HTMLHeadingElement>(null)
 
   const step = (delta: number) => setFocus(current => Math.max(1, Math.min(FLOORS, current + delta)))
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1000)
     const onKey = (event: KeyboardEvent) => {
       if (event.target instanceof HTMLElement && /INPUT|TEXTAREA|SELECT/.test(event.target.tagName)) return
+      if (event.target instanceof HTMLElement && event.target.closest('[role="dialog"]')) return
       if (event.key === 'ArrowUp') { event.preventDefault(); step(1) }
       if (event.key === 'ArrowDown') { event.preventDefault(); step(-1) }
     }
@@ -115,11 +118,20 @@ export function TownshipView() {
     return null
   }
 
-  const detail = rows.find(row => row.id === selected) || rows[0]
-  const detailAlert = detail ? isAlert(detail.status) : false
-  // Live units run the full incident flow (acknowledge → log outcome → close); falls back to the latest one so a resolution stays visible.
-  const detailIncident = detail?.unit ? incidentFor(detail) ||
-    [...incidents].filter(item => item.unit_id === detail.id).sort((a, b) => b.opened_at.localeCompare(a.opened_at))[0] : undefined
+  const activeIncident = [...incidents].filter(item => ['notified', 'acknowledged'].includes(item.state) && units.some(unit => unit.unit_id === item.unit_id))
+    .sort((a, b) => b.opened_at.localeCompare(a.opened_at))[0]
+  const activeUnit = activeIncident && units.find(unit => unit.unit_id === activeIncident.unit_id)
+  const activeIncidentId = activeIncident?.incident_id
+  const responseOpen = !!activeIncidentId && minimizedResponseId !== activeIncidentId
+  useEffect(() => {
+    if (!responseOpen) return
+    responseHeading.current?.focus()
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && activeIncidentId) setMinimizedResponseId(activeIncidentId)
+    }
+    window.addEventListener('keydown', onEscape)
+    return () => window.removeEventListener('keydown', onEscape)
+  }, [responseOpen, activeIncidentId])
 
   function jump(value: string) {
     const digits = value.replace(/\D/g, '')
@@ -269,9 +281,23 @@ export function TownshipView() {
           </div>
         </section>
 
-        {detail?.unit && (detailIncident || detailAlert) &&
-          <IncidentPanel key={detailIncident?.incident_id || detail.id} incident={detailIncident || null} unit={detail.unit} role="township" />}
+        {activeIncident && activeUnit && !responseOpen && <button type="button" className="tm-response-entry"
+          onClick={() => { const row = rows.find(item => item.id === activeUnit.unit_id); if (row) select(row); setMinimizedResponseId(null) }}>
+          <span><strong>Incident response · {activeUnit.unit_id}</strong><small>{activeIncident.state === 'acknowledged' ? 'Awaiting outcome report' : 'Action needed'}</small></span>
+          <span aria-hidden="true">Open →</span>
+        </button>}
       </aside>
     </div>
+    {responseOpen && activeIncident && activeUnit && <div className="tm-response-overlay">
+      <div className="tm-response-window" role="dialog" aria-modal="true" aria-labelledby="tm-response-title">
+        <div className="tm-response-head">
+          <div><p>Unit {activeUnit.unit_id} · {activeUnit.resident_name}</p><h2 id="tm-response-title" tabIndex={-1} ref={responseHeading}>Incident response</h2></div>
+          <button type="button" onClick={() => setMinimizedResponseId(activeIncident.incident_id)} aria-label="Minimise incident response">Minimise</button>
+        </div>
+        <div className="tm-response-body">
+          <IncidentPanel key={activeIncident.incident_id} incident={activeIncident} unit={activeUnit} role="township" />
+        </div>
+      </div>
+    </div>}
   </div>
 }

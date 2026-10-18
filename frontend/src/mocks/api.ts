@@ -256,7 +256,8 @@ export const mockApi: Api = {
     publish('reading.received', clone(reading))
     const activity = reading.sensor === 'door' ? reading.value === 'open' : typeof reading.value === 'number' && reading.value > (reading.sensor === 'electricity' ? unit.baseline.standby_power_kw : 0)
     const incident = latestIncident(unit.unit_id)
-    if (activity && incident) autoResolve(unit, incident)
+    if (activity && incident && !incident.events.some(event => event.type === 'emergency_called' || event.type === 'unable_to_verify')) autoResolve(unit, incident)
+    else if (incident?.events.some(event => event.type === 'emergency_called' || event.type === 'unable_to_verify')) publish('unit.updated', clone(unit))
     else if (activity && reading.sensor !== 'door' && ['routine', 'possible_away'].includes(unit.status)) {
       updateUnit(unit, 'routine', reading.sensor === 'electricity' ? 'Water and electricity activity within usual routine' : 'Water activity detected within usual routine')
     } else publish('unit.updated', clone(unit))
@@ -279,13 +280,32 @@ export const mockApi: Api = {
     for (const role of ['township', 'caregiver'] as Role[]) notify({ role, unit_id: incident.unit_id, kind: 'acknowledged', message: `${actor.name} is checking now.`, incident_id: id })
     return clone(incident)
   },
+  async escalateIncident(id, actor) {
+    const incident = incidentOrThrow(id)
+    if (incident.state !== 'acknowledged') throw new ApiError(409, 'A responder must acknowledge this incident first')
+    if (incident.acknowledged_by?.role !== actor.role || incident.acknowledged_by.name !== actor.name) throw new ApiError(403, 'Only the acknowledger can record this handoff')
+    if (incident.events.some(event => event.type === actor.action)) throw new ApiError(409, 'This handoff has already been recorded')
+    if (actor.action === 'unable_to_verify' && incident.events.some(event => event.type === 'emergency_called')) throw new ApiError(409, '999 has already been recorded as called')
+    const detail = actor.action === 'unable_to_verify'
+      ? 'Responder could not verify resident safety; urgent follow-up required.'
+      : 'Responder reported calling 999; emergency services have not been confirmed dispatched.'
+    incident.events.push({ type: actor.action, at: now(), actor: { role: actor.role, name: actor.name }, detail })
+    publish('incident.updated', clone(incident))
+    for (const role of ['township', 'caregiver'] as Role[]) notify({ role, unit_id: incident.unit_id, kind: actor.action,
+      message: actor.action === 'unable_to_verify' ? `${actor.name} could not verify the resident's safety. Urgent follow-up is needed.` : `${actor.name} reports calling 999. Emergency response is pending confirmation.`, incident_id: id })
+    return clone(incident)
+  },
   async closeIncident(id, actor) {
+    if (actor.role === 'township' && !actor.report?.trim()) throw new ApiError(422, 'Township response requires a short report')
     const incident = incidentOrThrow(id)
     if (incident.state !== 'acknowledged') throw new ApiError(409, 'Incident must be acknowledged first')
     if (incident.acknowledged_by?.role !== actor.role || incident.acknowledged_by.name !== actor.name) throw new ApiError(403, 'Only the acknowledger can close this incident')
+    if (incident.events.some(event => event.type === 'unable_to_verify') && !incident.events.some(event => event.type === 'emergency_called') && actor.outcome !== 'resident_ok')
+      throw new ApiError(409, 'Record the emergency handoff or confirm the resident is safe before closing')
     clearScenarioTimers()
     incident.state = 'closed'
     incident.outcome = actor.outcome
+    incident.report = actor.report?.trim() || null
     incident.closed_at = now()
     incident.events.push({ type: 'closed', at: incident.closed_at, actor: { role: actor.role, name: actor.name } })
     const unit = unitOrThrow(incident.unit_id)

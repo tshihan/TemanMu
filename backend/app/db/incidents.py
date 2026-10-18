@@ -60,6 +60,7 @@ async def _to_incidents(c: asyncpg.Connection, rows: list[asyncpg.Record]) -> li
                 else None
             ),
             outcome=r["outcome"],
+            report=r["report"],
             closed_at=r["closed_at"],
             events=events[r["incident_id"]],
         )
@@ -97,6 +98,7 @@ async def update_incident(
     ack_name: str | None = UNSET,
     ack_at: datetime | None = UNSET,
     outcome: Outcome | None = UNSET,
+    report: str | None = UNSET,
     closed_at: datetime | None = UNSET,
     conn: asyncpg.Connection | None = None,
 ) -> Incident:
@@ -117,6 +119,7 @@ async def update_incident(
         "ack_name": ack_name,
         "ack_at": ack_at,
         "outcome": outcome,
+        "report": report,
         "closed_at": closed_at,
     }
     changes = {k: v for k, v in fields.items() if v is not UNSET}

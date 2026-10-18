@@ -323,7 +323,7 @@ async def test_stop_cancels_watch_but_keeps_incident_timers(client):
     await client.post(f"/api/incidents/{incident.incident_id}/acknowledge", json={"role": "township", "name": "Guard Ali"})
     await client.post(
         f"/api/incidents/{incident.incident_id}/close",
-        json={"role": "township", "name": "Guard Ali", "outcome": "resident_ok"},
+        json={"role": "township", "name": "Guard Ali", "outcome": "resident_ok", "report": "Resident checked; no further help needed."},
     )
     assert f"watch:{UNIT}" not in timers.scheduled_keys()
 

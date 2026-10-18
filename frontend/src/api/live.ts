@@ -39,6 +39,7 @@ export const liveApi: Api = {
   getBuddy: unitId => request(`/api/companion/buddy?unit_id=${query(unitId)}`),
   postReading: reading => post('/api/readings', reading),
   acknowledgeIncident: (id, actor) => post(`/api/incidents/${query(id)}/acknowledge`, actor),
+  escalateIncident: (id, actor) => post(`/api/incidents/${query(id)}/escalate`, actor),
   closeIncident: (id, actor) => post(`/api/incidents/${query(id)}/close`, actor),
   markNotificationsRead: role => post('/api/notifications/read', { role }),
   markNotificationRead: (id, role) => post(`/api/notifications/${query(id)}/read`, { role }),

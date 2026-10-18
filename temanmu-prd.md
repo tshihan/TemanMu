@@ -39,7 +39,7 @@ Existing solutions each have a gap:
 - Separate neighbour view (neighbours are described verbally as opt-in responders receiving the same alert as the township guard).
 - Native mobile app (the Caregiver view is web; mobile is future work).
 - Machine-learned baselines (baselines are pre-filled values in the prototype).
-- Contacting emergency services.
+- Automatically contacting emergency services. A human-initiated 999 handoff is supported by the incident workflow.
 - "Appliance left on" detection (future work, see section 7).
 
 ---
@@ -224,6 +224,8 @@ The 3D home both **sends** readings (REST) and **receives** companion call event
 3. Both views show who acknowledged and when. The other role's switcher tab shows a badge.
 4. The person who acknowledged logs one outcome: **Resident OK**, **Assistance provided** or **Resident was away**.
 5. The backend closes the incident, writes it to history and returns the unit to Routine.
+
+**Emergency handoff:** After acknowledging, the responder can record that resident safety could not be verified, or that they personally called 999. The latter records a reported call, not confirmed dispatch. Both actions stay on the open incident timeline and notify caregiver and township; neither action places a call. The interface offers a `tel:999` link and prompts the caller to provide the full site address, unit and access details. The case remains open until the responder records the later outcome. Sensor activity cannot automatically close it. If safety could not be verified, the case cannot be closed as "assistance provided" or "resident away" without a recorded emergency handoff; a later in-person confirmation that the resident is OK can close it.
 
 **Auto-resolve:** at any point before closing, any water, electricity (above baseline) or door reading for the unit resolves the incident as "Resident activity detected".
 

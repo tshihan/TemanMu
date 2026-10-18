@@ -22,14 +22,16 @@ export function IncidentView({ incident, unit, ctx, now, liveNote, ackBusy, ackE
   const state = incident.state
   const ack = incident.acknowledged_by
   const mine = ack?.role === 'caregiver' && ack.name === ctx.me
+  const unable = incident.events.some(event => event.type === 'unable_to_verify')
+  const called = incident.events.some(event => event.type === 'emergency_called')
   const lastWater = unit.quiet_gap.last_water_activity_at
   const cause = isOuting(incident) ? `${R} has been out longer than usual.` : lastWater ? `No water use since ${clock(lastWater)}, longer than the usual gap.` : 'No water use for longer than the usual gap.'
 
   const hero = state === 'notified'
     ? { variant: 'alarm', chip: 'Needs response', Icon: TriangleAlert, badge: STATUS_LABELS[unit.status], title: `${R} didn’t answer`, body: `${cause} The simulated call to ${R} went unanswered.` }
     : state === 'acknowledged'
-      ? { variant: 'checking', chip: 'Awaiting outcome', Icon: ShieldCheck, badge: 'Someone is checking', title: mine ? 'You’re checking' : `${actorName(ctx, ack)} is checking`,
-        body: `${actorName(ctx, ack)} took this at ${ack ? clock(ack.at) : '—'}. Reminders have stopped for everyone. ${R} is not yet confirmed safe.` }
+      ? { variant: called || unable ? 'alarm' : 'checking', chip: called ? '999 called' : unable ? 'Urgent follow-up' : 'Awaiting outcome', Icon: called || unable ? TriangleAlert : ShieldCheck, badge: called ? 'Emergency handoff' : unable ? 'Safety not verified' : 'Someone is checking', title: called ? '999 call reported' : unable ? 'Safety not verified' : mine ? 'You’re checking' : `${actorName(ctx, ack)} is checking`,
+        body: called ? `${actorName(ctx, ack)} reports calling 999. Dispatch has not been confirmed. Help responders reach ${R} and await an outcome.` : unable ? `${actorName(ctx, ack)} could not verify ${R}’s safety. Contact the duty supervisor urgently; call 999 if an emergency is suspected.` : `${actorName(ctx, ack)} took this at ${ack ? clock(ack.at) : '—'}. Reminders have stopped for everyone. ${R} is not yet confirmed safe.` }
       : state === 'closed'
         ? { variant: 'calm', chip: 'Closed', Icon: CircleCheck, badge: 'Incident closed', title: outcomeLabel(incident.outcome),
           body: `Recorded by ${actorName(ctx, ack, false)} at ${incident.closed_at ? clock(incident.closed_at) : '—'}.` }
@@ -51,6 +53,11 @@ export function IncidentView({ incident, unit, ctx, now, liveNote, ackBusy, ackE
     try { applyIncident(await api.closeIncident(incident.incident_id, { role: 'caregiver', name: ctx.me, outcome })) }
     catch { setCloseFailed(true) }
     finally { setClosing(false) }
+  }
+
+  async function escalate(action: 'unable_to_verify' | 'emergency_called') {
+    try { applyIncident(await api.escalateIncident(incident.incident_id, { role: 'caregiver', name: ctx.me, action })) }
+    catch { setCloseFailed(true) }
   }
 
   return <div className="cg-sheet" role="dialog" aria-label="Safety alert">
@@ -89,6 +96,15 @@ export function IncidentView({ incident, unit, ctx, now, liveNote, ackBusy, ackE
           <span className="cg-responder-who"><strong>{person.name}</strong><span>{person.role}</span></span>
           <span className="cg-responder-state">{person.has ? <ShieldCheck size={14} aria-hidden="true" /> : <BellRing size={14} aria-hidden="true" />}{person.state}</span>
         </div>)}
+      </section>}
+
+      {state === 'acknowledged' && mine && <section className="cg-card">
+        <h2 className="cg-card-title">Emergency handoff</h2>
+        <p className="cg-card-lead">If {R} has collapsed or needs urgent help, call 999 now and request an ambulance. Give the operator the full address and unit {unit.unit_id}; follow their instructions.</p>
+        <a className="cg-btn cg-btn-accent" href="tel:999">Call 999</a>
+        {!called && <button type="button" className="cg-btn cg-btn-outline" onClick={() => void escalate('emergency_called')}>I called 999 — record handoff</button>}
+        {!unable && !called && <button type="button" className="cg-btn cg-btn-outline" onClick={() => void escalate('unable_to_verify')}>Unable to verify safety</button>}
+        {called && <p className="cg-card-lead">Keep this case open until the handoff or welfare outcome is confirmed.</p>}
       </section>}
 
       {state === 'acknowledged' && mine && <section className="cg-card">

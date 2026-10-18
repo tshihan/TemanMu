@@ -46,6 +46,8 @@ Open `http://localhost:8000/docs`.
 
 - Run the migration once per Supabase project, and again whenever a new file appears in
   `app/db/migrations/`. You can also paste the SQL into the Supabase SQL editor.
+- Migration `002_incident_report.sql` adds the optional report text saved when the township
+  operator records an incident outcome.
 - The app never seeds on startup (that would wipe a running demo on reload). If the database is
   empty, the startup log says so; call `POST /api/demo/reset`.
 - Reset re-reads `shared/seed.json` every time, so seed edits apply without a restart. If the

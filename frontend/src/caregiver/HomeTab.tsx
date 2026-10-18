@@ -18,6 +18,11 @@ function statusCard(unit: Unit, incident: Incident | null, ctx: Ctx, now: number
   }
   if (incident?.state === 'acknowledged' && incident.acknowledged_by) {
     const who = actorName(ctx, incident.acknowledged_by)
+    const called = incident.events.some(event => event.type === 'emergency_called')
+    const unable = incident.events.some(event => event.type === 'unable_to_verify')
+    if (called || unable) return { variant: 'alarm', Icon: TriangleAlert, badge: called ? '999 call reported' : 'Safety unverified',
+      headline: called ? 'Emergency handoff in progress' : 'Urgent follow-up needed',
+      reason: called ? `${who} reports calling 999. Dispatch has not been confirmed.` : `${who} could not verify ${R}’s safety.`, open: 'View alert' }
     return { variant: 'checking', Icon: ShieldCheck, badge: STATUS_LABELS[unit.status], headline: `${who} ${who === 'You' ? 'are' : 'is'} checking`,
       reason: `Taken at ${clock(incident.acknowledged_by.at)}. Reminders have stopped. ${R} is not yet confirmed safe.`,
       open: who === 'You' ? 'Record outcome' : 'View alert' }

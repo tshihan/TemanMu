@@ -365,7 +365,7 @@ async def acknowledge(incident_id: str, role: Role, name: str) -> Incident:
         return incident
 
 
-async def close(incident_id: str, role: Role, name: str, outcome: str) -> Incident:
+async def close(incident_id: str, role: Role, name: str, outcome: str, report: str | None = None) -> Incident:
     """POST /api/incidents/{id}/close: only the acknowledger; the unit returns to routine."""
     unit_id = await _incident_unit_id(incident_id)
     async with _unit_lock(unit_id):
@@ -379,7 +379,9 @@ async def close(incident_id: str, role: Role, name: str, outcome: str) -> Incide
             ack = incident.acknowledged_by
             if ack is None or ack.role != role or ack.name != name:
                 raise NotAcknowledger("Only the acknowledger can close this incident")
-            await db_incidents.update_incident(incident_id, state="closed", outcome=outcome, closed_at=now, conn=conn)
+            if _has_event(incident, "unable_to_verify") and not _has_event(incident, "emergency_called") and outcome != "resident_ok":
+                raise IncidentConflict("Record the emergency handoff or confirm the resident is safe before closing")
+            await db_incidents.update_incident(incident_id, state="closed", outcome=outcome, report=report, closed_at=now, conn=conn)
             incident = await db_incidents.add_incident_event(
                 incident_id,
                 "closed",
@@ -406,6 +408,41 @@ async def close(incident_id: str, role: Role, name: str, outcome: str) -> Incide
         return incident
 
 
+async def escalate(incident_id: str, role: Role, name: str, action: str) -> Incident:
+    """An acknowledged responder records the handoff; no emergency service is contacted here."""
+    unit_id = await _incident_unit_id(incident_id)
+    async with _unit_lock(unit_id):
+        async with get_pool().acquire() as conn, conn.transaction():
+            incident = await db_incidents.get_incident_for_update(incident_id, conn)
+            if incident is None:
+                raise IncidentNotFound(incident_id)
+            if incident.state != "acknowledged":
+                raise IncidentConflict("A responder must acknowledge this incident first")
+            ack = incident.acknowledged_by
+            if ack is None or ack.role != role or ack.name != name:
+                raise NotAcknowledger("Only the acknowledger can record this handoff")
+            if _has_event(incident, action):
+                raise IncidentConflict("This handoff has already been recorded")
+            if action == "unable_to_verify" and _has_event(incident, "emergency_called"):
+                raise IncidentConflict("999 has already been recorded as called")
+            detail = (
+                "Responder could not verify resident safety; urgent follow-up required."
+                if action == "unable_to_verify" else
+                "Responder reported calling 999; emergency services have not been confirmed dispatched."
+            )
+            incident = await db_incidents.add_incident_event(
+                incident_id, action, utc_now(), actor=Actor(role=role, name=name), detail=detail, conn=conn
+            )
+        await realtime.broadcast("incident.updated", incident)
+        message = (
+            f"{name} could not verify the resident's safety. Urgent follow-up is needed."
+            if action == "unable_to_verify" else
+            f"{name} reports calling 999. Emergency response is pending confirmation."
+        )
+        await _notify_both(unit_id, action, message, incident_id)
+        return incident
+
+
 # --- readings ----------------------------------------------------------------------------
 
 
@@ -426,7 +463,10 @@ async def ingest_reading(body: ReadingIn) -> Unit:
             recorded_at=body.recorded_at or utc_now(),
         )
         decision = rules.on_reading(_facts(unit, incident), reading, local_hhmm)
-        resolving = incident if decision.resolve_incident else None
+        emergency_open = incident is not None and (
+            _has_event(incident, "unable_to_verify") or _has_event(incident, "emergency_called")
+        )
+        resolving = incident if decision.resolve_incident and not emergency_open else None
 
         async with get_pool().acquire() as conn, conn.transaction():
             reading = await db_readings.insert_reading(reading, conn=conn)
@@ -434,7 +474,12 @@ async def ingest_reading(body: ReadingIn) -> Unit:
             if resolving is not None:
                 resolved = await _auto_resolve(conn, resolving, reading.recorded_at, decision.resolve_reason)
             # After the incident write, so the unit's derived active_incident_id is current.
-            unit = await db_units.update_unit_state(unit.unit_id, **decision.changes.as_kwargs(), conn=conn)
+            changes = decision.changes.as_kwargs()
+            if emergency_open:
+                # Activity is useful context, but cannot certify safety after a reported 999 call.
+                for field in ("status", "status_reason", "status_since"):
+                    changes.pop(field, None)
+            unit = await db_units.update_unit_state(unit.unit_id, **changes, conn=conn)
 
         if resolved is not None:
             timers.cancel_incident(resolved.incident_id)

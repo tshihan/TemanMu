@@ -46,7 +46,7 @@ export interface Unit {
 
 export type IncidentEventType =
   | 'detected' | 'voice_call_started' | 'voice_call_no_answer' | 'voice_call_cancelled'
-  | 'notified' | 'reminder' | 'acknowledged' | 'closed' | 'auto_resolved'
+  | 'notified' | 'reminder' | 'acknowledged' | 'unable_to_verify' | 'emergency_called' | 'closed' | 'auto_resolved'
 
 export interface IncidentEvent {
   type: IncidentEventType
@@ -65,13 +65,14 @@ export interface Incident {
   reminder_count: number
   acknowledged_by: { role: Role; name: string; at: string } | null
   outcome: Outcome | null
+  report?: string | null
   closed_at: string | null
   events: IncidentEvent[]
 }
 
 export type NotificationKind =
   | 'morning_reassurance' | 'alert' | 'reminder' | 'acknowledged' | 'closed'
-  | 'auto_resolved' | 'message_delivered' | 'buddy_matched'
+  | 'unable_to_verify' | 'emergency_called' | 'auto_resolved' | 'message_delivered' | 'buddy_matched'
 
 export interface Notification {
   notification_id: string
@@ -152,7 +153,8 @@ export interface Api {
   getBuddy(unitId: UnitId): Promise<BuddyMatch | null>
   postReading(reading: Omit<Reading, 'recorded_at'> & { recorded_at?: string }): Promise<{ accepted: true; unit: Unit }>
   acknowledgeIncident(id: string, actor: { role: Role; name: string }): Promise<Incident>
-  closeIncident(id: string, actor: { role: Role; name: string; outcome: Exclude<Outcome, 'resident_activity_detected'> }): Promise<Incident>
+  escalateIncident(id: string, actor: { role: Role; name: string; action: 'unable_to_verify' | 'emergency_called' }): Promise<Incident>
+  closeIncident(id: string, actor: { role: Role; name: string; outcome: Exclude<Outcome, 'resident_activity_detected'>; report?: string }): Promise<Incident>
   markNotificationsRead(role: Role): Promise<void>
   markNotificationRead(id: string, role: Role): Promise<Notification>
   respondToActivity(id: string, action: 'invite_resident' | 'join_together'): Promise<{ ok: true }>

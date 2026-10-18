@@ -51,6 +51,10 @@ export function notificationCopy(n: Notification, ctx: Ctx, incident: Incident |
       const name = by ? actorName(ctx, by) : n.message.replace(/ is checking now\.?$/, '')
       return { title: name === 'You' ? 'You’re checking' : `${name} is checking`, body: `Reminders stopped for everyone. ${R} is not yet confirmed safe.`, Icon: ShieldCheck, tone: 'info' }
     }
+    case 'unable_to_verify':
+      return { title: 'Safety not verified', body: `${n.message} Keep in contact with ${GUARD}.`, Icon: TriangleAlert, tone: 'alarm' }
+    case 'emergency_called':
+      return { title: '999 call reported', body: `${n.message} Dispatch has not been confirmed.`, Icon: PhoneOutgoing, tone: 'alarm' }
     case 'closed':
       return {
         title: `Closed: ${incident ? outcomeLabel(incident.outcome) : n.message.replace(/^Incident closed: |\.$/g, '')}`,
@@ -84,6 +88,10 @@ export function eventCopy(event: IncidentEvent, ctx: Ctx, incident: Incident): C
     case 'reminder': return { title: event.detail || 'Reminder', body: `Sent to you and ${GUARD}.`, Icon: BellRing, tone: 'alarm' }
     case 'acknowledged':
       return { title: `${actorName(ctx, event.actor)} tapped I’ll Check Now`, body: `Reminders stopped for everyone. ${R} not yet confirmed safe.`, Icon: ShieldCheck, tone: 'info' }
+    case 'unable_to_verify':
+      return { title: 'Safety not verified', body: `${actorName(ctx, event.actor)} could not verify ${R}’s safety. Urgent follow-up is needed.`, Icon: TriangleAlert, tone: 'alarm' }
+    case 'emergency_called':
+      return { title: '999 call reported', body: `${actorName(ctx, event.actor)} reports calling 999. Dispatch has not been confirmed.`, Icon: PhoneOutgoing, tone: 'alarm' }
     case 'auto_resolved': return { title: 'Resident activity detected', body: 'Activity at home ended the alert.', Icon: CircleCheck, tone: 'calm' }
     case 'closed':
       return { title: `Outcome: ${outcomeLabel(incident.outcome)}`, body: `Recorded by ${actorName(ctx, event.actor, false)}. Incident closed.`, Icon: CircleCheck, tone: 'calm' }
@@ -92,6 +100,6 @@ export function eventCopy(event: IncidentEvent, ctx: Ctx, incident: Incident): C
 }
 
 export const NOTIFICATION_TARGET: Record<Notification['kind'], 'incident' | 'home' | 'together'> = {
-  alert: 'incident', reminder: 'incident', acknowledged: 'incident', closed: 'incident', auto_resolved: 'incident',
+  alert: 'incident', reminder: 'incident', acknowledged: 'incident', unable_to_verify: 'incident', emergency_called: 'incident', closed: 'incident', auto_resolved: 'incident',
   morning_reassurance: 'home', message_delivered: 'together', buddy_matched: 'together',
 }
