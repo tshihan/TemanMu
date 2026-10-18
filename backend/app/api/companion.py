@@ -2,15 +2,26 @@ from fastapi import APIRouter, HTTPException
 
 from app.api.deps import require_unit
 from app.db import companion as db_companion
-from app.models import BuddyMatch, BuddyRequest, CompanionMessage, MessagePreset, SendMessageRequest
+from app.models import (
+    BuddyMatch,
+    BuddyRequest,
+    CompanionMessage,
+    MessagePreset,
+    NeighbourConsentRequest,
+    NeighbourIntroduceRequest,
+    NeighbourState,
+    SendMessageRequest,
+)
 from app.services import companion as companion_service
+from app.services import neighbours as neighbours_service
 from app.services.companion import AlreadyMatched, CompanionError
+from app.services.neighbours import AlreadyRequested, NotOptedIn
 
 router = APIRouter(tags=["companion"])
 
 
 def _http_error(e: CompanionError) -> HTTPException:
-    return HTTPException(status_code=409 if isinstance(e, AlreadyMatched) else 404, detail=str(e))
+    return HTTPException(status_code=409 if isinstance(e, AlreadyMatched | AlreadyRequested | NotOptedIn) else 404, detail=str(e))
 
 
 @router.get("/companion/messages", response_model=list[CompanionMessage])
@@ -55,5 +66,45 @@ async def post_buddy_request(body: BuddyRequest) -> BuddyMatch:
     """
     try:
         return await companion_service.request_buddy(body.unit_id)
+    except CompanionError as e:
+        raise _http_error(e) from None
+
+
+@router.get("/companion/neighbours", response_model=NeighbourState)
+async def get_neighbours(unit_id: str) -> NeighbourState:
+    """Whether the resident agreed to be introduced, and their same-hour neighbour if so.
+
+    The match carries only coarse labels: never times or the neighbour's unit_id. 404 if the
+    unit does not exist.
+    """
+    try:
+        return await neighbours_service.get_state(unit_id)
+    except CompanionError as e:
+        raise _http_error(e) from None
+
+
+@router.post("/companion/neighbours/consent", response_model=NeighbourState)
+async def post_neighbour_consent(body: NeighbourConsentRequest) -> NeighbourState:
+    """Record (open=true) or withdraw (open=false) the resident's consent. Idempotent.
+
+    Withdrawing also drops any introduction involving the resident. 404 if the unit does not
+    exist.
+    """
+    try:
+        return await neighbours_service.set_consent(body.unit_id, body.open)
+    except CompanionError as e:
+        raise _http_error(e) from None
+
+
+@router.post("/companion/neighbours/introduce", status_code=201, response_model=NeighbourState)
+async def post_neighbour_introduce(body: NeighbourIntroduceRequest) -> NeighbourState:
+    """Ask the community coordinator to introduce the pair in person (recorded only).
+
+    409 if the resident has not agreed or an introduction was already requested; 404 if the
+    unit does not exist or no neighbour keeps the same hours. Adds a caregiver
+    `neighbour_introduced` notification.
+    """
+    try:
+        return await neighbours_service.request_introduction(body.unit_id)
     except CompanionError as e:
         raise _http_error(e) from None

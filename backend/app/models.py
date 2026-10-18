@@ -41,6 +41,7 @@ NotificationKind: TypeAlias = Literal[
     "auto_resolved",
     "message_delivered",
     "buddy_matched",
+    "neighbour_introduced",
 ]
 CommunityAction: TypeAlias = Literal["invite_resident", "join_together"]
 
@@ -202,6 +203,23 @@ class BuddyMatch(ContractModel):
     matched_at: UtcDatetime
 
 
+class NeighbourMatch(ContractModel):
+    """A same-hour neighbour. Deliberately carries no times and no unit_id (privacy)."""
+
+    name: str
+    floor: int
+    labels: list[str]
+    meeting_activity: CommunityActivity | None
+    simulated: Literal[True] = True
+
+
+class NeighbourState(ContractModel):
+    unit_id: UnitId
+    opted_in: bool
+    match: NeighbourMatch | None  # always None while opted_in is false
+    introduction_requested_at: UtcDatetime | None
+
+
 class Config(ContractModel):
     grace_period_seconds: int
     reminder_interval_seconds: int
@@ -276,6 +294,15 @@ class MonitoringResponse(ContractModel):
     active: bool
 
 
+class NeighbourConsentRequest(ContractModel):
+    unit_id: UnitId
+    open: bool  # true = opt in, false = withdraw
+
+
+class NeighbourIntroduceRequest(ContractModel):
+    unit_id: UnitId
+
+
 # --- WebSocket payloads (§8.6) -----------------------------------------------------------
 
 
@@ -286,3 +313,4 @@ class Snapshot(ContractModel):
     incidents: list[Incident]
     notifications: list[Notification]
     config: Config
+

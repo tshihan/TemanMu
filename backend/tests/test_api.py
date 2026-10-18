@@ -119,6 +119,7 @@ async def test_every_get_returns_contract_shape(client):
         ("/api/community/activities", {"unit_id": "Z-999"}),
         ("/api/companion/messages", {"unit_id": "Z-999"}),
         ("/api/companion/buddy", {"unit_id": "Z-999"}),
+        ("/api/companion/neighbours", {"unit_id": "Z-999"}),
     ],
 )
 async def test_unknown_ids_return_404(client, path, params):
@@ -224,6 +225,67 @@ async def test_buddy_request_matches_once_and_reset_clears(client):
     await client.post("/api/demo/reset")
     got = await client.get("/api/companion/buddy", params={"unit_id": "A-105"})
     assert got.status_code == 200 and got.json() is None
+
+
+async def test_neighbour_flow_consent_introduce_withdraw(client):
+    url = "/api/companion/neighbours"
+    start = (await client.get(url, params={"unit_id": "A-105"})).json()
+    assert start == {"unit_id": "A-105", "opted_in": False, "match": None, "introduction_requested_at": None}
+
+    early = await client.post(f"{url}/introduce", json={"unit_id": "A-105"})
+    assert early.status_code == 409
+
+    r = await client.post(f"{url}/consent", json={"unit_id": "A-105", "open": True})
+    assert r.status_code == 200
+    match = r.json()["match"]
+    assert (match["name"], match["floor"], match["labels"]) == (
+        "Madam Wong Siew Lan", 1, ["early risers", "morning outings"],
+    )  # fmt: skip
+    assert match["meeting_activity"]["activity_id"] == "c2"
+    assert match["simulated"] is True
+    # Privacy: no times and no unit_id of the neighbour, ever.
+    for leaked in ("05:45", "06:50", "07:00", "08:00", "A-104"):
+        assert leaked not in r.text
+
+    intro = await client.post(f"{url}/introduce", json={"unit_id": "A-105"})
+    assert intro.status_code == 201 and intro.json()["introduction_requested_at"]
+    caregiver = (await client.get("/api/notifications", params={"role": "caregiver"})).json()
+    assert caregiver[0]["kind"] == "neighbour_introduced"
+    assert caregiver[0]["message"] == (
+        "Introduction requested. The community coordinator will arrange for Mum to meet Madam Wong Siew Lan."
+    )
+    township = (await client.get("/api/notifications", params={"role": "township"})).json()
+    assert all(n["kind"] != "neighbour_introduced" for n in township)
+
+    again = await client.post(f"{url}/introduce", json={"unit_id": "A-105"})
+    assert again.status_code == 409
+
+    gone = (await client.post(f"{url}/consent", json={"unit_id": "A-105", "open": False})).json()
+    assert gone == {"unit_id": "A-105", "opted_in": False, "match": None, "introduction_requested_at": None}
+
+
+async def test_neighbour_withdrawal_removes_them_from_others(client):
+    url = "/api/companion/neighbours"
+    await client.post(f"{url}/consent", json={"unit_id": "A-105", "open": True})
+    await client.post(f"{url}/consent", json={"unit_id": "A-104", "open": False})
+    match = (await client.get(url, params={"unit_id": "A-105"})).json()["match"]
+    assert match["name"] == "Puan Aminah binti Yusof"
+
+
+async def test_neighbour_reset_clears_consent_and_introductions(client):
+    url = "/api/companion/neighbours"
+    await client.post(f"{url}/consent", json={"unit_id": "A-105", "open": True})
+    await client.post(f"{url}/introduce", json={"unit_id": "A-105"})
+    await client.post("/api/demo/reset")
+    state = (await client.get(url, params={"unit_id": "A-105"})).json()
+    assert state["opted_in"] is False and state["introduction_requested_at"] is None
+
+
+async def test_neighbour_no_match_is_404(client):
+    url = "/api/companion/neighbours"
+    r = await client.post(f"{url}/consent", json={"unit_id": "A-106", "open": True})
+    assert r.json()["opted_in"] is True and r.json()["match"] is None
+    assert (await client.post(f"{url}/introduce", json={"unit_id": "A-106"})).status_code == 404
 
 
 async def test_simultaneous_buddy_requests_match_once(client):
