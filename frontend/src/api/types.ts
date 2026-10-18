@@ -154,6 +154,7 @@ export interface Api {
   acknowledgeIncident(id: string, actor: { role: Role; name: string }): Promise<Incident>
   closeIncident(id: string, actor: { role: Role; name: string; outcome: Exclude<Outcome, 'resident_activity_detected'> }): Promise<Incident>
   markNotificationsRead(role: Role): Promise<void>
+  markNotificationRead(id: string, role: Role): Promise<Notification>
   respondToActivity(id: string, action: 'invite_resident' | 'join_together'): Promise<{ ok: true }>
   sendMessage(body: { unit_id: UnitId; from_name: string; preset_id: string }): Promise<CompanionMessage>
   requestBuddy(unitId: UnitId): Promise<BuddyMatch>

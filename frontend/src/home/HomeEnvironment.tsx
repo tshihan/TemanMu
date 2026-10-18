@@ -22,7 +22,8 @@ import type { CompanionMessage, Config, Incident, Reading, Sensor, Unit } from '
 import { HOME_UNIT_ID, SensorGateway, readingForObject } from './integration/sensorGateway'
 import seed from '../../../shared/seed.json'
 import { SensorBeacons, type SensorPulses } from './SensorBeacons'
-import { Pause, Play, RotateCcw, Settings2, Square, X } from 'lucide-react'
+import { Pause, Play, RotateCcw, Settings2, Square, Volume2, VolumeX, X } from 'lucide-react'
+import { HomeSoundscape } from './soundscape'
 import './home.css'
 
 type Command = { action: 'reset' | 'in' | 'out' | 'left' | 'right' | 'plan'; id: number }
@@ -171,6 +172,8 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
   const [picked, setPicked] = useState<ScenarioId>('normalMorning')
   const [sensorView, setSensorView] = useState(false)
   const [toolsOpen, setToolsOpen] = useState(false)
+  const [soundOn, setSoundOn] = useState(() => { try { return localStorage.getItem('temanmu.home.sound') !== 'off' } catch { return true } })
+  const sound = useRef(new HomeSoundscape())
   const [pulses, setPulses] = useState<SensorPulses>({ water: 0, electricity: 0, door: 0 })
   const pulseTimers = useRef<Partial<Record<Sensor, ReturnType<typeof setTimeout>>>>({})
   const active = useRef<{ id: number; target: InteractionId; aborter: AbortController } | null>(null)
@@ -182,7 +185,22 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
   const clock = useRef(new ScenarioController())
   const scenarioActive = scenarioState === 'running' || scenarioState === 'paused'
   const homeUnit = fetchedUnit ?? storeUnit ?? null
-  const setVisualStates = (next: ObjectStates) => { localStates.current = next; setStates(next) }
+  const setVisualStates = (next: ObjectStates) => {
+    const previous = localStates.current
+    localStates.current = next
+    sound.current.setLoop('telephone', next.telephone === 'ringing')
+    sound.current.setLoop('water', next.bathroomTap)
+    sound.current.setLoop('kettle', next.kitchenKettle)
+    if (previous.mainDoor !== next.mainDoor) sound.current.play(next.mainDoor ? 'doorOpen' : 'doorClose')
+    setStates(next)
+  }
+  useEffect(() => {
+    sound.current.setEnabled(soundOn)
+    try { localStorage.setItem('temanmu.home.sound', soundOn ? 'on' : 'off') } catch { /* Preference is optional. */ }
+  }, [soundOn])
+  useEffect(() => {
+    sound.current.setLoop('footsteps', characterStatus.phase === 'walking' && visible && !sensorView)
+  }, [characterStatus.phase, visible, sensorView])
   const syncUnit = (unit: Unit) => {
     latestUnit.current = unit
     gateway.current.sync(unit)
@@ -199,6 +217,7 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
     setSpeech(null)
   }
   useEffect(() => () => {
+    sound.current.dispose()
     Object.values(pulseTimers.current).forEach(timer => clearTimeout(timer))
     runner.current?.stop()
     active.current?.aborter.abort()
@@ -498,11 +517,17 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
       playAnimation,
       interactWith: (object, value, approach, signal) => interactWith(object, false, approach, signal, value),
       setCharacterVisible: setVisible, setObject, waitForQuietGap, waitForNoAnswer, waitForCaregiverAlert, waitForResolution,
-      dispatchResponder, setResponderVisible: () => setResponderVisible(true), setResponderDoor: setResponderDoorOpen,
+      dispatchResponder, setResponderVisible: () => setResponderVisible(true), setResponderDoor: open => {
+        setResponderDoorOpen(open)
+        sound.current.play(open ? 'doorOpen' : 'doorClose')
+      },
       moveResponder, checkResident: () => setResponderChecking(true),
     }
-    void controller.play(steps, actions, (index: number, step: ScenarioStep) =>
-      setScenarioProgress({ index: index + 1, total: steps.length, label: step.label, kind: step.kind }))
+    void controller.play(steps, actions, (index: number, step: ScenarioStep) => {
+      if (step.kind === 'animate' && (step.animation === 'wake' || step.animation === 'recover')) sound.current.play('wake')
+      if (id === 'goingOut' && step.kind === 'visible' && step.value) sound.current.play('return')
+      setScenarioProgress({ index: index + 1, total: steps.length, label: step.label, kind: step.kind })
+    })
       .then(() => {
         if (runner.current !== controller) return
         runner.current = null
@@ -530,16 +555,20 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
   const pauseScenario = () => {
     if (!runner.current || scenarioState !== 'running') return
     runner.current.pause()
+    sound.current.setPaused(true)
     setPaused(true)
     setScenarioState('paused')
   }
   const resumeScenario = () => {
     if (!runner.current || scenarioState !== 'paused') return
     runner.current.resume()
+    sound.current.setPaused(false)
     setPaused(false)
     setScenarioState('running')
   }
   const stopScenario = (clearProgress = false, resetCharacter = true) => {
+    sound.current.stopAll()
+    sound.current.setPaused(false)
     runner.current?.stop()
     runner.current = null
     scenarioRef.current = null
@@ -573,6 +602,7 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
     if (characterStatus.phase !== 'loading' && characterStatus.phase !== 'error') nextCharacterCommand('stop')
   }
   const restoreScene = (unit: Unit) => {
+    sound.current.stopAll()
     runner.current?.stop()
     runner.current = null
     scenarioRef.current = null
@@ -707,7 +737,8 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
   const config = appState.config ?? fetchedConfig
 
   return <section className={`home-environment live-stage ${sensorView ? 'is-sensor-view' : ''} ${className}`} aria-label="Interactive 3D home demo"
-    onKeyDown={event => { if (event.key === 'Escape' && toolsOpen) setToolsOpen(false) }}>
+    onPointerDown={() => sound.current.unlock()}
+    onKeyDown={event => { sound.current.unlock(); if (event.key === 'Escape' && toolsOpen) setToolsOpen(false) }}>
     <div className="home-canvas" tabIndex={0} aria-label="3D home. Drag to rotate, scroll to zoom. Arrow keys rotate; plus and minus zoom; Home resets the camera."
       onKeyDown={event => {
         const action = ({ ArrowLeft: 'left', ArrowRight: 'right', '+': 'in', '=': 'in', '-': 'out', Home: 'reset' } as Record<string, Command['action']>)[event.key]
@@ -735,6 +766,15 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
           <button type="button" role="radio" aria-checked={!sensorView} onClick={() => setSensorView(false)}>Demo view</button>
           <button type="button" role="radio" aria-checked={sensorView} onClick={() => setSensorView(true)}>Sensor view</button>
         </div>
+        <button type="button" className="live-icon-button" aria-label={soundOn ? 'Mute home sounds' : 'Turn on home sounds'}
+          title={soundOn ? 'Mute home sounds' : 'Turn on home sounds'} aria-pressed={soundOn} onClick={() => {
+            const next = !soundOn
+            sound.current.setEnabled(next)
+            if (next) sound.current.unlock()
+            setSoundOn(next)
+          }}>
+          {soundOn ? <Volume2 size={16} aria-hidden="true" /> : <VolumeX size={16} aria-hidden="true" />}
+        </button>
         <button type="button" className="live-icon-button" aria-expanded={toolsOpen} aria-controls="live-tools" onClick={() => setToolsOpen(value => !value)} title="Presenter tools" aria-label="Presenter tools">
           <Settings2 size={15} aria-hidden="true" />
         </button>

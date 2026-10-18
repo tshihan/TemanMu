@@ -66,6 +66,7 @@ export const sharedMockApi: Api = {
   acknowledgeIncident: (id, actor) => call('acknowledgeIncident', id, actor),
   closeIncident: (id, actor) => call('closeIncident', id, actor),
   markNotificationsRead: role => call('markNotificationsRead', role),
+  markNotificationRead: (id, role) => call('markNotificationRead', id, role),
   respondToActivity: (id, action) => call('respondToActivity', id, action),
   sendMessage: body => call('sendMessage', body),
   requestBuddy: unitId => call('requestBuddy', unitId),

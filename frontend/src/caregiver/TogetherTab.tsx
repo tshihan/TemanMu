@@ -1,22 +1,19 @@
-import { CalendarDays, Check, Heart, Info, LoaderCircle, MapPin, Sprout, Users } from 'lucide-react'
+import { CalendarDays, Check, Info, LoaderCircle, MapPin, Sprout, Users } from 'lucide-react'
 import seed from '../../../shared/seed.json'
 import type { Unit } from '../api/types'
 import type { Ctx } from './copy'
-import { initials, weekdayTime, when } from './format'
+import { initials, weekdayTime } from './format'
 import type { ActivityAction, useCompanion } from './useCompanion'
 
-interface Props { unit: Unit; ctx: Ctx; now: number; companion: ReturnType<typeof useCompanion>; onToast: (text: string) => void }
+interface Props { unit: Unit; ctx: Ctx; companion: ReturnType<typeof useCompanion>; onToast: (text: string) => void }
 
-export function TogetherTab({ unit, ctx, now, companion, onToast }: Props) {
+export function TogetherTab({ unit, ctx, companion, onToast }: Props) {
   const { R } = ctx
-  const { presets, messages, buddy, activity, responses, sending, sendFailed } = companion
+  const { buddy, activity, responses } = companion
   // The API exposes no interests, so the description reads them from the shared seed.
   const interests = seed.units.find(item => item.unit_id === unit.unit_id)?.interests || []
   const interestText = interests.length ? `: ${interests.join(' or ')}` : ''
 
-  async function send(presetId: string) {
-    if (await companion.send(presetId)) onToast(`Delivered to ${R} by voice call (simulated)`)
-  }
   async function respond(action: ActivityAction) {
     if (await companion.respond(action)) onToast(action === 'invite_resident' ? `Invitation for ${R} saved` : 'Saved: you’ll join together')
   }
@@ -32,25 +29,6 @@ export function TogetherTab({ unit, ctx, now, companion, onToast }: Props) {
 
   return <div className="cg-page">
     <h1 className="cg-display cg-pad">Stay close</h1>
-
-    <section className="cg-card" aria-labelledby="cg-message-heading">
-      <h2 id="cg-message-heading" className="cg-card-title">Thinking of you</h2>
-      <p className="cg-card-lead">Tap one to send. It reaches {R} as a one-way voice call (simulated). {R} can’t reply.</p>
-      <div className="cg-presets">
-        {presets.map(preset => <button key={preset.preset_id} type="button" onClick={() => void send(preset.preset_id)} disabled={sending !== null}
-          className={`cg-preset ${sending === preset.preset_id ? 'is-sending' : ''}`}>
-          <Heart size={16} aria-hidden="true" /><span>“{preset.text}”</span><small>{sending === preset.preset_id ? 'Sending…' : ''}</small>
-        </button>)}
-      </div>
-      {sendFailed && <p className="cg-inline-error" role="alert"><Info size={16} aria-hidden="true" />The message couldn’t be sent. Please try again.</p>}
-      <h3 className="cg-overline">Sent</h3>
-      {messages.length ? <ol className="cg-sent">
-        {messages.map(message => <li key={message.message_id}>
-          <span>“{message.text}”</span>
-          <span className="cg-sent-meta"><Check size={14} aria-hidden="true" /><span>Delivered to {R} by voice call · Simulated · {when(message.sent_at, now)}</span></span>
-        </li>)}
-      </ol> : <p className="cg-card-lead">Nothing sent yet.</p>}
-    </section>
 
     <section className="cg-card" aria-labelledby="cg-buddy-heading">
       <div className="cg-card-head">

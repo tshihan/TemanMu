@@ -53,3 +53,12 @@ async def list_notifications(
 async def mark_all_read(role: Role, conn: asyncpg.Connection | None = None) -> None:
     async with connection(conn) as c:
         await c.execute("update notifications set read = true where role = $1 and not read", role)
+
+
+async def mark_one_read(notification_id: str, role: Role, conn: asyncpg.Connection | None = None) -> Notification | None:
+    async with connection(conn) as c:
+        row = await c.fetchrow(
+            "update notifications set read = true where notification_id = $1 and role = $2 returning *",
+            notification_id, role,
+        )
+    return _row_to_notification(row) if row else None

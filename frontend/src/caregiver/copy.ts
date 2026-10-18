@@ -39,7 +39,7 @@ export function notificationCopy(n: Notification, ctx: Ctx, incident: Incident |
   const { R } = ctx
   switch (n.kind) {
     case 'morning_reassurance':
-      return { title: `${R}’s day has started.`, body: 'Activity detected at home.', Icon: Sunrise, tone: 'calm' }
+      return { title: `${R}’s day has started.`, body: n.message.match(/day has started\.\s*(.+)$/)?.[1] || 'Activity detected at home.', Icon: Sunrise, tone: 'calm' }
     case 'alert':
       return { title: 'Safety alert', body: `${cause(ctx, incident)}, and ${R} didn’t answer the simulated call. ${GUARD} has been alerted too.`, Icon: TriangleAlert, tone: 'alarm' }
     case 'reminder': {

@@ -10,6 +10,7 @@ import asyncio
 import logging
 from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import asyncpg
 
@@ -87,9 +88,10 @@ async def _notify_both(unit_id: str, kind: NotificationKind, message: str, incid
 
 
 async def _morning_reassurance_sent(unit_id: str) -> bool:
-    # Reset truncates notifications, so any morning_reassurance was sent since the last reset.
+    today = utc_now().astimezone(ZoneInfo(settings.demo_timezone)).date()
     sent = await db_notifications.list_notifications(role="caregiver")
-    return any(n.kind == "morning_reassurance" and n.unit_id == unit_id for n in sent)
+    return any(n.kind == "morning_reassurance" and n.unit_id == unit_id
+               and n.created_at.astimezone(ZoneInfo(settings.demo_timezone)).date() == today for n in sent)
 
 
 # --- timer keys and scheduling -----------------------------------------------------------
@@ -405,7 +407,7 @@ async def ingest_reading(body: ReadingIn) -> Unit:
                 "caregiver",
                 unit.unit_id,
                 "morning_reassurance",
-                reasons.morning_message(unit.caregiver_relationship),
+                reasons.morning_message(unit.caregiver_relationship, reading.sensor),
             )
 
         await _arm_watch_locked(unit.unit_id)

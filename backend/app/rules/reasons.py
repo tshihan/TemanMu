@@ -138,8 +138,13 @@ def reminder_detail(n: int) -> str:
 # --- Notification messages (section 3.4) -------------------------------------------------
 
 
-def morning_message(relationship: str) -> str:
-    return f"{relationship}'s day has started. Activity detected at home."
+def morning_message(relationship: str, sensor: Sensor) -> str:
+    action = {
+        "door": "Front door opened at home.",
+        "water": "Water used at home.",
+        "electricity": "Electricity used at home.",
+    }[sensor]
+    return f"{relationship}'s day has started. {action}"
 
 
 def alert_message(unit_id: str, resident_name: str) -> str:

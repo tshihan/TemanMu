@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
 import { ApiError } from '../api/live'
-import { subscribeAppEvents } from '../api/store'
-import type { BuddyMatch, CommunityActivity, CompanionMessage, MessagePreset } from '../api/types'
+import type { BuddyMatch, CommunityActivity } from '../api/types'
 
 export type BuddyState =
   | { kind: 'loading' } | { kind: 'none' } | { kind: 'requesting' } | { kind: 'matched'; match: BuddyMatch }
@@ -12,25 +11,18 @@ export type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 
 const IDLE: Record<ActivityAction, SaveState> = { invite_resident: 'idle', join_together: 'idle' }
 
-/** Messages, Community Buddy and the nearby activity for one unit. Reloads after every demo reset. */
-export function useCompanion(unitId: string | undefined, fromName: string | undefined, revision: number) {
-  const [presets, setPresets] = useState<MessagePreset[]>([])
-  const [messages, setMessages] = useState<CompanionMessage[]>([])
+/** Community Buddy and the nearby activity for one unit. Reloads after every demo reset. */
+export function useCompanion(unitId: string | undefined, revision: number) {
   const [buddy, setBuddy] = useState<BuddyState>({ kind: 'loading' })
   const [activity, setActivity] = useState<CommunityActivity | null>(null)
   const [responses, setResponses] = useState(IDLE)
-  const [sending, setSending] = useState<string | null>(null)
-  const [sendFailed, setSendFailed] = useState(false)
 
   useEffect(() => {
     if (!unitId) return
     let cancelled = false
-    void Promise.allSettled([api.getMessagePresets(), api.getMessages(unitId), api.getBuddy(unitId), api.getActivities(unitId)]).then(([p, m, b, a]) => {
+    void Promise.allSettled([api.getBuddy(unitId), api.getActivities(unitId)]).then(([b, a]) => {
       if (cancelled) return
       setResponses(IDLE)
-      setSendFailed(false)
-      if (p.status === 'fulfilled') setPresets(p.value)
-      if (m.status === 'fulfilled') setMessages(m.value)
       setBuddy(b.status === 'rejected' ? { kind: 'error' } : b.value ? { kind: 'matched', match: b.value } : { kind: 'none' })
       if (a.status === 'fulfilled') {
         const now = new Date().toISOString()
@@ -39,25 +31,6 @@ export function useCompanion(unitId: string | undefined, fromName: string | unde
     })
     return () => { cancelled = true }
   }, [unitId, revision])
-
-  useEffect(() => subscribeAppEvents(event => {
-    if (event.type !== 'companion.message_delivered' || event.data.unit_id !== unitId) return
-    setMessages(items => items.some(item => item.message_id === event.data.message_id) ? items : [event.data, ...items])
-  }), [unitId])
-
-  async function send(presetId: string): Promise<boolean> {
-    if (!unitId || !fromName || sending) return false
-    setSending(presetId)
-    setSendFailed(false)
-    try {
-      const message = await api.sendMessage({ unit_id: unitId, from_name: fromName, preset_id: presetId })
-      setMessages(items => items.some(item => item.message_id === message.message_id) ? items : [message, ...items])
-      return true
-    } catch {
-      setSendFailed(true)
-      return false
-    } finally { setSending(null) }
-  }
 
   async function requestBuddy(): Promise<void> {
     if (!unitId) return
@@ -84,5 +57,5 @@ export function useCompanion(unitId: string | undefined, fromName: string | unde
     }
   }
 
-  return { presets, messages, buddy, activity, responses, sending, sendFailed, send, requestBuddy, respond }
+  return { buddy, activity, responses, requestBuddy, respond }
 }

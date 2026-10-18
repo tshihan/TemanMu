@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Bell, Check, ChevronRight, HeartHandshake, House, PhoneOff, Settings, ShieldCheck, TriangleAlert, Volume2, VolumeX, WifiOff } from 'lucide-react'
 import { api } from '../api'
 import { ApiError } from '../api/live'
-import { applyIncident, getAppState, loadUnitReadings, markRoleViewed, subscribeAppEvents, useAppState } from '../api/store'
+import { applyIncident, getAppState, loadUnitReadings, markNotificationViewed, markRoleViewed, subscribeAppEvents, useAppState } from '../api/store'
 import type { Notification } from '../api/types'
 import { actorName, ctxFor, NOTIFICATION_TARGET, notificationCopy } from './copy'
 import { clock } from './format'
@@ -51,8 +51,9 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
   const [ackError, setAckError] = useState<AckError>(null)
   const [liveNote, setLiveNote] = useState(false)
   const [lastSync, setLastSync] = useState(() => Date.now())
+  const [connectionTimedOut, setConnectionTimedOut] = useState(false)
   const [now, setNow] = useState(() => Date.now())
-  const companion = useCompanion(unitId, unit?.caregiver_name, snapshotRevision)
+  const companion = useCompanion(unitId, snapshotRevision)
   const scrollRef = useRef<HTMLDivElement>(null)
   const mutedRef = useRef(muted)
   const timers = useRef<Record<'push' | 'toast' | 'call', number | undefined>>({ push: undefined, toast: undefined, call: undefined })
@@ -84,6 +85,11 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
     if (unitId) void loadUnitReadings(unitId, snapshotRevision).catch(() => { /* Today at home falls back to current values. */ })
   }, [unitId, snapshotRevision])
   useEffect(() => { scrollRef.current?.scrollTo({ top: 0 }) }, [tab])
+  useEffect(() => {
+    if (loaded) return
+    const timer = window.setTimeout(() => setConnectionTimedOut(true), 8000)
+    return () => window.clearTimeout(timer)
+  }, [loaded])
 
   // Note when an alert the caregiver is looking at resolves on its own.
   useEffect(() => {
@@ -121,14 +127,22 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
   function goTo(next: Tab) { setTab(next); setIncidentOpen(false) }
   function open(n: Notification) {
     setReadIds(ids => new Set(ids).add(n.notification_id))
+    void markNotificationViewed(n.notification_id, 'caregiver').catch(() => {
+      setReadIds(ids => { const next = new Set(ids); next.delete(n.notification_id); return next })
+      showToast('Could not mark this update as read')
+    })
     setPush(null)
     const target = NOTIFICATION_TARGET[n.kind]
     if (target === 'incident') openIncident()
     else goTo(target)
   }
   function markAllRead() {
-    setReadIds(new Set(feed.map(item => item.notification_id)))
-    void markRoleViewed('caregiver').catch(() => { /* Read state is also kept locally. */ })
+    const ids = feed.map(item => item.notification_id)
+    setReadIds(current => new Set([...current, ...ids]))
+    void markRoleViewed('caregiver').catch(() => {
+      setReadIds(current => { const next = new Set(current); ids.forEach(id => next.delete(id)); return next })
+      showToast('Could not mark updates as read')
+    })
   }
   async function acknowledge() {
     if (!unit || !incident || incident.state !== 'notified' || ackBusy) return
@@ -190,13 +204,13 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
       <div className="cg-scroll" ref={scrollRef}>
         {!loaded ? <div className="cg-loading" role="status">
           <div /><div /><div /><div />
-          <p>Connecting to TemanMu…</p>
+          <p>{connectionTimedOut ? 'Cannot reach TemanMu. Check the backend connection and retry.' : 'Connecting to TemanMu…'}</p>
         </div> : !unit || !ctx ? <p className="cg-card-lead cg-pad">The resident’s home is unavailable.</p>
           : tab === 'home' ? <HomeTab unit={unit} ctx={ctx} incident={incident} feed={feed} readings={readingsByUnit[unit.unit_id] || []} now={now}
-            ackBusy={ackBusy} onAck={() => void acknowledge()} onOpenIncident={openIncident} onCall={startCall} onTogether={() => goTo('together')} />
+            ackBusy={ackBusy} onAck={() => void acknowledge()} onOpenIncident={openIncident} onCall={startCall} />
           : tab === 'updates' ? <UpdatesTab feed={feed} ctx={ctx} now={now} incidentFor={incidentFor} isUnread={isUnread} ackTargetId={ackTargetId}
             ackBusy={ackBusy} onOpen={open} onMarkAllRead={markAllRead} onAck={() => void acknowledge()} />
-          : tab === 'together' ? <TogetherTab unit={unit} ctx={ctx} now={now} companion={companion} onToast={showToast} />
+          : tab === 'together' ? <TogetherTab unit={unit} ctx={ctx} companion={companion} onToast={showToast} />
           : <SettingsTab unit={unit} ctx={ctx} theme={theme} muted={muted} onTheme={setTheme} onToggleMute={() => setMuted(value => !value)} onPreview={playTone} />}
       </div>
 

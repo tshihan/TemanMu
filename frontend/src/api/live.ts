@@ -1,7 +1,9 @@
 import type { Api, RealtimeEvent } from './types'
 
-const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000').replace(/\/$/, '')
-const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/ws'
+// Same-origin URLs let a phone use the Vite proxy instead of resolving localhost on the phone.
+// A separately hosted frontend can override both URLs at build time.
+const baseUrl = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
+const wsUrl = import.meta.env.VITE_WS_URL || `${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}/ws`
 
 export class ApiError extends Error {
   status: number
@@ -39,6 +41,7 @@ export const liveApi: Api = {
   acknowledgeIncident: (id, actor) => post(`/api/incidents/${query(id)}/acknowledge`, actor),
   closeIncident: (id, actor) => post(`/api/incidents/${query(id)}/close`, actor),
   markNotificationsRead: role => post('/api/notifications/read', { role }),
+  markNotificationRead: (id, role) => post(`/api/notifications/${query(id)}/read`, { role }),
   respondToActivity: (id, action) => post(`/api/community/activities/${query(id)}/respond`, { action }),
   sendMessage: body => post('/api/companion/messages', body),
   requestBuddy: unit_id => post('/api/companion/buddy/request', { unit_id }),

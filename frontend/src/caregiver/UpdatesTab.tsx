@@ -36,7 +36,7 @@ export function UpdatesTab({ feed, ctx, now, incidentFor, isUnread, ackTargetId,
     </ol> : <div className="cg-empty">
       <span className="cg-empty-icon"><Bell size={24} aria-hidden="true" /></span>
       <strong>No updates yet</strong>
-      <p>Morning reassurance, alerts and messages about {ctx.R} will appear here as they happen.</p>
+      <p>Morning reassurance and safety alerts about {ctx.R} will appear here as they happen.</p>
     </div>}
   </div>
 }

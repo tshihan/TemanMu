@@ -278,7 +278,9 @@ def test_unresolved_reason_adds_sentence():
 def test_lifecycle_texts():
     assert reasons.voice_call_started("Mum") == "Calling Mum (simulated)"
     assert reasons.reminder_detail(2) == "Reminder #2"
-    assert reasons.morning_message("Mum") == "Mum's day has started. Activity detected at home."
+    assert reasons.morning_message("Mum", "door") == "Mum's day has started. Front door opened at home."
+    assert reasons.morning_message("Mum", "water") == "Mum's day has started. Water used at home."
+    assert reasons.morning_message("Mum", "electricity") == "Mum's day has started. Electricity used at home."
     assert reasons.alert_message("A-105", "Mdm Tan") == "Unresolved concern at A-105: Mdm Tan could not be reached."
     assert reasons.reminder_message(1, "A-105") == "Reminder #1: concern at A-105 still needs a response."
     assert reasons.acknowledged_message("Guard Ali") == "Guard Ali is checking now."

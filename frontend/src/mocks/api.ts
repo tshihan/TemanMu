@@ -11,6 +11,12 @@ const listeners = new Set<(event: RealtimeEvent) => void>()
 const weekdays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
 const clone = <T,>(value: T): T => structuredClone(value)
 const now = () => new Date().toISOString()
+const localDay = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kuala_Lumpur' }).format(new Date())
+const activityMessage = (sensor: Reading['sensor']) => ({
+  door: 'Front door opened at home.',
+  water: 'Water used at home.',
+  electricity: 'Electricity used at home.',
+})[sensor]
 
 function activityDate(activity: SeedActivity, from = new Date()): string {
   const parts = new Intl.DateTimeFormat('en-US', {
@@ -76,7 +82,7 @@ let readings: Reading[] = []
 let messages: CompanionMessage[] = []
 let matches: BuddyMatch[] = []
 let responses: { activity_id: string; action: string }[] = []
-let morningSent = false
+let morningSentOn: string | null = null
 let scenarioTimers = new Set<ReturnType<typeof setTimeout>>()
 
 export const mockSnapshot = (): Snapshot => clone(state)
@@ -90,7 +96,7 @@ export function primeMockInactivity(): Incident {
     throw new ApiError(409, 'The door or away status still suggests an outing. Return home or reset the demo before the inactivity scenario.')
   if (unit.latest.water_lpm > 0 || unit.latest.power_kw > unit.baseline.standby_power_kw)
     throw new ApiError(409, 'Household utility use is active. Reset Demo before the inactivity scenario.')
-  morningSent = true
+  morningSentOn = localDay()
   unit.quiet_gap.last_water_activity_at = new Date(Date.now() - unit.baseline.usual_quiet_gap_seconds * 1000).toISOString()
   publish('unit.updated', clone(unit))
   return startGrace(unit)
@@ -254,9 +260,9 @@ export const mockApi: Api = {
     else if (activity && reading.sensor !== 'door' && ['routine', 'possible_away'].includes(unit.status)) {
       updateUnit(unit, 'routine', reading.sensor === 'electricity' ? 'Water and electricity activity within usual routine' : 'Water activity detected within usual routine')
     } else publish('unit.updated', clone(unit))
-    if (!morningSent && activity && !incident) {
-      morningSent = true
-      notify({ role: 'caregiver', unit_id: unit.unit_id, kind: 'morning_reassurance', message: `${unit.caregiver_relationship}'s day has started. Activity detected at home.`, incident_id: null })
+    if (morningSentOn !== localDay() && activity && !incident) {
+      morningSentOn = localDay()
+      notify({ role: 'caregiver', unit_id: unit.unit_id, kind: 'morning_reassurance', message: `${unit.caregiver_relationship}'s day has started. ${activityMessage(reading.sensor)}`, incident_id: null })
     }
     return { accepted: true, unit: clone(unit) }
   },
@@ -297,6 +303,13 @@ export const mockApi: Api = {
       item.read = true
       publish('notification.updated', clone(item))
     }
+  },
+  async markNotificationRead(id, role) {
+    const item = state.notifications.find(item => item.notification_id === id && item.role === role)
+    if (!item) throw new ApiError(404, 'Notification not found')
+    item.read = true
+    publish('notification.updated', clone(item))
+    return clone(item)
   },
   async respondToActivity(id, action) {
     if (!activities().some(item => item.activity_id === id)) throw new ApiError(404, 'Activity not found')
@@ -340,7 +353,7 @@ export const mockApi: Api = {
     messages = []
     matches = []
     responses = []
-    morningSent = false
+    morningSentOn = null
     publish('snapshot', clone(state))
     return { units: clone(state.units) }
   },
@@ -366,7 +379,7 @@ export const mockScenarios = {
       await mockApi.postReading({ unit_id: unit.unit_id, sensor: 'electricity', value: unit.baseline.standby_power_kw })
       return
     }
-    morningSent = true // These scenarios begin after the resident's day has started.
+    morningSentOn = localDay() // These scenarios begin after the resident's day has started.
     if (scenario === 'going_out') {
       await mockApi.postReading({ unit_id: unit.unit_id, sensor: 'door', value: 'open' })
       await mockApi.postReading({ unit_id: unit.unit_id, sensor: 'door', value: 'closed' })

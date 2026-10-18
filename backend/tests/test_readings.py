@@ -81,12 +81,18 @@ async def test_first_activity_sends_one_morning_reassurance(client, broadcasts):
     [n] = await morning_notifications()
     assert n.role == "caregiver"
     assert n.unit_id == "A-105"
-    assert n.message == "Mum's day has started. Activity detected at home."
+    assert n.message == "Mum's day has started. Water used at home."
     assert n.incident_id is None
 
     await post(client, "electricity", 1.8)
     await post(client, "water", 4)
     assert len(await morning_notifications()) == 1
+
+
+async def test_first_door_open_names_the_action(client):
+    await post(client, "door", "open")
+    [n] = await morning_notifications()
+    assert n.message == "Mum's day has started. Front door opened at home."
 
 
 async def test_non_activity_sends_no_reassurance(client):

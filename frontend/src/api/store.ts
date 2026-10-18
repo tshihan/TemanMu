@@ -103,6 +103,11 @@ export async function markRoleViewed(role: Role): Promise<void> {
   })
 }
 
+export async function markNotificationViewed(id: string, role: Role): Promise<void> {
+  const notification = await api.markNotificationRead(id, role)
+  applyEvent({ type: 'notification.updated', at: new Date().toISOString(), data: notification })
+}
+
 export function useAppState(): AppState {
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
 }

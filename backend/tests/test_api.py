@@ -258,6 +258,24 @@ async def test_mark_read_only_affects_that_role(client):
     assert [n["read"] for n in township] == [False]
 
 
+async def test_opening_one_caregiver_update_persists_only_that_update(client, broadcasts):
+    first = await notifications.insert_notification("caregiver", "A-105", "alert", "First")
+    second = await notifications.insert_notification("caregiver", "A-105", "alert", "Second")
+    other = await notifications.insert_notification("township", "A-105", "alert", "Other")
+
+    response = await client.post(f"/api/notifications/{first.notification_id}/read", json={"role": "caregiver"})
+    assert response.status_code == 200 and response.json()["read"] is True
+    assert [kind for kind, _ in broadcasts] == ["notification.updated"]
+    assert (await client.post(f"/api/notifications/{other.notification_id}/read", json={"role": "caregiver"})).status_code == 404
+    assert (await client.post("/api/notifications/missing/read", json={"role": "caregiver"})).status_code == 404
+
+    feed = (await client.get("/api/notifications", params={"role": "caregiver"})).json()
+    assert {item["notification_id"]: item["read"] for item in feed} == {
+        first.notification_id: True, second.notification_id: False,
+    }
+    assert (await client.get("/api/notifications", params={"role": "township"})).json()[0]["read"] is False
+
+
 # 6 -----------------------------------------------------------------------------------------
 
 

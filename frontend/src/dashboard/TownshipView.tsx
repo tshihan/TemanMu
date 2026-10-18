@@ -22,14 +22,12 @@ const isAlert = (status: Shown): status is AlertStatus => status === 'unresolved
 // Only floor 1 is backed by the live store; the rest of Block A is illustrative sample data.
 const FLOORS = 24
 const SAMPLE_ALERTS: Record<string, { status: Shown; start: number }> = { 'A-1204': { status: 'unusual_inactivity', start: 70 }, 'A-2106': { status: 'unusual_inactivity', start: 160 } }
-const SAMPLE_REASON = 'No water use for longer than the usual quiet gap. Electricity is at standby.'
 const responder = seed.responders.township
 
 interface Row {
-  id: string; floor: number; name: string; short: string; caregiver: string
-  status: Shown; reason: string; usual: number; elapsed: number
-  water: string; power: string; door: string
-  unit?: Unit; demo: boolean
+  id: string; floor: number; short: string
+  status: Shown; usual: number; elapsed: number
+  unit?: Unit
 }
 
 const pad = (n: number) => String(n).padStart(2, '0')
@@ -52,9 +50,8 @@ function sampleRows(start: number, now: number): Row[] {
     const offset = alert?.start ?? (i * 7 + floor * 3) % 30
     const seconds = offset + (now - start) / 1000
     rows.push({
-      id, floor, name: alert ? 'Sample resident' : `Unit ${id}`, short: alert ? 'Sample' : '', caregiver: 'caregiver',
-      status: alert?.status ?? 'routine', reason: alert ? SAMPLE_REASON : 'Nothing to check at this unit.',
-      usual: 40, elapsed: alert ? seconds : seconds % 34, water: '0 L/min', power: '0.12 kW', door: 'Closed', demo: false,
+      id, floor, short: alert ? 'Sample' : '', status: alert?.status ?? 'routine',
+      usual: 40, elapsed: alert ? seconds : seconds % 34,
     })
   }
   return rows
@@ -66,13 +63,11 @@ function liveRow(unit: Unit, now: number): Row {
   const raw = lastWater ? Math.max(0, (now - new Date(lastWater).getTime()) / 1000) : 0
   const alert = isAlert(unit.status)
   return {
-    id: unit.unit_id, floor: 1, name: unit.resident_name, short: shortName(unit.resident_name), caregiver: unit.caregiver_name,
+    id: unit.unit_id, floor: 1, short: shortName(unit.resident_name),
     // Like the design, only units that need a response stand out; everything else reads as "no action needed".
     status: alert ? unit.status : 'routine',
-    reason: alert || unit.controllable ? unit.status_reason : 'Nothing to check at this unit.',
     usual, elapsed: alert || unit.controllable ? raw : raw % Math.max(6, usual * 0.85),
-    water: `${unit.latest.water_lpm} L/min`, power: `${unit.latest.power_kw} kW`, door: unit.latest.door === 'open' ? 'Open' : 'Closed',
-    unit, demo: unit.controllable,
+    unit,
   }
 }
 
@@ -83,7 +78,6 @@ export function TownshipView() {
   const [selected, setSelected] = useState(() => units.find(unit => unit.controllable)?.unit_id || 'A-105')
   const [focus, setFocus] = useState(1)
   const [filter, setFilter] = useState<AlertStatus | null>(null)
-  const [localAcks, setLocalAcks] = useState<Record<string, number>>({})
   const [query, setQuery] = useState('')
   const [queryMsg, setQueryMsg] = useState('')
 
@@ -118,13 +112,11 @@ export function TownshipView() {
   const ackFor = (row: Row): { name: string; at: number } | null => {
     const by = incidentFor(row)?.acknowledged_by
     if (by) return { name: by.name, at: new Date(by.at).getTime() }
-    return localAcks[row.id] ? { name: responder, at: localAcks[row.id] } : null
+    return null
   }
 
   const detail = rows.find(row => row.id === selected) || rows[0]
-  const look = detail ? STATUS[detail.status] : STATUS.routine
   const detailAlert = detail ? isAlert(detail.status) : false
-  const detailAck = detail ? ackFor(detail) : null
   // Live units run the full incident flow (acknowledge → log outcome → close); falls back to the latest one so a resolution stays visible.
   const detailIncident = detail?.unit ? incidentFor(detail) ||
     [...incidents].filter(item => item.unit_id === detail.id).sort((a, b) => b.opened_at.localeCompare(a.opened_at))[0] : undefined
@@ -277,31 +269,6 @@ export function TownshipView() {
           </div>
         </section>
 
-        {detail && <section className="tm-card" aria-label={`Unit ${detail.id} details`}>
-          <p className="tm-detail-eyebrow">Floor {detail.floor} · Unit {detail.id}</p>
-          <div className="tm-detail-head">
-            <h3>{detail.name}</h3>
-            <span className="tm-detail-chip" style={{ background: look.chipBg, color: look.chipFg }}>{look.glyph} {look.label}</span>
-          </div>
-          {(detail.demo || !detail.unit) && <small className="tm-detail-sim">{detail.demo ? 'Connected to the simulated home' : 'Sample unit'}</small>}
-          <p className="tm-detail-reason">{detail.reason}</p>
-          {detailAlert && <>
-            <div className="tm-quiet-head"><span>Water quiet gap</span><span>{duration(detail.elapsed)} / usual {duration(detail.usual)}</span></div>
-            <div className="tm-quiet" role="progressbar" aria-label="Water quiet gap" aria-valuemin={0} aria-valuemax={detail.usual} aria-valuenow={Math.min(detail.usual, Math.floor(detail.elapsed))}>
-              <span style={{ width: `${Math.min(100, detail.elapsed / Math.max(detail.usual, 1) * 100)}%`, background: look.bar }} />
-            </div>
-            <div className="tm-signals">
-              <div><span><span aria-hidden="true">◉</span> Water</span><strong>{detail.water}</strong></div>
-              <div><span><span aria-hidden="true">ϟ</span> Electricity</span><strong>{detail.power}</strong></div>
-              <div><span><span aria-hidden="true">▣</span> Front door</span><strong>{detail.door}</strong></div>
-            </div>
-            {!detail.unit && !detailAck && <div className="tm-actions">
-              <button type="button" onClick={() => setLocalAcks(acks => ({ ...acks, [detail.id]: Date.now() }))}>I’ll check now</button>
-              <button type="button">Call {detail.caregiver}</button>
-            </div>}
-            {!detail.unit && detailAck && <p className="tm-ack">{detailAck.name} is checking · since {clockTime(detailAck.at)}</p>}
-          </>}
-        </section>}
         {detail?.unit && (detailIncident || detailAlert) &&
           <IncidentPanel key={detailIncident?.incident_id || detail.id} incident={detailIncident || null} unit={detail.unit} role="township" />}
       </aside>
