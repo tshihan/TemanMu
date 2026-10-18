@@ -1,7 +1,7 @@
 import { Bell, ShieldCheck } from 'lucide-react'
 import type { Incident, Notification } from '../api/types'
 import { notificationCopy, type Ctx } from './copy'
-import { when } from './format'
+import { clock, dayKey, dayLabel } from './format'
 
 interface Props {
   feed: Notification[]; ctx: Ctx; now: number; incidentFor: (n: Notification) => Incident | undefined
@@ -10,30 +10,46 @@ interface Props {
 }
 
 export function UpdatesTab({ feed, ctx, now, incidentFor, isUnread, ackTargetId, ackBusy, onOpen, onMarkAllRead, onAck }: Props) {
-  return <div className="cg-page cg-page-flat">
-    <div className="cg-page-head">
-      <h1 className="cg-display">Updates</h1>
-      {feed.some(isUnread) && <button type="button" className="cg-link-button" onClick={onMarkAllRead}>Mark all read</button>}
-    </div>
-    {feed.length ? <ol className="cg-feed">
-      {feed.map(n => {
-        const copy = notificationCopy(n, ctx, incidentFor(n))
-        const unread = isUnread(n)
-        return <li key={n.notification_id} className={`cg-feed-item ${unread ? 'is-unread' : ''}`}>
-          <button type="button" className="cg-feed-open" onClick={() => onOpen(n)}>
-            <span className={`cg-tone-icon tone-${copy.tone}`}><copy.Icon size={18} aria-hidden="true" /></span>
-            <span className="cg-feed-text">
-              <span className="cg-feed-title"><strong>{copy.title}</strong>{unread && <span className="cg-new"><span aria-hidden="true" />New</span>}</span>
-              <span className="cg-feed-body">{copy.body}</span>
-              <time dateTime={n.created_at}>{when(n.created_at, now)}</time>
-            </span>
-          </button>
-          {n.notification_id === ackTargetId && <button type="button" className="cg-btn cg-btn-alarm cg-feed-ack" onClick={onAck} disabled={ackBusy}>
-            {!ackBusy && <ShieldCheck size={22} aria-hidden="true" />}{ackBusy ? 'Recording…' : 'I’ll Check Now'}
-          </button>}
-        </li>
-      })}
-    </ol> : <div className="cg-empty">
+  const unread = feed.filter(isUnread).length
+  // The feed is newest first, so each day's group keeps that order.
+  const days: { key: string; label: string; items: Notification[] }[] = []
+  for (const n of feed) {
+    const key = dayKey(n.created_at)
+    const group = days.at(-1)
+    if (group?.key === key) group.items.push(n)
+    else days.push({ key, items: [n], label: key === dayKey(now) ? 'Today' : key === dayKey(now - 864e5) ? 'Yesterday' : dayLabel(n.created_at) })
+  }
+
+  return <div className="cg-page">
+    <header className="cg-page-head">
+      <div>
+        <p className="cg-eyebrow">{unread ? `${unread} new` : 'All caught up'}</p>
+        <h1 className="cg-display">Updates</h1>
+      </div>
+      {unread > 0 && <button type="button" className="cg-link-button" onClick={onMarkAllRead}>Mark all read</button>}
+    </header>
+    {feed.length ? days.map(day => <section key={day.key} className="cg-feed-day" aria-label={day.label}>
+      <h2 className="cg-feed-day-label">{day.label}</h2>
+      <ol className="cg-feed">
+        {day.items.map(n => {
+          const copy = notificationCopy(n, ctx, incidentFor(n))
+          const fresh = isUnread(n)
+          return <li key={n.notification_id} className={`cg-feed-item is-${copy.tone} ${fresh ? 'is-unread' : ''}`}>
+            <button type="button" className="cg-feed-open" onClick={() => onOpen(n)}>
+              <span className={`cg-tone-icon tone-${copy.tone}`}><copy.Icon size={18} aria-hidden="true" /></span>
+              <span className="cg-feed-text">
+                <span className="cg-feed-title"><strong>{copy.title}</strong>{fresh && <span className="cg-new">New</span>}</span>
+                <span className="cg-feed-body">{copy.body}</span>
+              </span>
+              <time className="cg-num" dateTime={n.created_at}>{clock(n.created_at)}</time>
+            </button>
+            {n.notification_id === ackTargetId && <button type="button" className="cg-btn cg-btn-alarm cg-feed-ack" onClick={onAck} disabled={ackBusy}>
+              {!ackBusy && <ShieldCheck size={20} aria-hidden="true" />}{ackBusy ? 'Recording…' : 'I’ll Check Now'}
+            </button>}
+          </li>
+        })}
+      </ol>
+    </section>) : <div className="cg-empty">
       <span className="cg-empty-icon"><Bell size={24} aria-hidden="true" /></span>
       <strong>No updates yet</strong>
       <p>Morning reassurance and safety alerts about {ctx.R} will appear here as they happen.</p>

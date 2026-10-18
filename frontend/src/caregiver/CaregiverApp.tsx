@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { Bell, Check, ChevronRight, HeartHandshake, House, PhoneOff, Settings, ShieldCheck, TriangleAlert, Volume2, VolumeX, WifiOff } from 'lucide-react'
 import { api } from '../api'
 import { ApiError } from '../api/live'
 import { applyIncident, getAppState, loadUnitReadings, markNotificationViewed, markRoleViewed, subscribeAppEvents, useAppState } from '../api/store'
 import type { Notification } from '../api/types'
 import { actorName, ctxFor, NOTIFICATION_TARGET, notificationCopy } from './copy'
-import { clock } from './format'
+import { clock, initials } from './format'
 import { HomeTab } from './HomeTab'
 import { IncidentView, type AckError } from './IncidentView'
 import { SettingsTab, type Theme } from './SettingsTab'
@@ -53,6 +53,7 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
   const [lastSync, setLastSync] = useState(() => Date.now())
   const [connectionTimedOut, setConnectionTimedOut] = useState(false)
   const [now, setNow] = useState(() => Date.now())
+  const [scrolled, setScrolled] = useState(false)
   const companion = useCompanion(unitId, snapshotRevision)
   const scrollRef = useRef<HTMLDivElement>(null)
   const mutedRef = useRef(muted)
@@ -95,10 +96,21 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
   }, [unitId, snapshotRevision])
   useEffect(() => { scrollRef.current?.scrollTo({ top: 0 }) }, [tab])
   useEffect(() => {
+    if (!call) return
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') setCall(null) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [call])
+  useEffect(() => {
     if (loaded) return
     const timer = window.setTimeout(() => setConnectionTimedOut(true), 8000)
     return () => window.clearTimeout(timer)
   }, [loaded])
+
+  // A new check or concern brings Home back to the top, where its hero and action live.
+  useEffect(() => {
+    if ((incident?.state === 'grace' || incident?.state === 'notified') && tab === 'home') scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [incident?.state, tab])
 
   // Note when an alert the caregiver is looking at resolves on its own.
   useEffect(() => {
@@ -133,7 +145,12 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
     setIncidentOpen(true)
     setLiveNote(false)
   }
-  function goTo(next: Tab) { setTab(next); setIncidentOpen(false) }
+  function goTo(next: Tab) {
+    // Tapping the tab you're already on returns to its top, as native apps do.
+    if (next === tab && !showIncident) scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+    setTab(next)
+    setIncidentOpen(false)
+  }
   function open(n: Notification) {
     setReadIds(ids => new Set(ids).add(n.notification_id))
     void markNotificationViewed(n.notification_id, 'caregiver').catch(() => {
@@ -185,8 +202,8 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
 
   return <div className={`cg-root ${standalone ? 'is-standalone' : 'is-embedded'}`} data-theme={theme} onPointerDown={unlockAudio}>
     <div className="cg-app">
-      <header className="cg-header">
-        <span className="cg-wordmark">TemanMu</span>
+      <header className={`cg-header ${scrolled ? 'is-scrolled' : ''}`}>
+        <span className="cg-wordmark"><Mark />TemanMu</span>
         <span className={`cg-connection is-${connection.toLowerCase()}`} role="status"><span aria-hidden="true" />{connection}</span>
         <button type="button" className="cg-round" onClick={() => setMuted(value => !value)}
           aria-label={muted ? 'Sounds off. Turn on' : 'Sounds on. Mute'} title={muted ? 'Sounds off. Turn on' : 'Sounds on. Mute'}>
@@ -199,18 +216,18 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
         <span><strong>Reconnecting…</strong> <span>Showing the last update from {clock(lastSync)}.</span></span>
       </div>}
 
-      {ctx && !showIncident && incident?.state === 'notified' && <button type="button" className="cg-concern is-alarm" onClick={openIncident}>
+      {ctx && !showIncident && tab !== 'home' && incident?.state === 'notified' && <button type="button" className="cg-concern is-alarm" onClick={openIncident}>
         <TriangleAlert size={22} aria-hidden="true" />
         <span><strong>Unresolved concern: {ctx.R} didn’t answer</strong><span>{incident.reminder_count ? `Reminder #${incident.reminder_count}` : 'Alert sent'} · Tap to respond</span></span>
         <ChevronRight size={20} aria-hidden="true" />
       </button>}
-      {ctx && !showIncident && incident?.state === 'acknowledged' && <button type="button" className="cg-concern is-checking" onClick={openIncident}>
+      {ctx && !showIncident && tab !== 'home' && incident?.state === 'acknowledged' && <button type="button" className="cg-concern is-checking" onClick={openIncident}>
         <ShieldCheck size={22} aria-hidden="true" />
         <span><strong>{ackWho} {ackWho === 'You' ? 'are' : 'is'} checking on {ctx.R}</strong><span>{ackWho === 'You' ? 'Record the outcome when you’re done' : `Awaiting ${ackWho}’s outcome`}</span></span>
         <ChevronRight size={20} aria-hidden="true" />
       </button>}
 
-      <div className="cg-scroll" ref={scrollRef}>
+      <div className="cg-scroll" ref={scrollRef} onScroll={event => setScrolled(event.currentTarget.scrollTop > 6)}>
         {!loaded ? <div className="cg-loading" role="status">
           <div /><div /><div /><div />
           <p>{connectionTimedOut ? 'Cannot reach TemanMu. Check the backend connection and retry.' : 'Connecting to TemanMu…'}</p>
@@ -223,11 +240,12 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
           : <SettingsTab unit={unit} ctx={ctx} theme={theme} muted={muted} onTheme={setTheme} onToggleMute={() => setMuted(value => !value)} onPreview={playTone} />}
       </div>
 
-      <nav className="cg-nav" aria-label="Main">
+      <nav className="cg-nav" aria-label="Main" style={{ '--tab': TABS.findIndex(item => item.id === tab) } as CSSProperties}>
+        <span className={`cg-nav-thumb ${showIncident ? 'is-hidden' : ''}`} aria-hidden="true" />
         {TABS.map(item => {
           const current = tab === item.id && !showIncident
           return <button key={item.id} type="button" aria-current={current ? 'page' : undefined} className={current ? 'is-current' : ''} onClick={() => goTo(item.id)}>
-            <span className="cg-nav-icon"><item.Icon size={22} aria-hidden="true" />
+            <span className="cg-nav-icon"><item.Icon size={21} aria-hidden="true" />
               {item.id === 'updates' && unread > 0 && <span className="cg-nav-badge" aria-label={`${unread} unread`}>{unread}</span>}
             </span>
             <span>{item.label}</span>
@@ -238,13 +256,14 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
       {showIncident && unit && ctx && <IncidentView key={incident.incident_id} incident={incident} unit={unit} ctx={ctx} now={now} liveNote={liveNote}
         ackBusy={ackBusy} ackError={ackError} onAck={() => void acknowledge()} onBack={() => { setIncidentOpen(false); setLiveNote(false) }} />}
 
-      {call && ctx && <div className="cg-scrim">
-        <div className="cg-call" role="dialog" aria-label="Simulated call">
+      {call && ctx && <div className="cg-scrim" onClick={event => { if (event.target === event.currentTarget) setCall(null) }}>
+        <div className={`cg-call ${call === 'calling' ? 'is-calling' : ''}`} role="dialog" aria-modal="true" aria-label="Simulated call">
           <span className="cg-call-tag">Simulated call</span>
+          <span className="cg-call-avatar" aria-hidden="true"><span /><span />{initials(ctx.R)}</span>
           <strong className="cg-serif">{ctx.R}</strong>
           <span role="status">{call === 'calling' ? 'Calling… (simulated)' : 'Simulated call ended'}</span>
           <p>This is a demo. No real phone call is made and {ctx.R}’s phone won’t ring.</p>
-          <button type="button" className={call === 'calling' ? 'is-calling' : ''} onClick={() => setCall(current => current === 'calling' ? 'ended' : null)}>
+          <button type="button" autoFocus className={call === 'calling' ? 'is-calling' : ''} onClick={() => setCall(current => current === 'calling' ? 'ended' : null)}>
             {call === 'calling' && <PhoneOff size={18} aria-hidden="true" />}{call === 'calling' ? 'End simulated call' : 'Close'}
           </button>
         </div>
@@ -258,4 +277,11 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
       {toast && <div className="cg-toast" role="status"><Check size={14} aria-hidden="true" />{toast}</div>}
     </div>
   </div>
+}
+
+function Mark() {
+  return <svg className="cg-mark" width="22" height="22" viewBox="0 0 64 64" aria-hidden="true">
+    <path d="M14 29 L32 15 L50 29 V50 H14 Z" fill="none" stroke="currentColor" strokeWidth="4.4" strokeLinejoin="round" />
+    <rect x="35" y="34" width="11" height="12" rx="1.5" fill="#f0b25a" />
+  </svg>
 }
