@@ -1,5 +1,5 @@
 import type { Api, DoorState, Sensor, Unit } from '../../api/types'
-import type { InteractionId } from '../interactions/registry'
+import type { InteractionId, ObjectStates } from '../interactions/registry'
 
 export const HOME_UNIT_ID = 'A-105'
 export type SensorValue = { water: number; electricity: number; door: DoorState }
@@ -8,12 +8,19 @@ export function valuesFromUnit(unit: Unit): SensorValue {
   return { water: unit.latest.water_lpm, electricity: unit.latest.power_kw, door: unit.latest.door }
 }
 
-export function readingForObject(object: Exclude<InteractionId, 'telephone'>, on: boolean, unit: Unit): { sensor: Sensor; value: number | DoorState } {
-  switch (object) {
-    case 'bathroomTap': return { sensor: 'water', value: on ? 6 : 0 }
-    case 'kitchenKettle': return { sensor: 'electricity', value: on ? 1.8 : unit.baseline.standby_power_kw }
-    case 'mainDoor': return { sensor: 'door', value: on ? 'open' : 'closed' }
+const waterLoad = (states: ObjectStates) => (states.bathroomTap ? 6 : 0) + (states.shower ? 9 : 0)
+const powerLoad = (states: ObjectStates) => (states.kitchenKettle ? 1.65 : 0) + (states.television ? .12 : 0) + (states.bedroomLamp ? .06 : 0)
+
+export function readingForObject(object: Exclude<InteractionId, 'telephone'>, on: boolean, unit: Unit, states: ObjectStates): { sensor: Sensor; value: number | DoorState } {
+  if (object === 'mainDoor') return { sensor: 'door', value: on ? 'open' : 'closed' }
+  const next = { ...states, [object]: on }
+  if (object === 'bathroomTap' || object === 'shower') {
+    const otherUse = Math.max(0, unit.latest.water_lpm - waterLoad(states))
+    return { sensor: 'water', value: Math.round((otherUse + waterLoad(next)) * 100) / 100 }
   }
+  const standby = unit.baseline.standby_power_kw
+  const otherUse = Math.max(0, unit.latest.power_kw - standby - powerLoad(states))
+  return { sensor: 'electricity', value: Math.round((standby + otherUse + powerLoad(next)) * 100) / 100 }
 }
 
 export function validateReading(sensor: Sensor, value: number | DoorState): void {

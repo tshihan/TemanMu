@@ -33,7 +33,7 @@ const HOME_TARGET = [0, .25, -.55] as const
 /** One world unit = one metre. +Y is up; -Z is the rear of the home. */
 export function HouseModel({ interaction }: { interaction?: InteractionBindings } = {}) {
   return <group name="unit-a105">
-    <Architecture interaction={interaction} /><Bedroom /><Bathroom interaction={interaction} /><Kitchen interaction={interaction} /><LivingRoom interaction={interaction} /><DiningArea />
+    <Architecture interaction={interaction} /><Bedroom interaction={interaction} /><Bathroom interaction={interaction} /><Kitchen interaction={interaction} /><LivingRoom interaction={interaction} /><DiningArea />
   </group>
 }
 function Scene({ command, characterCommand, responderCommand, responderVisible, responderChecking, interaction, pose, speech, visible, paused, urgent, sensorView, unit, pulses, onCharacterStatus, onReached, onArrived, onResponderArrived, onAnimationComplete, onReady }: {
@@ -189,7 +189,7 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
     const previous = localStates.current
     localStates.current = next
     sound.current.setLoop('telephone', next.telephone === 'ringing')
-    sound.current.setLoop('water', next.bathroomTap)
+    sound.current.setLoop('water', next.bathroomTap || next.shower)
     sound.current.setLoop('kettle', next.kitchenKettle)
     if (previous.mainDoor !== next.mainDoor) sound.current.play(next.mainDoor ? 'doorOpen' : 'doorClose')
     setStates(next)
@@ -205,8 +205,16 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
     latestUnit.current = unit
     gateway.current.sync(unit)
     setFetchedUnit(unit)
-    setVisualStates({ bathroomTap: unit.latest.water_lpm > 0, kitchenKettle: unit.latest.power_kw > unit.baseline.standby_power_kw,
-      mainDoor: unit.latest.door === 'open', telephone: localStates.current.telephone })
+    const current = localStates.current
+    const waterActive = unit.latest.water_lpm > 0
+    const electricityActive = unit.latest.power_kw > unit.baseline.standby_power_kw
+    setVisualStates({ ...current,
+      bathroomTap: waterActive && current.bathroomTap,
+      shower: waterActive && current.shower,
+      kitchenKettle: electricityActive && current.kitchenKettle,
+      television: electricityActive && current.television,
+      bedroomLamp: electricityActive && current.bedroomLamp,
+      mainDoor: unit.latest.door === 'open' })
   }
   const cancelSequence = () => {
     active.current?.aborter.abort()
@@ -283,11 +291,12 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
       if (graceDeadline.current && isDeadlinePast(graceDeadline.current))
         throw new Error('The backend grace period expired before Madam Lee reached the tap')
     }
-    const reading = readingForObject(target, on, unit)
+    const reading = readingForObject(target, on, unit, localStates.current)
     setTransmission('sending')
     setIntegrationError(null)
     try {
       const confirmed = await gateway.current.sendSensorReading(reading.sensor, reading.value)
+      setVisualStates({ ...localStates.current, [target]: on })
       if (confirmed) syncUnit(confirmed)
       setTransmission('confirmed')
       const refreshReadings = api.getReadings(HOME_UNIT_ID).then(items => {
@@ -796,11 +805,11 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
       <div className="live-tools-group">
         <strong>Test an object</strong>
         <div className="live-tools-buttons">
-          {(['bathroomTap', 'kitchenKettle', 'mainDoor'] as const).map(id => <button key={id} type="button" onClick={() => manualInteract(id)} disabled={scenarioActive || resetBusy || !homeUnit || characterBusy || selected === id} aria-pressed={states[id]}>{interactionPrompt(id, states)}</button>)}
+          {(['bathroomTap', 'shower', 'kitchenKettle', 'television', 'bedroomLamp', 'mainDoor'] as const).map(id => <button key={id} type="button" onClick={() => manualInteract(id)} disabled={scenarioActive || resetBusy || !homeUnit || characterBusy || selected === id} aria-pressed={states[id]}>{interactionPrompt(id, states)}</button>)}
           <button type="button" onClick={() => manualInteract('telephone', true)} disabled={scenarioActive || resetBusy || characterBusy || selected === 'telephone'}>Test incoming call</button>
           <button type="button" className="is-muted" onClick={resetInteractions} disabled={scenarioActive || resetBusy}>Stop interaction</button>
         </div>
-        <p className="live-tools-states" role="status">Tap <b>{states.bathroomTap ? 'ON' : 'OFF'}</b> · Kettle <b>{states.kitchenKettle ? 'ON' : 'OFF'}</b> · Door <b>{states.mainDoor ? 'OPEN' : 'CLOSED'}</b> · Phone <b>{states.telephone.toUpperCase()}</b></p>
+        <p className="live-tools-states" role="status">Tap <b>{states.bathroomTap ? 'ON' : 'OFF'}</b> · Shower <b>{states.shower ? 'ON' : 'OFF'}</b> · Kettle <b>{states.kitchenKettle ? 'ON' : 'OFF'}</b> · TV <b>{states.television ? 'ON' : 'OFF'}</b> · Lamp <b>{states.bedroomLamp ? 'ON' : 'OFF'}</b> · Door <b>{states.mainDoor ? 'OPEN' : 'CLOSED'}</b> · Phone <b>{states.telephone.toUpperCase()}</b></p>
       </div>
       <div className="live-tools-group">
         <strong>Timing</strong>

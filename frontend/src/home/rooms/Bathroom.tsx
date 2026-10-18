@@ -79,6 +79,22 @@ export function Bathroom({ interaction }: { interaction?: InteractionBindings })
       <Cylinder at={[.2, .2, .7]} radius={.08} height={.008} mat={m.steel} />
       <Box at={[.57, .7, -.95]} size={[.5, .07, .35]} mat={m.walnut} />
       <Cylinder at={[.58, .87, -.95]} radius={.055} height={.26} mat={m.sage} />
+      {interaction && <InteractiveObject id="shower" label={interactionPrompt('shower', interaction.states)}
+        selected={interaction.selected === 'shower'} hovered={interaction.hovered === 'shower'} disabled={interaction.disabled}
+        onSelect={interaction.onSelect} onHover={interaction.onHover}
+        hitbox={[-.6, 1.1, 1.33]} hitboxSize={[.42, .5, .28]} tooltip={[-.6, 1.65, 1.33]}>
+        <Box at={[-.6, 1.1, 1.33]} size={[.32, .2, .09]} mat={m.steel} radius={.035} />
+        <Cylinder at={[-.6, 1.1, 1.39]} radius={.065} height={.035} rotation={[Math.PI / 2, 0, 0]} mat={m.brass} />
+      </InteractiveObject>}
+      {interaction?.states.shower && <group name="shower-water-flow">
+        {[-.12, 0, .12].map((offset, i) => <mesh key={offset} position={[.3 + offset, 1.25, -.91 + i * .04]}>
+          <cylinderGeometry args={[.008, .013, 1.65, 8]} />
+          <meshPhysicalMaterial color="#a8e8ef" transparent opacity={.62} roughness={.08} depthWrite={false} />
+        </mesh>)}
+        <mesh position={[.3, .19, -.85]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[.22, .3, 24]} /><meshBasicMaterial color="#a6dce6" transparent opacity={.38} depthWrite={false} />
+        </mesh>
+      </group>}
     </group>
     <Box at={[.65, .09, -2.45]} size={[1.2, .03, .65]} mat={m.rug} radius={.06} />
     <Box at={[3.99, .9, -1.8]} size={[.1, .04, .6]} mat={m.brass} />

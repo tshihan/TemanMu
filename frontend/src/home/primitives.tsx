@@ -37,13 +37,14 @@ export function Plant({ at, scale = 1 }: { at: V3; scale?: number }) {
     })}
   </group>
 }
-export function Lamp({ at }: { at: V3 }) {
+export function Lamp({ at, lit = true }: { at: V3; lit?: boolean }) {
   const m = getMaterials()
   return <group position={at} name="table-lamp">
     <Cylinder at={[0, .025, 0]} radius={.15} height={.05} mat={m.brass} />
     <Cylinder at={[0, .21, 0]} radius={.025} height={.4} mat={m.brass} />
-    <mesh position={[0, .42, 0]} castShadow><cylinderGeometry args={[.16, .22, .27, 32]} /><primitive object={m.lamp} attach="material" /></mesh>
-    <Ball at={[0, .42, 0]} size={[.09, .09, .09]} mat={m.lamp} />
+    <mesh position={[0, .42, 0]} castShadow><cylinderGeometry args={[.16, .22, .27, 32]} /><primitive object={lit ? m.lamp : m.linen} attach="material" /></mesh>
+    <Ball at={[0, .42, 0]} size={[.09, .09, .09]} mat={lit ? m.lamp : m.linen} />
+    {lit && <pointLight position={[0, .44, 0]} color="#ffe0a0" intensity={.5} distance={2.6} decay={2} />}
   </group>
 }
 export function Books({ at }: { at: V3 }) {

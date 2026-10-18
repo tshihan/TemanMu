@@ -1,7 +1,9 @@
 import { Art, Box, Cylinder, Lamp, Plant } from '../primitives'
 import { getMaterials } from '../materials'
+import { InteractiveObject } from '../interactions/InteractiveObject'
+import { interactionPrompt, type InteractionBindings } from '../interactions/registry'
 
-export function Bedroom() {
+export function Bedroom({ interaction }: { interaction?: InteractionBindings }) {
   const m = getMaterials()
   return <group name="bedroom">
     <Box at={[-2.85, .085, -2.95]} size={[3.3, .035, 3.35]} mat={m.rug} radius={.09} />
@@ -23,7 +25,12 @@ export function Bedroom() {
       <Box at={[0, .4, 0]} size={[.68, .67, .65]} mat={m.oak} />
       <Box at={[0, .53, .34]} size={[.59, .22, .035]} mat={m.walnut} />
       <Box at={[0, .54, .37]} size={[.15, .025, .025]} mat={m.brass} />
-      <Lamp at={[0, .76, 0]} />
+      {x === -1.22 && interaction ? <InteractiveObject id="bedroomLamp" label={interactionPrompt('bedroomLamp', interaction.states)}
+        selected={interaction.selected === 'bedroomLamp'} hovered={interaction.hovered === 'bedroomLamp'} disabled={interaction.disabled}
+        onSelect={interaction.onSelect} onHover={interaction.onHover}
+        hitbox={[0, 1.16, 0]} hitboxSize={[.5, .65, .5]} tooltip={[0, 1.7, 0]}>
+        <Lamp at={[0, .76, 0]} lit={interaction.states.bedroomLamp} />
+      </InteractiveObject> : <Lamp at={[0, .76, 0]} lit={!interaction} />}
     </group>)}
     <group name="wardrobe" position={[-4.98, 0, -2.55]}>
       <Box at={[0, 1.03, 0]} size={[.68, 2, 1.58]} mat={m.walnut} />

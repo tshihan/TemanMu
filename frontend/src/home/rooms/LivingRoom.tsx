@@ -35,6 +35,7 @@ function Telephone({ state, paused }: { state: TelephoneState; paused?: boolean 
 
 export function LivingRoom({ interaction }: { interaction?: InteractionBindings }) {
   const m = getMaterials()
+  const tvOn = interaction?.states.television ?? false
   return <group name="living-room">
     <Box at={[-3.2, .085, 2.06]} size={[3.75, .045, 4.2]} mat={m.rug} radius={.15} />
     {[-4.98, -1.42].map(x => <Box key={x} at={[x, .111, 2.06]} size={[.028, .004, 3.96]} mat={m.cream} radius={0} />)}
@@ -64,8 +65,22 @@ export function LivingRoom({ interaction }: { interaction?: InteractionBindings 
     <group name="television-console" position={[-5.02, 0, 1.55]} rotation={[0, Math.PI / 2, 0]}>
       <Box at={[0, .4, 0]} size={[2.1, .57, .48]} mat={m.oak} />
       {[-.67, 0, .67].map(x => <Box key={x} at={[x, .4, .25]} size={[.61, .4, .02]} mat={m.walnut} />)}
-      <Box at={[0, 1.19, 0]} size={[1.72, .99, .075]} mat={m.dark} radius={.035} />
-      <Box at={[0, 1.2, .041]} size={[1.62, .89, .01]} mat={m.screen} radius={.025} />
+      {interaction ? <InteractiveObject id="television" label={interactionPrompt('television', interaction.states)}
+        selected={interaction.selected === 'television'} hovered={interaction.hovered === 'television'} disabled={interaction.disabled}
+        onSelect={interaction.onSelect} onHover={interaction.onHover}
+        hitbox={[0, 1.2, .07]} hitboxSize={[1.75, 1.04, .2]} tooltip={[0, 1.92, .07]}>
+        <Box at={[0, 1.19, 0]} size={[1.72, .99, .075]} mat={m.dark} radius={.035} />
+        <Box at={[0, 1.2, .041]} size={[1.62, .89, .01]} mat={tvOn ? m.mirror : m.screen} radius={.025} />
+        {tvOn && <>
+          <Box at={[-.18, 1.33, .052]} size={[1.05, .035, .006]} mat={m.cream} radius={0} />
+          <Box at={[.12, 1.17, .052]} size={[.78, .035, .006]} mat={m.sage} radius={0} />
+          <Box at={[-.31, 1.02, .052]} size={[.58, .035, .006]} mat={m.cream} radius={0} />
+          <pointLight position={[0, 1.2, .4]} color="#a9dfe5" intensity={.35} distance={2.3} />
+        </>}
+      </InteractiveObject> : <>
+        <Box at={[0, 1.19, 0]} size={[1.72, .99, .075]} mat={m.dark} radius={.035} />
+        <Box at={[0, 1.2, .041]} size={[1.62, .89, .01]} mat={m.screen} radius={.025} />
+      </>}
       {[-.53, .53].map(x => <Box key={x} at={[x, .72, .06]} size={[.06, .14, .3]} mat={m.dark} />)}
     </group>
     <Plant at={[-4.9, .08, -.35]} scale={.85} />
