@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import { Bell, Check, ChevronRight, HeartHandshake, House, PhoneOff, Settings, ShieldCheck, TriangleAlert, Volume2, VolumeX, WifiOff } from 'lucide-react'
+import { Bell, Check, ChevronRight, HeartHandshake, House, Phone, PhoneOff, Settings, ShieldCheck, TriangleAlert, Volume2, VolumeX, WifiOff } from 'lucide-react'
 import { api } from '../api'
 import { ApiError } from '../api/live'
 import { applyIncident, getAppState, loadUnitReadings, markNotificationViewed, markRoleViewed, subscribeAppEvents, useAppState } from '../api/store'
@@ -203,7 +203,7 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
   return <div className={`cg-root ${standalone ? 'is-standalone' : 'is-embedded'}`} data-theme={theme} onPointerDown={unlockAudio}>
     <div className="cg-app">
       <header className={`cg-header ${scrolled ? 'is-scrolled' : ''}`}>
-        <span className="cg-wordmark"><Mark />TemanMu</span>
+        <span className="cg-wordmark"><span className="cg-brand-mark"><Mark /></span>TemanMu</span>
         <span className={`cg-connection is-${connection.toLowerCase()}`} role="status"><span aria-hidden="true" />{connection}</span>
         <button type="button" className="cg-round" onClick={() => setMuted(value => !value)}
           aria-label={muted ? 'Sounds off. Turn on' : 'Sounds on. Mute'} title={muted ? 'Sounds off. Turn on' : 'Sounds on. Mute'}>
@@ -233,12 +233,17 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
           <p>{connectionTimedOut ? 'Cannot reach TemanMu. Check the backend connection and retry.' : 'Connecting to TemanMu…'}</p>
         </div> : !unit || !ctx ? <p className="cg-card-lead cg-pad">The resident’s home is unavailable.</p>
           : tab === 'home' ? <HomeTab unit={unit} ctx={ctx} incident={incident} feed={feed} readings={readingsByUnit[unit.unit_id] || []} now={now}
-            ackBusy={ackBusy} onAck={() => void acknowledge()} onOpenIncident={openIncident} onCall={startCall} />
+            ackBusy={ackBusy} onAck={() => void acknowledge()} onOpenIncident={openIncident} />
           : tab === 'updates' ? <UpdatesTab feed={feed} ctx={ctx} now={now} incidentFor={incidentFor} isUnread={isUnread} ackTargetId={ackTargetId}
             ackBusy={ackBusy} onOpen={open} onMarkAllRead={markAllRead} onAck={() => void acknowledge()} />
           : tab === 'together' ? <TogetherTab unit={unit} ctx={ctx} companion={companion} onToast={showToast} />
-          : <SettingsTab unit={unit} ctx={ctx} theme={theme} muted={muted} onTheme={setTheme} onToggleMute={() => setMuted(value => !value)} onPreview={playTone} />}
+          : <SettingsTab unit={unit} ctx={ctx} theme={theme} onTheme={setTheme} />}
       </div>
+
+      {/* Calling stays one tap away on Home, docked above the tab bar. */}
+      {tab === 'home' && !showIncident && loaded && ctx && <button type="button" className="cg-call-dock" onClick={startCall}>
+        <Phone size={18} aria-hidden="true" />Call {ctx.R}<span className="cg-call-dock-tag">Simulated</span>
+      </button>}
 
       <nav className="cg-nav" aria-label="Main" style={{ '--tab': TABS.findIndex(item => item.id === tab) } as CSSProperties}>
         <span className={`cg-nav-thumb ${showIncident ? 'is-hidden' : ''}`} aria-hidden="true" />
@@ -281,7 +286,8 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
 
 function Mark() {
   return <svg className="cg-mark" width="22" height="22" viewBox="0 0 64 64" aria-hidden="true">
-    <path d="M14 29 L32 15 L50 29 V50 H14 Z" fill="none" stroke="currentColor" strokeWidth="4.4" strokeLinejoin="round" />
-    <rect x="35" y="34" width="11" height="12" rx="1.5" fill="#f0b25a" />
+    <path d="M14 29 L32 15 L50 29 V50 H14 Z" fill="none" stroke="currentColor" strokeWidth="3.6" strokeLinejoin="round" />
+    <path d="M14 31 H50 M32 31 V50" stroke="currentColor" strokeWidth="3.6" />
+    <rect x="35" y="34" width="12" height="13" fill="#f0b25a" />
   </svg>
 }
