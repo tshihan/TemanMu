@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Bell, Check, ChevronRight, HeartHandshake, House, PhoneOff, Settings, ShieldCheck, TriangleAlert, Volume2, VolumeX, WifiOff } from 'lucide-react'
+import { Bell, Check, ChevronRight, HeartHandshake, House, Phone, PhoneOff, Settings, ShieldCheck, TriangleAlert, Volume2, VolumeX, WifiOff } from 'lucide-react'
 import { api } from '../api'
 import { ApiError } from '../api/live'
 import { applyIncident, getAppState, loadUnitReadings, markNotificationViewed, markRoleViewed, subscribeAppEvents, useAppState } from '../api/store'
@@ -186,7 +186,16 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
   return <div className={`cg-root ${standalone ? 'is-standalone' : 'is-embedded'}`} data-theme={theme} onPointerDown={unlockAudio}>
     <div className="cg-app">
       <header className="cg-header">
-        <span className="cg-wordmark">TemanMu</span>
+        <span className="cg-brand">
+          <span className="cg-brand-mark" aria-hidden="true">
+            <svg width="27" height="27" viewBox="0 0 64 64" focusable="false">
+              <path d="M14 29 L32 15 L50 29 V50 H14 Z" fill="none" stroke="#fef9ef" strokeWidth="3.6" strokeLinejoin="round" />
+              <path d="M14 31 H50 M32 31 V50" stroke="#fef9ef" strokeWidth="3.6" />
+              <rect x="35" y="34" width="12" height="13" fill="#f0b25a" />
+            </svg>
+          </span>
+          <span className="cg-wordmark">TemanMu</span>
+        </span>
         <span className={`cg-connection is-${connection.toLowerCase()}`} role="status"><span aria-hidden="true" />{connection}</span>
         <button type="button" className="cg-round" onClick={() => setMuted(value => !value)}
           aria-label={muted ? 'Sounds off. Turn on' : 'Sounds on. Mute'} title={muted ? 'Sounds off. Turn on' : 'Sounds on. Mute'}>
@@ -216,12 +225,16 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
           <p>{connectionTimedOut ? 'Cannot reach TemanMu. Check the backend connection and retry.' : 'Connecting to TemanMu…'}</p>
         </div> : !unit || !ctx ? <p className="cg-card-lead cg-pad">The resident’s home is unavailable.</p>
           : tab === 'home' ? <HomeTab unit={unit} ctx={ctx} incident={incident} feed={feed} readings={readingsByUnit[unit.unit_id] || []} now={now}
-            ackBusy={ackBusy} onAck={() => void acknowledge()} onOpenIncident={openIncident} onCall={startCall} />
+            ackBusy={ackBusy} onAck={() => void acknowledge()} onOpenIncident={openIncident} />
           : tab === 'updates' ? <UpdatesTab feed={feed} ctx={ctx} now={now} incidentFor={incidentFor} isUnread={isUnread} ackTargetId={ackTargetId}
             ackBusy={ackBusy} onOpen={open} onMarkAllRead={markAllRead} onAck={() => void acknowledge()} />
           : tab === 'together' ? <TogetherTab unit={unit} ctx={ctx} companion={companion} onToast={showToast} />
-          : <SettingsTab unit={unit} ctx={ctx} theme={theme} muted={muted} onTheme={setTheme} onToggleMute={() => setMuted(value => !value)} onPreview={playTone} />}
+          : <SettingsTab unit={unit} ctx={ctx} theme={theme} onTheme={setTheme} />}
       </div>
+
+      {tab === 'home' && !showIncident && ctx && <div className="cg-call-dock">
+        <button type="button" className="cg-quick-call" onClick={startCall}><Phone size={19} aria-hidden="true" />Call {ctx.R}</button>
+      </div>}
 
       <nav className="cg-nav" aria-label="Main">
         {TABS.map(item => {
