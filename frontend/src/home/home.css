@@ -59,12 +59,10 @@
 .live-tools-timing { display: flex; align-items: center; gap: 6px; color: var(--color-graphite); font-size: 12px; }
 .live-tools-timing input { width: 52px; padding: 5px 7px; border: 1px solid var(--color-warm-taupe); border-radius: 8px; background: var(--color-parchment); color: var(--color-ink); font: inherit; }
 
-/* Top right: the demo disclaimer, then where the resident is */
+/* Top right: the demo disclaimer */
 .live-top-right { position: absolute; z-index: 3; top: 16px; right: 16px; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
 .live-demo-badge { display: flex; align-items: center; gap: 10px; margin: 0; padding: 6px 14px 6px 6px; border-radius: 999px; background: var(--color-terracotta); box-shadow: 0 8px 22px #b05a3640; color: var(--color-parchment); font-size: 13px; font-weight: 600; white-space: nowrap; }
 .live-demo-badge b { padding: 4px 9px; border-radius: 999px; background: var(--color-parchment); color: var(--color-terracotta-dark); font: 700 11px var(--font-fragment-mono); letter-spacing: .06em; text-transform: uppercase; }
-.live-resident-status { max-width: 280px; margin: 0; padding: 6px 11px; border: 1px solid #d1c9bfcc; border-radius: 999px; background: #fef9efe8; color: var(--color-graphite); font-size: 12px; text-align: right; }
-.live-resident-status b { color: var(--color-ink); }
 
 /* Camera tools */
 .home-camera-tools { position: absolute; z-index: 3; top: 50%; right: 16px; transform: translateY(-50%); display: flex; flex-direction: column; align-items: center; padding: 5px; border: 1px solid #d1c9bfcc; border-radius: 14px; background: #fef9efe8; box-shadow: 0 6px 18px #4a352614; }
@@ -115,7 +113,6 @@
 @container stage (max-width: 820px) {
   .live-scenarios { top: 58px; left: 12px; max-width: calc(100% - 24px); }
   .live-top-right { top: 12px; right: auto; left: 12px; align-items: flex-start; }
-  .live-resident-status { display: none; }
   .live-tools { top: 12px; left: 12px; width: calc(100% - 24px); max-height: calc(100% - 24px); }
   .home-camera-tools { display: none; }
   .live-bottom { left: 12px; right: 12px; bottom: 12px; gap: 8px; }

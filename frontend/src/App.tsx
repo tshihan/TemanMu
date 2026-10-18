@@ -4,7 +4,6 @@ import { connectStore, markRoleViewed, useAppState } from './api/store'
 import type { Role } from './api/types'
 import { Box, Building2, House } from 'lucide-react'
 import { CaregiverView } from './dashboard/CaregiverView'
-import { LiveTownshipPanel } from './dashboard/LiveTownshipPanel'
 import { TownshipView } from './dashboard/TownshipView'
 import './live.css'
 
@@ -15,10 +14,9 @@ type Page = 'landing' | 'dashboard' | 'simulator'
 const pageFromHash = (): Page => window.location.hash === '#simulator' ? 'simulator' : window.location.hash === '#dashboard' ? 'dashboard' : 'landing'
 
 export default function App() {
-  const { connected, loaded, units, notifications, config } = useAppState()
+  const { connected, loaded, notifications, config } = useAppState()
   const [page, setPage] = useState<Page>(pageFromHash)
   const [role, setRole] = useState<Role>('township')
-  const homeUnit = units.find(unit => unit.controllable)
   const activeUnread = notifications.filter(item => item.role === role && !item.read).length
   const inactiveRole: Role = role === 'township' ? 'caregiver' : 'township'
   const inactiveUnread = notifications.filter(item => item.role === inactiveRole && !item.read).length
@@ -61,7 +59,6 @@ export default function App() {
           <HomeEnvironment />
         </Suspense>
       </div>
-      <LiveTownshipPanel unitId={homeUnit?.unit_id ?? 'A-105'} />
     </main>
   </div>
 

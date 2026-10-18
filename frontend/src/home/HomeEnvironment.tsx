@@ -12,7 +12,7 @@ import { DiningArea } from './rooms/DiningArea'
 import { ElderlyCharacter, type CharacterAnimation, type CharacterCommand, type CharacterStatus, type InteractionPose } from './character/ElderlyCharacter'
 import { TownshipResponder, type ResponderCommand } from './character/TownshipResponder'
 import { ROOM_LABELS, type RoomId, type Waypoint } from './character/navigation'
-import { INITIAL_OBJECT_STATES, INTERACTIONS, interactionPrompt, type InteractionBindings, type InteractionId, type ObjectStates } from './interactions/registry'
+import { INITIAL_OBJECT_STATES, interactionPrompt, type InteractionBindings, type InteractionId, type ObjectStates } from './interactions/registry'
 import { ScenarioController, type ScenarioActions } from './scenarios/ScenarioController'
 import { DEFAULT_TIMING, SCENARIO_DESCRIPTIONS, SCENARIO_LABELS, scenarioSteps, type ScenarioId, type ScenarioStep, type ScenarioTiming } from './scenarios/definitions'
 import { api, usingMock } from '../api'
@@ -679,13 +679,6 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
   const shownScenario = scenario ?? picked
   const timelineSteps = scenarioSteps(shownScenario, timing, usingMock)
   const stepIndex = scenarioState === 'complete' ? timelineSteps.length : scenarioProgress?.index ?? 0
-  const residentStatus = characterStatus.phase === 'loading' ? 'Loading character…' : characterStatus.phase === 'error' ? 'Character could not load'
-    : scenario === 'unusualInactivity' && (scenarioProgress?.index ?? 0) >= 7 ? 'On the living-room floor · Guard Ali checking'
-    : scenarioActive ? `In the ${ROOM_LABELS[characterStatus.room] ?? 'home'}`
-    : selected && characterStatus.phase === 'walking' ? `Walking to ${INTERACTIONS[selected].label}`
-    : selected && characterStatus.phase === 'interacting' ? `Using ${INTERACTIONS[selected].label}`
-    : characterStatus.destination ? `Walking to ${ROOM_LABELS[characterStatus.destination as RoomId] ?? 'next point'}`
-    : `At ${ROOM_LABELS[characterStatus.room] ?? 'home'}`
   const caption = scenarioState === 'complete' ? 'Scenario complete' : scenarioState === 'stopped' ? 'Scenario stopped'
     : scenarioProgress?.label ?? (canStart ? `Press play to run “${SCENARIO_LABELS[picked]}”` : 'Preparing the home…')
   const playback = scenarioState === 'running' && scenarioProgress?.kind === 'hold' ? 'Awaiting outcome'
@@ -785,7 +778,6 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
 
     <div className="live-top-right">
       <p className="live-demo-badge"><b>Demo only</b>Real homes are sensed, never seen.</p>
-      <p className="live-resident-status" role="status">{sensorView ? 'Resident hidden · sensors only' : <><b>Madam Lee</b> · {residentStatus}</>}</p>
     </div>
 
     <div className="home-camera-tools" aria-label="Camera controls">

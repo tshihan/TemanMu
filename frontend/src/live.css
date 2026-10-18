@@ -1,4 +1,4 @@
-/* Live 3D view: icon rail, the 3D stage and the township operator panel side by side. */
+/* Live 3D view: icon rail and a full-width 3D stage. Township actions live on Unit status. */
 .live-shell { display: grid; grid-template-columns: 68px minmax(0, 1fr); height: 100dvh; min-height: 560px; overflow: hidden; background: var(--color-aged-paper); color: var(--color-ink); }
 
 .live-rail { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 16px 0; border-right: 1px solid var(--color-warm-taupe); background: var(--color-parchment); }
@@ -12,49 +12,20 @@
 .live-rail-status { display: flex; flex-direction: column; align-items: center; gap: 5px; margin-top: auto; color: var(--color-graphite); font: 600 10px var(--font-fragment-mono); text-transform: uppercase; }
 .live-rail-status.is-connected { color: var(--color-terracotta-dark); }
 
-.live-main { display: grid; grid-template-columns: minmax(0, 1fr) clamp(340px, 27vw, 420px); gap: 16px; min-width: 0; min-height: 0; padding: 16px; }
-.live-stage-wrap { position: relative; min-width: 0; min-height: 0; overflow: hidden; border: 1px solid var(--color-warm-taupe); border-radius: 24px; background: #eeeae1; }
+.live-main { display: flex; min-width: 0; min-height: 0; padding: 16px; }
+.live-stage-wrap { position: relative; flex: 1; min-width: 0; min-height: 0; overflow: hidden; border: 1px solid var(--color-warm-taupe); border-radius: 24px; background: #eeeae1; }
 .live-stage-wrap > .home-scene-loading { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; color: var(--color-graphite); }
+.live-card-kicker { margin: 0; color: var(--color-terracotta); font: 600 11px var(--font-fragment-mono); letter-spacing: .06em; text-transform: uppercase; }
+.live-card-kicker::before { content: '[ '; }
+.live-card-kicker::after { content: ' ]'; }
 
-/* Township panel: each section becomes a bracket-titled card. */
-.live-township { display: flex; flex-direction: column; gap: 12px; min-height: 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--color-warm-taupe) transparent; }
-.live-township .live-card, .live-township .detail-section, .live-township .incident-panel { margin: 0; padding: 16px 18px; border: 1px solid var(--color-warm-taupe); border-radius: 20px; background: var(--color-parchment); box-shadow: none; }
-.live-card-kicker, .live-township .detail-section h4, .live-township .incident-panel-head h4 { margin: 0; color: var(--color-terracotta); font: 600 11px var(--font-fragment-mono); letter-spacing: .06em; text-transform: uppercase; }
-.live-card-kicker::before, .live-township .detail-section h4::before, .live-township .incident-panel-head h4::before { content: '[ '; }
-.live-card-kicker::after, .live-township .detail-section h4::after, .live-township .incident-panel-head h4::after { content: ' ]'; }
-.live-muted { margin: 10px 0 0; color: var(--color-graphite); font-size: 13px; }
-.live-unit-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-top: 12px; }
-.live-unit-head h2 { margin: 0; font-family: var(--font-editorial); font-size: 26px; font-weight: 400; line-height: 1.1; letter-spacing: -.02em; }
-.live-unit-head p { margin: 5px 0 0; color: var(--color-graphite); font-size: 13px; }
-.live-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
-.live-chips span { padding: 6px 10px; border: 1px solid var(--color-warm-taupe); border-radius: 999px; background: var(--color-aged-paper); color: var(--color-charcoal); font-size: 12px; }
-.live-township-detail { display: grid; gap: 12px; }
-.live-township .detail-hint { margin: 0; padding: 0 6px; }
-.live-township .reason-card .eyebrow { display: none; }
-.live-township .reason-card h4 { margin-bottom: 10px; }
-.live-township .reason-card > p:not(.eyebrow) { font-size: 14px; line-height: 1.5; }
-.live-township .detail-section-title { align-items: center; }
-.live-township .signal-grid { gap: 6px; }
-.live-township .signal-card { padding: 10px; border-radius: 14px; }
-.live-township .signal-current { margin: 8px 0; font-size: 15px; }
-.live-township .incident-panel-head { margin-bottom: 12px; }
-.live-township .primary-action { min-height: 42px; padding: 10px 18px; }
-
-@media (max-width: 1100px) {
-  .live-shell { height: auto; min-height: 100dvh; overflow: visible; }
-  .live-rail { position: sticky; top: 0; height: 100dvh; }
-  .live-main { grid-template-columns: minmax(0, 1fr); }
-  .live-stage-wrap { height: min(82dvh, 820px); min-height: 520px; }
-  .live-township { overflow: visible; }
-}
 @media (max-width: 700px) {
-  .live-shell { grid-template-columns: minmax(0, 1fr); }
-  .live-rail { z-index: 10; flex-direction: row; height: auto; padding: 8px 16px; border-right: 0; border-bottom: 1px solid var(--color-warm-taupe); }
+  .live-shell { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+  .live-rail { z-index: 10; flex-direction: row; padding: 8px 16px; border-right: 0; border-bottom: 1px solid var(--color-warm-taupe); }
   .live-rail a { width: 40px; height: 40px; }
   .live-rail a[aria-current="page"]::before { display: none; }
   .live-rail .live-rail-logo { margin: 0 8px 0 0; }
   .live-rail-status { flex-direction: row; margin: 0 0 0 auto; }
-  .live-main { padding: 12px 16px 16px; gap: 12px; }
-  .live-stage-wrap { height: 84dvh; min-height: 560px; border-radius: 20px; }
-  .live-township .signal-grid { grid-template-columns: minmax(0, 1fr); }
+  .live-main { padding: 12px 16px 16px; }
+  .live-stage-wrap { border-radius: 20px; }
 }
