@@ -39,17 +39,6 @@
 .live-township .signal-current { margin: 8px 0; font-size: 15px; }
 .live-township .incident-panel-head { margin-bottom: 12px; }
 .live-township .primary-action { min-height: 42px; padding: 10px 18px; }
-.live-neighbours ul { margin: 8px 0 0; padding: 0; list-style: none; }
-.live-neighbours li + li { border-top: 1px solid #d1c9bf99; }
-.live-neighbours a { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 10px 2px; color: var(--color-ink); text-decoration: none; }
-.live-neighbours a:hover strong { color: var(--color-terracotta-dark); }
-.live-neighbour-copy { display: grid; min-width: 0; }
-.live-neighbour-copy strong { font-size: 14px; }
-.live-neighbour-copy small { overflow: hidden; color: var(--color-graphite); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.live-status-dot { width: 9px; height: 9px; border-radius: 50%; background: #9aa98c; }
-.live-status-dot.dot-possible_away { background: #c4b39a; }
-.live-status-dot.dot-unusual_inactivity { background: #d98b5f; }
-.live-status-dot.dot-unresolved_concern { background: var(--color-terracotta); }
 
 @media (max-width: 1100px) {
   .live-shell { height: auto; min-height: 100dvh; overflow: visible; }

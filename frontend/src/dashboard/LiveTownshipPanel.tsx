@@ -6,7 +6,6 @@ import { UnitDetailSections } from './UnitDetail'
 export function LiveTownshipPanel({ unitId }: { unitId: string }) {
   const { loaded, units } = useAppState()
   const unit = units.find(item => item.unit_id === unitId)
-  const neighbours = units.filter(item => item.unit_id !== unitId)
 
   return <aside className="live-township" aria-label="Township operator view">
     <div className="live-card live-unit-card">
@@ -28,18 +27,5 @@ export function LiveTownshipPanel({ unitId }: { unitId: string }) {
     </div>
 
     {unit && <div className="live-township-detail"><UnitDetailSections key={unit.unit_id} unit={unit} /></div>}
-
-    {neighbours.length > 0 && <section className="live-card live-neighbours" aria-labelledby="neighbours-heading">
-      <h3 id="neighbours-heading" className="live-card-kicker">Other homes · Floor 1</h3>
-      <ul>
-        {neighbours.map(item => <li key={item.unit_id}>
-          <a href="#dashboard" target="_blank" rel="noopener">
-            <span className={`live-status-dot dot-${item.status}`} aria-hidden="true" />
-            <span className="live-neighbour-copy"><strong>{item.unit_id}</strong><small>{item.resident_name}</small></span>
-            <span className={`status-pill status-${item.status}`}>{statusLabels[item.status]}</span>
-          </a>
-        </li>)}
-      </ul>
-    </section>}
   </aside>
 }
