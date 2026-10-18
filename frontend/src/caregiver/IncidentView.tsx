@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BellRing, Check, ChevronLeft, CircleCheck, Info, ShieldCheck, TriangleAlert } from 'lucide-react'
+import { BellRing, Check, ChevronLeft, CircleCheck, Info, Phone, ShieldCheck, TriangleAlert } from 'lucide-react'
 import { api } from '../api'
 import { applyIncident } from '../api/store'
 import type { Incident, Outcome, Unit } from '../api/types'
@@ -60,7 +60,7 @@ export function IncidentView({ incident, unit, ctx, now, liveNote, ackBusy, ackE
     catch { setCloseFailed(true) }
   }
 
-  return <div className="cg-sheet" role="dialog" aria-label="Safety alert">
+  return <div className={`cg-sheet is-${hero.variant}`} role="dialog" aria-label="Safety alert">
     <div className="cg-sheet-head">
       <button type="button" className="cg-round" onClick={onBack} aria-label="Back"><ChevronLeft size={22} aria-hidden="true" /></button>
       <strong>Safety alert</strong>
@@ -70,11 +70,12 @@ export function IncidentView({ incident, unit, ctx, now, liveNote, ackBusy, ackE
       {liveNote && <div className="cg-live-note" role="status"><Info size={18} aria-hidden="true" />Updated just now: activity was detected at home.</div>}
 
       <section className={`cg-hero is-${hero.variant}`}>
+        <span className="cg-orb" aria-hidden="true"><span /><span /><span /></span>
         <span className="cg-badge"><hero.Icon size={16} aria-hidden="true" /><span>{hero.badge}</span></span>
         <h1 className="cg-display">{hero.title}</h1>
         <p>{hero.body}</p>
         {state === 'notified' && <p className="cg-hero-reminder"><BellRing size={16} aria-hidden="true" />
-          <span>{incident.reminder_count ? `Reminder #${incident.reminder_count} sent` : 'Alert sent'} · next in <span className="cg-num">{until(incident.next_reminder_at, now)}</span></span>
+          <span>{incident.reminder_count ? `Reminder #${incident.reminder_count} sent` : 'Alert sent'}</span><span className="cg-hero-next">next in <span className="cg-num">{until(incident.next_reminder_at, now)}</span></span>
         </p>}
         {state === 'notified' && <>
           <button type="button" className="cg-btn cg-btn-inverse cg-btn-tall" onClick={onAck} disabled={ackBusy}>
@@ -98,10 +99,10 @@ export function IncidentView({ incident, unit, ctx, now, liveNote, ackBusy, ackE
         </div>)}
       </section>}
 
-      {state === 'acknowledged' && mine && <section className="cg-card">
+      {state === 'acknowledged' && mine && <section className="cg-card cg-handoff">
         <h2 className="cg-card-title">Emergency handoff</h2>
         <p className="cg-card-lead">If {R} has collapsed or needs urgent help, call 999 now and request an ambulance. Give the operator the full address and unit {unit.unit_id}; follow their instructions.</p>
-        <a className="cg-btn cg-btn-accent" href="tel:999">Call 999</a>
+        <a className="cg-btn cg-btn-alarm cg-btn-tall" href="tel:999"><Phone size={20} aria-hidden="true" />Call 999</a>
         {!called && <button type="button" className="cg-btn cg-btn-outline" onClick={() => void escalate('emergency_called')}>I called 999 — record handoff</button>}
         {!unable && !called && <button type="button" className="cg-btn cg-btn-outline" onClick={() => void escalate('unable_to_verify')}>Unable to verify safety</button>}
         {called && <p className="cg-card-lead">Keep this case open until the handoff or welfare outcome is confirmed.</p>}

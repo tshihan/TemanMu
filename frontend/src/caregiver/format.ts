@@ -48,3 +48,14 @@ export function neighbourSentence(labels: string[]): string {
   if (!rest.length) return out ? `Both ${out}` : ''
   return `Both ${rest.join(' and ')}${out ? ` who ${out}` : ''}`
 }
+
+/** Position within the Malaysian day, 0 at midnight and 1 at the next midnight. */
+export function dayFraction(time: string | number): number {
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone: TZ, hour: 'numeric', minute: 'numeric', hourCycle: 'h23' }).formatToParts(new Date(ms(time)))
+  const part = (type: string) => Number(parts.find(item => item.type === type)?.value || 0)
+  return (part('hour') * 60 + part('minute')) / 1440
+}
+
+/** "Mon 19 Oct". */
+export const dayLabel = (time: string | number) =>
+  new Intl.DateTimeFormat('en-GB', { timeZone: TZ, weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(ms(time))).replace(',', '')

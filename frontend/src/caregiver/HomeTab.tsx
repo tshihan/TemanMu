@@ -1,8 +1,9 @@
+import type { CSSProperties } from 'react'
 import type { LucideIcon } from 'lucide-react'
-import { ChevronRight, CircleCheck, Clock3, DoorOpen, Droplets, Phone, PhoneOutgoing, ShieldCheck, Sunrise, TriangleAlert, Zap } from 'lucide-react'
+import { ArrowRight, ArrowUpRight, CircleCheck, Clock3, DoorOpen, Droplets, Phone, PhoneOutgoing, ShieldCheck, Sunrise, TriangleAlert, Zap } from 'lucide-react'
 import type { Incident, Notification, Reading, Unit } from '../api/types'
 import { actorName, GUARD, isOuting, notificationCopy, outcomeLabel, STATUS_LABELS, type Ctx } from './copy'
-import { clock, greeting, isToday, until, when } from './format'
+import { clock, dayFraction, dayLabel, greeting, isToday, until, when } from './format'
 
 type Variant = 'alarm' | 'checking' | 'quiet' | 'away' | 'calm' | 'pending'
 interface Card { variant: Variant; Icon: LucideIcon; badge: string; headline: string; reason: string; grace?: string; ack?: boolean; open?: string }
@@ -72,68 +73,93 @@ export function HomeTab({ unit, ctx, incident, feed, readings, now, ackBusy, onA
   const updatedAt = Math.max(new Date(unit.status_since).getTime(),
     ...(lastReadingAt ? [Date.parse(lastReadingAt)] : []),
     ...(lastIncidentAt ? [Date.parse(lastIncidentAt)] : []))
-  const activityCards: { Icon: LucideIcon; label: string; value: string; time: string }[] = [
-    { Icon: Droplets, label: 'Water', value: waterAt ? 'Used today' : 'No use yet', time: waterAt ? clock(waterAt) : 'Today' },
-    { Icon: Zap, label: 'Electricity', value: unit.latest.power_kw > unit.baseline.standby_power_kw ? 'In use' : powerUsed ? 'Used today' : power ? 'Standby' : 'No use yet',
-      time: powerUsed ? clock(powerUsed.recorded_at) : power ? clock(power.recorded_at) : 'Today' },
-    { Icon: DoorOpen, label: 'Possible outing', value: unit.status === 'possible_away' ? 'Possible' : 'Not indicated',
-      time: unit.status === 'possible_away' && unit.latest.last_door_event_at ? clock(unit.latest.last_door_event_at) : 'Currently' },
+  const active = (reading: Reading) => reading.sensor === 'door' ? reading.value === 'open'
+    : reading.sensor === 'water' ? Number(reading.value) > 0 : Number(reading.value) > unit.baseline.standby_power_kw
+  const marks = (sensor: Reading['sensor']) => today.filter(reading => reading.sensor === sensor && active(reading)).map(reading => reading.recorded_at)
+  const waterMarks = marks('water')
+  const doorMarks = marks('door')
+  const lanes: Lane[] = [
+    { key: 'water', Icon: Droplets, label: 'Water', value: waterAt ? 'Used today' : 'No use yet', time: waterAt ? clock(waterAt) : null,
+      marks: waterMarks.length || !waterAt ? waterMarks : [waterAt] },
+    { key: 'power', Icon: Zap, label: 'Electricity', value: unit.latest.power_kw > unit.baseline.standby_power_kw ? 'In use' : powerUsed ? 'Used today' : power ? 'Standby' : 'No use yet',
+      time: powerUsed ? clock(powerUsed.recorded_at) : power ? clock(power.recorded_at) : null, marks: marks('electricity') },
+    { key: 'door', Icon: DoorOpen, label: 'Front door', value: unit.status === 'possible_away' ? 'Possible outing' : doorMarks.length ? 'Opened today' : 'No outing indicated',
+      time: unit.status === 'possible_away' && unit.latest.last_door_event_at ? clock(unit.latest.last_door_event_at) : doorMarks.length ? clock(doorMarks.at(-1)!) : null, marks: doorMarks },
   ]
   const recent = [
     ...(waterAt && !water ? [{ at: waterAt, Icon: Droplets, title: 'Water used at home' }] : []),
-    ...today.filter(reading => reading.sensor === 'door' ? reading.value === 'open'
-      : reading.sensor === 'water' ? Number(reading.value) > 0 : Number(reading.value) > unit.baseline.standby_power_kw).map(reading => ({
+    ...today.filter(active).map(reading => ({
       at: reading.recorded_at,
       Icon: reading.sensor === 'water' ? Droplets : reading.sensor === 'electricity' ? Zap : DoorOpen,
       title: reading.sensor === 'water' ? 'Water used at home' : reading.sensor === 'electricity' ? 'Electricity used at home' : 'Front door opened',
     })),
     ...(morning ? [{ at: morning.created_at, Icon: Sunrise, title: `${R}’s day has started`, detail: notificationCopy(morning, ctx, null).body }] : []),
   ].sort((a, b) => b.at.localeCompare(a.at))[0]
+  const nowAt = dayFraction(now)
 
-  return <div className="cg-page">
-    <div className="cg-intro">
-      <h1 className="cg-display">{greeting(now)}, {ctx.me.split(' ')[0]}</h1>
-      <p>Here's how {R} is doing today.</p>
-    </div>
+  return <div className="cg-page cg-home">
+    <header className="cg-intro">
+      <p className="cg-eyebrow"><time dateTime={new Date(now).toISOString()}>{dayLabel(now)}</time><span aria-hidden="true">·</span>{clock(now)}</p>
+      <h1 className="cg-display">{greeting(now)},<br /><em>{ctx.me.split(' ')[0]}.</em></h1>
+    </header>
 
     <section aria-label="Current status" className={`cg-status is-${card.variant}`}>
+      <span className="cg-orb" aria-hidden="true"><span /><span /><span /></span>
       <div className="cg-status-top">
-        <strong className="cg-serif">{R}</strong>
-        <span className="cg-badge"><card.Icon size={16} aria-hidden="true" /><span>{card.badge}</span></span>
+        <span className="cg-status-badge"><card.Icon size={14} strokeWidth={2.4} aria-hidden="true" />{card.badge}</span>
       </div>
-      <p className="cg-status-muted">{unit.resident_name} · Unit {unit.unit_id}</p>
       <h2 className="cg-status-headline">{card.headline}</h2>
       <p className="cg-status-reason">{card.reason}</p>
-      {card.grace && <p className="cg-status-meta">Simulated call window ends in <strong className="cg-num">{card.grace}</strong>. You’ll only be alerted if {R} doesn’t answer.</p>}
-      {card.ack && <button type="button" className="cg-btn cg-btn-inverse" onClick={onAck} disabled={ackBusy}>
+      {card.grace && <p className="cg-status-meta"><span className="cg-status-timer cg-num">{card.grace}</span>
+        <span>left in the simulated call window. You’ll only be alerted if {R} doesn’t answer.</span></p>}
+      {card.ack && <button type="button" className="cg-btn cg-btn-inverse cg-btn-tall" onClick={onAck} disabled={ackBusy}>
         {!ackBusy && <ShieldCheck size={22} aria-hidden="true" />}{ackBusy ? 'Recording…' : 'I’ll Check Now'}
       </button>}
-      {card.open && <button type="button" className="cg-btn cg-btn-outline-o" onClick={onOpenIncident}>{card.open}<ChevronRight size={20} aria-hidden="true" /></button>}
-      <p className="cg-status-updated">Updated {when(updatedAt, now)}</p>
+      {card.open && <button type="button" className="cg-btn cg-btn-ghost" onClick={onOpenIncident}>{card.open}<ArrowRight size={18} aria-hidden="true" /></button>}
+      <p className="cg-status-who"><span className="cg-status-name">{R}</span><span>{unit.resident_name} · {unit.unit_id}</span>
+        <span className="cg-status-updated">{when(updatedAt, now)}</span></p>
     </section>
 
-    <section className="cg-status-activity" aria-label="Activity indicators">
-      {activityCards.map(item => <div key={item.label} className="cg-status-activity-card">
-        <span className="cg-status-activity-icon"><item.Icon size={18} aria-hidden="true" /></span>
-        <span className="cg-status-activity-label">{item.label}</span>
-        <span className="cg-status-activity-value"><strong>{item.value}</strong><small>{item.time}</small></span>
-      </div>)}
+    <section className="cg-day" aria-labelledby="cg-day-heading">
+      <div className="cg-section-head">
+        <h2 id="cg-day-heading" className="cg-section-title">{R}’s day</h2>
+        <span className="cg-section-note">Water, power &amp; door only</span>
+      </div>
+      <div className="cg-day-card" style={{ '--now': nowAt } as CSSProperties}>
+      <ul className="cg-lanes">
+        {lanes.map(lane => <li key={lane.key} className={`cg-lane is-${lane.key}`}>
+          <span className="cg-lane-icon"><lane.Icon size={17} aria-hidden="true" /></span>
+          <span className="cg-lane-label">{lane.label}</span>
+          <span className="cg-lane-value"><strong>{lane.value}</strong>{lane.time && <time className="cg-num">{lane.time}</time>}</span>
+          <span className="cg-lane-track" aria-hidden="true">
+            <span className="cg-lane-past" />
+            {lane.marks.map((at, index) => <i key={`${at}-${index}`} style={{ left: `${dayFraction(at) * 100}%`, animationDelay: `${300 + index * 40}ms` }} />)}
+          </span>
+        </li>)}
+      </ul>
+      <div className="cg-axis" aria-hidden="true">
+        {['12a', '6a', '12p', '6p', '12a'].map((label, index) => <span key={index} className={Math.abs(index / 4 - nowAt) < .08 ? 'is-hidden' : ''}>{label}</span>)}
+        <b>Now</b>
+      </div>
+      </div>
     </section>
 
-    <div className="cg-quick">
-      <button type="button" className="cg-quick-call" onClick={onCall}>
-        <span><Phone size={20} aria-hidden="true" />Call {R}</span><small>Simulated call</small>
-      </button>
-    </div>
+    <button type="button" className="cg-quick-call" onClick={onCall}>
+      <span className="cg-quick-call-icon"><Phone size={20} aria-hidden="true" /></span>
+      <span className="cg-quick-call-text"><strong>Call {R}</strong><small>Simulated call · no phone will ring</small></span>
+      <ArrowUpRight className="cg-quick-call-arrow" size={20} aria-hidden="true" />
+    </button>
 
     <section className="cg-recent" aria-labelledby="cg-recent-heading">
-      <h2 id="cg-recent-heading" className="cg-card-title">Recent Activity</h2>
+      <div className="cg-section-head"><h2 id="cg-recent-heading" className="cg-section-title">Latest signal</h2></div>
       <div className="cg-recent-event">
         <span className="cg-recent-icon">{recent ? <recent.Icon size={19} aria-hidden="true" /> : <Clock3 size={19} aria-hidden="true" />}</span>
-        <span><strong>{recent?.title ?? 'No activity detected yet today'}</strong>
-          {recent && 'detail' in recent && <span className="cg-recent-detail">{recent.detail}</span>}
-          {recent && <time dateTime={recent.at}>Detected at {clock(recent.at)}</time>}</span>
+        <span className="cg-recent-text"><strong>{recent?.title ?? 'No activity detected yet today'}</strong>
+          {recent && 'detail' in recent && <span className="cg-recent-detail">{recent.detail}</span>}</span>
+        {recent && <time className="cg-num" dateTime={recent.at}>{clock(recent.at)}</time>}
       </div>
     </section>
   </div>
 }
+
+interface Lane { key: string; Icon: LucideIcon; label: string; value: string; time: string | null; marks: string[] }
