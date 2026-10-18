@@ -1,3 +1,4 @@
+from datetime import time
 from pathlib import Path
 from typing import Annotated
 
@@ -23,6 +24,10 @@ class Settings(BaseSettings):
     # validator below can accept "http://a,http://b".
     cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:5173"]
     demo_timezone: str = "Asia/Kuala_Lumpur"
+    # Same-hour neighbours: outing windows must overlap at least this long to match, and a
+    # resident who wakes strictly before the given local time counts as an early riser.
+    neighbour_min_overlap_minutes: int = 30
+    neighbour_early_riser_before: time = time(6, 30)
 
     @field_validator("cors_origins", mode="before")
     @classmethod
