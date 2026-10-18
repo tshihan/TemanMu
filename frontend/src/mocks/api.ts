@@ -314,7 +314,7 @@ export const mockApi: Api = {
     }
     messages.unshift(message)
     publish('companion.message_delivered', clone(message))
-    notify({ role: 'caregiver', unit_id: body.unit_id, kind: 'message_delivered', message: `Delivered to ${unitOrThrow(body.unit_id).caregiver_relationship} by voice call (simulated).`, incident_id: null })
+    notify({ role: 'caregiver', unit_id: body.unit_id, kind: 'message_delivered', message: `Delivered to ${unitOrThrow(body.unit_id).caregiver_relationship} by voice call: "${preset.text}"`, incident_id: null })
     return clone(message)
   },
   async requestBuddy(unitId) {
@@ -330,7 +330,7 @@ export const mockApi: Api = {
       simulated: true, matched_at: now(),
     }
     matches.push(match)
-    notify({ role: 'caregiver', unit_id: unitId, kind: 'buddy_matched', message: `Matched with ${buddy.name} through ${sharedInterest}.`, incident_id: null })
+    notify({ role: 'caregiver', unit_id: unitId, kind: 'buddy_matched', message: `${unitOrThrow(unitId).caregiver_relationship} is matched with ${buddy.name}, who also enjoys ${sharedInterest}`, incident_id: null })
     return clone(match)
   },
   async resetDemo() {

@@ -77,6 +77,9 @@ export function applyEvent(event: RealtimeEvent): void {
   eventSubscribers.forEach(listener => listener(event))
 }
 
+/** Apply an incident returned by a REST action without waiting for its WebSocket echo. */
+export const applyIncident = (incident: Incident) => applyEvent({ type: 'incident.updated', at: new Date().toISOString(), data: incident })
+
 export function connectStore(): () => void {
   return api.connect(applyEvent, connected => setState({ ...state, connected }))
 }

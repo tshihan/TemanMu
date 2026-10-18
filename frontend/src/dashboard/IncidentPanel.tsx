@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { BellRing, ChevronDown, ChevronUp, CircleCheck, Droplets, PhoneMissed, PhoneOutgoing, ShieldCheck, XCircle } from 'lucide-react'
 import seed from '../../../shared/seed.json'
 import { api } from '../api'
 import { ApiError } from '../api/live'
@@ -60,9 +59,8 @@ export function AcknowledgeButton({ incident, unit, role }: { incident: Incident
   </div>
 }
 
-export function IncidentPanel({ incident, unit, role, variant = 'default' }: { incident: Incident | null; unit: Unit; role: Role; variant?: 'default' | 'caregiver' }) {
+export function IncidentPanel({ incident, unit, role }: { incident: Incident | null; unit: Unit; role: Role }) {
   const [clock, setClock] = useState(() => Date.now())
-  const [expanded, setExpanded] = useState(false)
   const [outcome, setOutcome] = useState<Exclude<Outcome, 'resident_activity_detected'>>('resident_ok')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -82,7 +80,6 @@ export function IncidentPanel({ incident, unit, role, variant = 'default' }: { i
     finally { setBusy(false) }
   }
 
-  if (!incident && variant === 'caregiver') return <section className="care-incident" aria-label="Incident activity"><h2>Incident activity</h2><p className="care-empty">No incident has been recorded for Mum.</p></section>
   if (!incident) return <section className="incident-panel" aria-label="Incident response">
     <div className="incident-panel-head"><h4>Incident response</h4><span className="incident-state calm">No active concern</span></div>
     <p className="incident-empty">No safety incident has been recorded for this home.</p>
@@ -91,31 +88,6 @@ export function IncidentPanel({ incident, unit, role, variant = 'default' }: { i
   const canClose = incident.state === 'acknowledged' && incident.acknowledged_by?.role === role && incident.acknowledged_by.name === actorName(role, unit)
   const resolved = incident.state === 'closed' || incident.state === 'auto_resolved'
   const statusText = incident.state === 'grace' ? 'Checking quietly' : incident.state === 'notified' ? 'Needs response' : incident.state === 'acknowledged' ? 'Someone is checking' : 'Resolved'
-  if (variant === 'caregiver') {
-    const eventDetails = incident.events.map((event, index) => {
-      const name = event.actor?.name || incident.acknowledged_by?.name || 'A responder'
-      const detail = event.type === 'detected' ? { title: 'Unusual water inactivity', description: 'No water activity within the expected window.', Icon: Droplets, tone: 'info' }
-        : event.type === 'voice_call_started' ? { title: 'Automatic call started', description: 'TemanMu attempted to call Mum.', Icon: PhoneOutgoing, tone: 'info' }
-        : event.type === 'voice_call_no_answer' ? { title: 'No answer', description: 'Mum did not answer the call.', Icon: PhoneMissed, tone: 'attention' }
-        : event.type === 'voice_call_cancelled' ? { title: 'Call stopped', description: 'The automatic call was stopped.', Icon: XCircle, tone: 'info' }
-        : event.type === 'notified' ? { title: 'Alert sent', description: 'Caregiver and township were notified.', Icon: BellRing, tone: 'attention' }
-        : event.type === 'reminder' ? { title: 'Reminder sent', description: 'The care team received a follow-up alert.', Icon: BellRing, tone: 'attention' }
-        : event.type === 'acknowledged' ? { title: 'Alert acknowledged', description: `${name} accepted the alert. Safety is not yet confirmed.`, Icon: ShieldCheck, tone: 'info' }
-        : event.type === 'auto_resolved' ? { title: 'Activity detected', description: 'New activity at home ended the alert.', Icon: CircleCheck, tone: 'calm' }
-        : { title: 'Outcome recorded', description: `${name} recorded the incident outcome.`, Icon: CircleCheck, tone: 'calm' }
-      return { ...detail, event, index }
-    })
-    const visible = expanded ? eventDetails : eventDetails.slice(-2)
-    return <section className="care-incident" aria-labelledby="incident-activity-heading">
-      <div className="care-section-head"><h2 id="incident-activity-heading">Incident activity</h2><span>{incident.state === 'acknowledged' ? 'Awaiting outcome' : resolved ? 'Completed' : 'In progress'}</span></div>
-      <ol className="care-event-list" aria-label="Incident events in chronological order">{visible.map(({ event, index, title, description, Icon, tone }) => <li key={`${event.at}-${event.type}-${index}`} className={`care-event-${tone}`}><span className="care-event-icon"><Icon size={19} aria-hidden="true" /></span><div><strong>{title}</strong><p>{description}</p><time dateTime={event.at}>{timeLabel(event.at)}</time></div></li>)}</ol>
-      {eventDetails.length > 2 && <button type="button" className="care-timeline-toggle" aria-expanded={expanded} onClick={() => setExpanded(value => !value)}>{expanded ? <>Show less <ChevronUp size={17} /></> : <>View full timeline <ChevronDown size={17} /></>}</button>}
-      {(incident.state === 'grace' || incident.state === 'notified') && <AcknowledgeButton incident={incident} unit={unit} role={role} />}
-      {canClose && <form className="outcome-form" onSubmit={event => { event.preventDefault(); void close() }}><label htmlFor={`outcome-${role}`}>What happened?</label><div className="outcome-controls"><select id={`outcome-${role}`} value={outcome} onChange={event => setOutcome(event.target.value as Exclude<Outcome, 'resident_activity_detected'>)}>{outcomes.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}</select><button type="submit" className="primary-action" disabled={busy}>{busy ? 'Closing…' : 'Record outcome'}</button></div>{error && <p className="action-error" role="alert">{error}</p>}</form>}
-      {incident.state === 'acknowledged' && !canClose && <p className="care-incident-note">{incident.acknowledged_by?.name} will record the outcome after checking.</p>}
-    </section>
-  }
-
   return <section className={`incident-panel incident-${incident.state}`} aria-label="Incident response">
     <div className="incident-panel-head"><h4>Incident response</h4><span className={`incident-state ${resolved ? 'calm' : ''}`}>{statusText}</span></div>
     {incident.state === 'grace' && <p className="incident-lead">A possible break in routine was detected. A simulated voice call is being made before anyone is alerted.</p>}

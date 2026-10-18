@@ -3,15 +3,16 @@ import { usingMock } from './api'
 import { connectStore, markRoleViewed, useAppState } from './api/store'
 import type { Role } from './api/types'
 import { Box, Building2, House } from 'lucide-react'
-import { CaregiverView } from './dashboard/CaregiverView'
+import { CaregiverApp } from './caregiver/CaregiverApp'
 import { TownshipView } from './dashboard/TownshipView'
 import './live.css'
 
 const Landing = lazy(() => import('./landing/Landing').then(module => ({ default: module.Landing })))
 const HomeEnvironment = lazy(() => import('./home/HomeEnvironment').then(module => ({ default: module.HomeEnvironment })))
-type Page = 'landing' | 'dashboard' | 'simulator'
+type Page = 'landing' | 'dashboard' | 'simulator' | 'caregiver'
 // Any other hash (including the landing page's own #how / #roles anchors) stays on the landing page.
-const pageFromHash = (): Page => window.location.hash === '#simulator' ? 'simulator' : window.location.hash === '#dashboard' ? 'dashboard' : 'landing'
+const PAGES: Record<string, Page> = { '#simulator': 'simulator', '#dashboard': 'dashboard', '#caregiver': 'caregiver' }
+const pageFromHash = (): Page => PAGES[window.location.hash] ?? 'landing'
 
 export default function App() {
   const { connected, loaded, notifications, config } = useAppState()
@@ -28,7 +29,8 @@ export default function App() {
     return () => window.removeEventListener('hashchange', onHashChange)
   }, [])
   useEffect(() => {
-    if (page === 'dashboard' && loaded && activeUnread)
+    // The caregiver app keeps its own read state (per item and "Mark all read").
+    if (page === 'dashboard' && role === 'township' && loaded && activeUnread)
       void markRoleViewed(role).catch(error => console.error('Could not mark notifications read', error))
   }, [page, role, loaded, activeUnread])
   useEffect(() => {
@@ -36,6 +38,9 @@ export default function App() {
   }, [page])
 
   if (page === 'landing') return <Suspense fallback={null}><Landing /></Suspense>
+
+  // The installed caregiver app (PWA start page): the phone screen only, no dashboard chrome.
+  if (page === 'caregiver') return <CaregiverApp standalone />
 
   if (page === 'simulator') return <div className="live-shell">
     <nav className="live-rail" aria-label="TemanMu views">
@@ -62,7 +67,7 @@ export default function App() {
     </main>
   </div>
 
-  return <div className={`app-shell ${role === 'caregiver' ? 'caregiver-shell' : ''}`}>
+  return <div className="app-shell">
     <header className="app-header">
       <a className="brand-block" href="#" aria-label="TemanMu home" style={{ color: 'inherit', textDecoration: 'none' }}>
         <span className="brand-mark" aria-hidden="true">
@@ -80,6 +85,7 @@ export default function App() {
       <nav className="view-navigation" aria-label="Presentation views">
         <a href="#dashboard" target="_blank" rel="noopener" aria-current="page">Product dashboard</a>
         <a href="#simulator" target="_blank" rel="noopener">Live 3D view <span aria-hidden="true">↗</span></a>
+        <a href="#caregiver" target="_blank" rel="noopener">Caregiver app <span aria-hidden="true">↗</span></a>
       </nav>
       <div className="header-meta">
         <span className="environment-label">{usingMock ? 'Simulated data' : 'Live backend'}</span>
@@ -108,7 +114,7 @@ export default function App() {
           </div>
         </div>
         <div className="dashboard-content" role="tabpanel" id={`panel-${role}`} aria-labelledby={`tab-${role}`}>
-          {!loaded ? <p className="loading-state" role="status">Waiting for the first snapshot…</p> : role === 'township' ? <TownshipView /> : <CaregiverView />}
+          {!loaded ? <p className="loading-state" role="status">Waiting for the first snapshot…</p> : role === 'caregiver' ? <CaregiverApp /> : <TownshipView />}
         </div>
         {role === 'township' && <div className="dashboard-footer">
           <span>{inactiveUnread ? `${inactiveUnread} unread for ${inactiveRole}` : 'Both roles are up to date'} · Floors 2–24 use sample data</span>
