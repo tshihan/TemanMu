@@ -1,28 +1,33 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
 import { ApiError } from '../api/live'
-import type { BuddyMatch, CommunityActivity } from '../api/types'
+import type { BuddyMatch, CommunityActivity, NeighbourState } from '../api/types'
 
 export type BuddyState =
   | { kind: 'loading' } | { kind: 'none' } | { kind: 'requesting' } | { kind: 'matched'; match: BuddyMatch }
   | { kind: 'not_found' } | { kind: 'error' }
+export type NeighboursState =
+  | { kind: 'loading' } | { kind: 'ready'; state: NeighbourState } | { kind: 'saving'; state: NeighbourState }
+  | { kind: 'error' }
 export type ActivityAction = 'invite_resident' | 'join_together'
 export type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 
 const IDLE: Record<ActivityAction, SaveState> = { invite_resident: 'idle', join_together: 'idle' }
 
-/** Community Buddy and the nearby activity for one unit. Reloads after every demo reset. */
+/** Community Buddy, same-hour neighbours and the nearby activity for one unit. Reloads after every demo reset. */
 export function useCompanion(unitId: string | undefined, revision: number) {
   const [buddy, setBuddy] = useState<BuddyState>({ kind: 'loading' })
   const [activity, setActivity] = useState<CommunityActivity | null>(null)
   const [responses, setResponses] = useState(IDLE)
+  const [neighbours, setNeighbours] = useState<NeighboursState>({ kind: 'loading' })
 
   useEffect(() => {
     if (!unitId) return
     let cancelled = false
-    void Promise.allSettled([api.getBuddy(unitId), api.getActivities(unitId)]).then(([b, a]) => {
+    void Promise.allSettled([api.getBuddy(unitId), api.getActivities(unitId), api.getNeighbours(unitId)]).then(([b, a, n]) => {
       if (cancelled) return
       setResponses(IDLE)
+      setNeighbours(n.status === 'fulfilled' ? { kind: 'ready', state: n.value } : { kind: 'error' })
       setBuddy(b.status === 'rejected' ? { kind: 'error' } : b.value ? { kind: 'matched', match: b.value } : { kind: 'none' })
       if (a.status === 'fulfilled') {
         const now = new Date().toISOString()
@@ -57,5 +62,27 @@ export function useCompanion(unitId: string | undefined, revision: number) {
     }
   }
 
-  return { buddy, activity, responses, requestBuddy, respond }
+  async function reloadNeighbours(): Promise<void> {
+    if (!unitId) return
+    setNeighbours({ kind: 'loading' })
+    try { setNeighbours({ kind: 'ready', state: await api.getNeighbours(unitId) }) }
+    catch { setNeighbours({ kind: 'error' }) }
+  }
+
+  async function saveNeighbours(change: (id: string) => Promise<NeighbourState>): Promise<boolean> {
+    if (!unitId || neighbours.kind !== 'ready') return false
+    setNeighbours({ kind: 'saving', state: neighbours.state })
+    try { setNeighbours({ kind: 'ready', state: await change(unitId) }); return true }
+    catch (error) {
+      // 409/404: the state moved on (another tab, a withdrawal), so show what is true now.
+      if (error instanceof ApiError && (error.status === 409 || error.status === 404)) await reloadNeighbours()
+      else setNeighbours({ kind: 'ready', state: neighbours.state })
+      return false
+    }
+  }
+
+  const setNeighbourConsent = (open: boolean) => saveNeighbours(id => api.setNeighbourConsent(id, open))
+  const requestIntroduction = () => saveNeighbours(id => api.requestNeighbourIntroduction(id))
+
+  return { buddy, activity, responses, requestBuddy, respond, neighbours, reloadNeighbours, setNeighbourConsent, requestIntroduction }
 }

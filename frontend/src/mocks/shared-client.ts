@@ -62,6 +62,7 @@ export const sharedMockApi: Api = {
   getMessages: unitId => call('getMessages', unitId),
   getMessagePresets: () => call('getMessagePresets'),
   getBuddy: unitId => call('getBuddy', unitId),
+  getNeighbours: unitId => call('getNeighbours', unitId),
   postReading: reading => call('postReading', reading),
   acknowledgeIncident: (id, actor) => call('acknowledgeIncident', id, actor),
   closeIncident: (id, actor) => call('closeIncident', id, actor),
@@ -70,6 +71,8 @@ export const sharedMockApi: Api = {
   respondToActivity: (id, action) => call('respondToActivity', id, action),
   sendMessage: body => call('sendMessage', body),
   requestBuddy: unitId => call('requestBuddy', unitId),
+  setNeighbourConsent: (unitId, open) => call('setNeighbourConsent', unitId, open),
+  requestNeighbourIntroduction: unitId => call('requestNeighbourIntroduction', unitId),
   resetDemo: () => call('resetDemo'),
   setMonitoring: active => call('setMonitoring', active),
   connect(onEvent, onStatus) {

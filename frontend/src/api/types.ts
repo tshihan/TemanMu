@@ -71,7 +71,7 @@ export interface Incident {
 
 export type NotificationKind =
   | 'morning_reassurance' | 'alert' | 'reminder' | 'acknowledged' | 'closed'
-  | 'auto_resolved' | 'message_delivered' | 'buddy_matched'
+  | 'auto_resolved' | 'message_delivered' | 'buddy_matched' | 'neighbour_introduced'
 
 export interface Notification {
   notification_id: string
@@ -117,6 +117,22 @@ export interface BuddyMatch {
   matched_at: string
 }
 
+/** A same-hour neighbour. Carries no times and no unit_id on purpose (privacy). */
+export interface NeighbourMatch {
+  name: string
+  floor: number
+  labels: string[]
+  meeting_activity: CommunityActivity | null
+  simulated: true
+}
+
+export interface NeighbourState {
+  unit_id: UnitId
+  opted_in: boolean
+  match: NeighbourMatch | null
+  introduction_requested_at: string | null
+}
+
 export interface Config {
   grace_period_seconds: number
   reminder_interval_seconds: number
@@ -150,6 +166,7 @@ export interface Api {
   getMessages(unitId: UnitId): Promise<CompanionMessage[]>
   getMessagePresets(): Promise<MessagePreset[]>
   getBuddy(unitId: UnitId): Promise<BuddyMatch | null>
+  getNeighbours(unitId: UnitId): Promise<NeighbourState>
   postReading(reading: Omit<Reading, 'recorded_at'> & { recorded_at?: string }): Promise<{ accepted: true; unit: Unit }>
   acknowledgeIncident(id: string, actor: { role: Role; name: string }): Promise<Incident>
   closeIncident(id: string, actor: { role: Role; name: string; outcome: Exclude<Outcome, 'resident_activity_detected'> }): Promise<Incident>
@@ -158,6 +175,8 @@ export interface Api {
   respondToActivity(id: string, action: 'invite_resident' | 'join_together'): Promise<{ ok: true }>
   sendMessage(body: { unit_id: UnitId; from_name: string; preset_id: string }): Promise<CompanionMessage>
   requestBuddy(unitId: UnitId): Promise<BuddyMatch>
+  setNeighbourConsent(unitId: UnitId, open: boolean): Promise<NeighbourState>
+  requestNeighbourIntroduction(unitId: UnitId): Promise<NeighbourState>
   resetDemo(): Promise<{ units: Unit[] }>
   // Demo-only: the home unit's quiet-gap watch runs only while a scenario plays.
   setMonitoring(active: boolean): Promise<{ unit_id: UnitId; active: boolean }>
