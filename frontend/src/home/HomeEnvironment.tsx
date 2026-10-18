@@ -184,6 +184,8 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
   const runner = useRef<ScenarioController | null>(null)
   const clock = useRef(new ScenarioController())
   const scenarioActive = scenarioState === 'running' || scenarioState === 'paused'
+  const monitoringOn = useRef(false)
+  const monitoringQueue = useRef<Promise<void>>(Promise.resolve())
   const homeUnit = fetchedUnit ?? storeUnit ?? null
   const setVisualStates = (next: ObjectStates) => {
     const previous = localStates.current
@@ -676,6 +678,29 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
       }
     }
   }, [appState.connected])
+  // The backend watches A-105 for inactivity only while a scenario plays, so it never raises
+  // incidents on its own between scenarios. Calls are queued so on/off reach it in order.
+  useEffect(() => {
+    if (scenarioActive === monitoringOn.current) return
+    const active = scenarioActive
+    monitoringOn.current = active
+    monitoringQueue.current = monitoringQueue.current.then(() => api.setMonitoring(active)).then(() => undefined, error => {
+      console.error('Could not switch A-105 monitoring', error)
+      if (active && runner.current) {
+        stopScenario()
+        setIntegrationError('Could not start A-105 monitoring on the backend; scenario stopped.')
+      }
+    })
+  }, [scenarioActive])
+  useEffect(() => {
+    const off = () => {
+      if (!monitoringOn.current) return
+      monitoringOn.current = false
+      void api.setMonitoring(false).catch(() => undefined)
+    }
+    window.addEventListener('pagehide', off)
+    return () => { window.removeEventListener('pagehide', off); off() }
+  }, [])
   useEffect(() => subscribeAppEvents(event => {
     if (event.type === 'snapshot') {
       const unit = event.data.units.find(item => item.unit_id === HOME_UNIT_ID)

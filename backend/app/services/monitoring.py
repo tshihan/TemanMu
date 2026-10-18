@@ -116,8 +116,56 @@ async def _run_incident_step(incident_id: str, step: Callable[[str], Awaitable[N
 
 # --- watch timer -------------------------------------------------------------------------
 
+# Units whose quiet-gap watch is on. Demo-only: the 3D home turns it on while a scenario plays,
+# so A-105 never raises incidents on its own between scenarios. In memory, so a reset or a
+# restart turns it off.
+_watching: set[str] = set()
+
+
+def is_watching(unit_id: str) -> bool:
+    return unit_id in _watching
+
+
+async def start_watching(unit_id: str) -> Unit:
+    """POST /api/demo/monitoring {active: true}: turn the watch on with a fresh quiet-gap clock.
+
+    The clock restarts now, or an old silence would open an incident the moment it turns on.
+    """
+    async with _unit_lock(unit_id):
+        unit = await db_units.get_unit(unit_id)
+        if unit is None:
+            raise UnitNotFound(unit_id)
+        if not unit.controllable:
+            raise UnitNotControllable(unit_id)
+        _watching.add(unit_id)
+        if unit.active_incident_id is None:
+            now = utc_now()
+            unit = await db_units.update_unit_state(
+                unit_id,
+                last_water_activity_at=now,
+                status_since=now if unit.status == "possible_away" else None,
+            )
+            await realtime.broadcast("unit.updated", unit)
+        await _arm_watch_locked(unit_id)
+        return unit
+
+
+async def stop_watching(unit_id: str) -> None:
+    """POST /api/demo/monitoring {active: false}. Active incidents keep their own timers."""
+    async with _unit_lock(unit_id):
+        _watching.discard(unit_id)
+        timers.cancel(_watch_key(unit_id))
+
+
+def stop_all_watching() -> None:
+    """Demo reset: every watch off (reset has already cancelled the timers)."""
+    _watching.clear()
+
 
 async def _arm_watch_locked(unit_id: str) -> None:
+    if unit_id not in _watching:
+        timers.cancel(_watch_key(unit_id))
+        return
     unit = await db_units.get_unit(unit_id)
     if unit is None or not unit.controllable:
         timers.cancel(_watch_key(unit_id))
@@ -138,6 +186,8 @@ async def arm_watch(unit_id: str) -> None:
 async def check_unit(unit_id: str) -> None:
     """Watch timer callback: open an incident if the quiet gap or outing has run out."""
     async with _unit_lock(unit_id):
+        if unit_id not in _watching:
+            return
         unit = await db_units.get_unit(unit_id)
         if unit is None or not unit.controllable:
             return
@@ -418,9 +468,10 @@ async def ingest_reading(body: ReadingIn) -> Unit:
 
 
 async def restore() -> None:
-    """On startup: reschedule timers for active incidents, then arm the watch timer.
+    """On startup: reschedule timers for active incidents.
 
-    Deadlines that passed while the server was down fire immediately.
+    Deadlines that passed while the server was down fire immediately. The quiet-gap watch
+    stays off until a scenario turns it on (start_watching).
     """
     for incident in await db_incidents.list_active_incidents():
         unit = await db_units.get_unit(incident.unit_id)
@@ -435,4 +486,3 @@ async def restore() -> None:
         elif incident.state == "notified" and incident.next_reminder_at is not None:
             _schedule_incident_timer("reminder", incident.incident_id, incident.next_reminder_at, _send_reminder)
         logger.info("Restored timers for %s incident %s", incident.state, incident.incident_id)
-    await arm_watch(settings.controllable_unit_id)

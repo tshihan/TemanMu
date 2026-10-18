@@ -267,6 +267,15 @@ class ResetResponse(ContractModel):
     units: list[Unit]
 
 
+class MonitoringIn(ContractModel):
+    active: bool
+
+
+class MonitoringResponse(ContractModel):
+    unit_id: UnitId
+    active: bool
+
+
 # --- WebSocket payloads (§8.6) -----------------------------------------------------------
 
 

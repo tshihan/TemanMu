@@ -28,6 +28,13 @@ def fast_timers(monkeypatch):
     monkeypatch.setattr(settings, "voice_call_ring_seconds", 0.2)
 
 
+@pytest.fixture(autouse=True)
+async def watching(client, broadcasts):
+    """These tests exercise the watch, which is off after reset until a scenario turns it on."""
+    await monitoring.start_watching(UNIT)
+    broadcasts.clear()
+
+
 async def wait_for(predicate, timeout=3.0, interval=0.05):
     deadline = asyncio.get_running_loop().time() + timeout
     while True:

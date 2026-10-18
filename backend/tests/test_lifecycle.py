@@ -31,6 +31,13 @@ def fast_timers(monkeypatch):
     monkeypatch.setattr(settings, "voice_call_ring_seconds", 0.2)
 
 
+@pytest.fixture(autouse=True)
+async def watching(client, broadcasts):
+    """These tests exercise the watch, which is off after reset until a scenario turns it on."""
+    await monitoring.start_watching(UNIT)
+    broadcasts.clear()
+
+
 async def wait_for(predicate, timeout=3.0, interval=0.05):
     """Poll an async predicate until it returns a truthy value."""
     deadline = asyncio.get_running_loop().time() + timeout
@@ -219,7 +226,7 @@ async def test_reset_during_grace_cancels_timers(client):
     await reset_demo()
     keys = timers.scheduled_keys()
     assert not any(incident.incident_id in k for k in keys)
-    assert f"watch:{UNIT}" in keys  # reset re-arms the quiet-gap watch
+    assert f"watch:{UNIT}" not in keys  # reset turns the quiet-gap watch off
     await asyncio.sleep(1.3)
     assert await incidents.list_incidents() == []
     assert await notifications.list_notifications() == []
@@ -270,3 +277,58 @@ async def test_restore_reschedules_overdue_reminder(client):
         return i if i.reminder_count == 1 else None
 
     await wait_for(reminded)
+
+
+async def test_watch_is_off_after_reset(client):
+    await reset_demo()
+    await units.update_unit_state(UNIT, last_water_activity_at=utc_now() - timedelta(seconds=300))
+    await monitoring.check_unit(UNIT)
+    await monitoring.arm_watch(UNIT)
+    assert await incidents.list_incidents() == []
+    assert f"watch:{UNIT}" not in timers.scheduled_keys()
+
+
+async def test_reading_does_not_arm_watch_when_off(client):
+    await reset_demo()
+    await post(client, "water", 6)
+    assert f"watch:{UNIT}" not in timers.scheduled_keys()
+
+
+async def test_start_restarts_the_quiet_gap_clock(client, broadcasts):
+    await reset_demo()
+    await units.update_unit_state(UNIT, last_water_activity_at=utc_now() - timedelta(seconds=300))
+    broadcasts.clear()
+
+    r = await client.post("/api/demo/monitoring", json={"active": True})
+    assert r.status_code == 200
+    assert r.json() == {"unit_id": UNIT, "active": True}
+    unit = await units.get_unit(UNIT)
+    assert unit.quiet_gap.last_water_activity_at >= utc_now() - timedelta(seconds=2)
+    assert [t for t, _ in broadcasts] == ["unit.updated"]
+    assert f"watch:{UNIT}" in timers.scheduled_keys()
+    assert await incidents.list_incidents() == []  # the old silence does not count
+
+
+async def test_stop_cancels_watch_but_keeps_incident_timers(client):
+    incident = await open_quiet_gap_incident()
+
+    r = await client.post("/api/demo/monitoring", json={"active": False})
+    assert r.json() == {"unit_id": UNIT, "active": False}
+    keys = timers.scheduled_keys()
+    assert f"watch:{UNIT}" not in keys
+    assert f"grace:{incident.incident_id}" in keys
+
+    # A close after the scenario has stopped does not start a new quiet gap.
+    await wait_for(lambda: incident_state(incident.incident_id, "notified"))
+    await client.post(f"/api/incidents/{incident.incident_id}/acknowledge", json={"role": "township", "name": "Guard Ali"})
+    await client.post(
+        f"/api/incidents/{incident.incident_id}/close",
+        json={"role": "township", "name": "Guard Ali", "outcome": "resident_ok"},
+    )
+    assert f"watch:{UNIT}" not in timers.scheduled_keys()
+
+
+async def test_restore_leaves_watch_off(client):
+    await reset_demo()
+    await monitoring.restore()
+    assert f"watch:{UNIT}" not in timers.scheduled_keys()

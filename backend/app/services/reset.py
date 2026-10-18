@@ -34,8 +34,10 @@ async def reset_demo() -> list[Unit]:
     Raises app.seed.SeedError if seed.json is invalid; the database is then left untouched.
     """
     async with _reset_lock:
-        # 1. Stop Backend 1's timers first so none fire mid-reset.
+        # 1. Stop Backend 1's timers first so none fire mid-reset. The quiet-gap watch stays
+        #    off until a scenario turns it on.
         await timers.cancel_all()
+        monitoring.stop_all_watching()
         # 2. Re-read every time, so seed edits apply without a restart. Validate before wiping.
         seed = load_seed(settings.seed_file)
         now = utc_now()
@@ -108,6 +110,4 @@ async def reset_demo() -> list[Unit]:
         # 5. After commit, so connected clients never see a half-reset state.
         snapshot = await build_snapshot()
         await realtime.broadcast("snapshot", snapshot)
-        # 6. Start the controllable unit's quiet-gap clock (Backend 1).
-        await monitoring.arm_watch(settings.controllable_unit_id)
         return snapshot.units

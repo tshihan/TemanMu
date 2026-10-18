@@ -46,6 +46,8 @@ export const liveApi: Api = {
   sendMessage: body => post('/api/companion/messages', body),
   requestBuddy: unit_id => post('/api/companion/buddy/request', { unit_id }),
   resetDemo: () => post('/api/demo/reset'),
+  // keepalive: the 3D home turns monitoring off on pagehide, which must survive the unload.
+  setMonitoring: active => request('/api/demo/monitoring', { method: 'POST', body: JSON.stringify({ active }), keepalive: true }),
   connect(onEvent, onStatus) {
     let closed = false
     let socket: WebSocket | undefined

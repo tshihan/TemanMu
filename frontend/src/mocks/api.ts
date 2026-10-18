@@ -357,6 +357,10 @@ export const mockApi: Api = {
     publish('snapshot', clone(state))
     return { units: clone(state.units) }
   },
+  // The mock has no background quiet-gap watch; scenarios prime its inactivity explicitly.
+  async setMonitoring(active) {
+    return { unit_id: 'A-105', active }
+  },
   connect(onEvent, onStatus) {
     listeners.add(onEvent)
     queueMicrotask(() => { if (listeners.has(onEvent)) { onStatus?.(true); onEvent({ type: 'snapshot', at: now(), data: clone(state) }) } })

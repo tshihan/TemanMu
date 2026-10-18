@@ -159,5 +159,7 @@ export interface Api {
   sendMessage(body: { unit_id: UnitId; from_name: string; preset_id: string }): Promise<CompanionMessage>
   requestBuddy(unitId: UnitId): Promise<BuddyMatch>
   resetDemo(): Promise<{ units: Unit[] }>
+  // Demo-only: the home unit's quiet-gap watch runs only while a scenario plays.
+  setMonitoring(active: boolean): Promise<{ unit_id: UnitId; active: boolean }>
   connect(onEvent: (event: RealtimeEvent) => void, onStatus?: (connected: boolean) => void): () => void
 }

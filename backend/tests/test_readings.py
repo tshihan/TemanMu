@@ -138,6 +138,8 @@ async def test_electricity_does_not_move_quiet_gap_anchor(client):
 
 async def test_reading_arms_watch_timer(client):
     from app import timers
+    from app.services import monitoring
 
+    await monitoring.start_watching("A-105")
     await post(client, "water", 6)
     assert "watch:A-105" in timers.scheduled_keys()

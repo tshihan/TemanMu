@@ -71,6 +71,7 @@ export const sharedMockApi: Api = {
   sendMessage: body => call('sendMessage', body),
   requestBuddy: unitId => call('requestBuddy', unitId),
   resetDemo: () => call('resetDemo'),
+  setMonitoring: active => call('setMonitoring', active),
   connect(onEvent, onStatus) {
     listeners.add(onEvent)
     if (onStatus) statusListeners.add(onStatus)
