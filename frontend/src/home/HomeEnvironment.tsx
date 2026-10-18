@@ -14,13 +14,15 @@ import { TownshipResponder, type ResponderCommand } from './character/TownshipRe
 import { ROOM_LABELS, type RoomId, type Waypoint } from './character/navigation'
 import { INITIAL_OBJECT_STATES, INTERACTIONS, interactionPrompt, type InteractionBindings, type InteractionId, type ObjectStates } from './interactions/registry'
 import { ScenarioController, type ScenarioActions } from './scenarios/ScenarioController'
-import { DEFAULT_TIMING, SCENARIO_LABELS, scenarioSteps, type ScenarioId, type ScenarioStep, type ScenarioTiming } from './scenarios/definitions'
+import { DEFAULT_TIMING, SCENARIO_DESCRIPTIONS, SCENARIO_LABELS, scenarioSteps, type ScenarioId, type ScenarioStep, type ScenarioTiming } from './scenarios/definitions'
 import { api, usingMock } from '../api'
 import { primeSharedMockInactivity } from '../mocks/shared-client'
 import { applyEvent, getAppState, subscribeAppEvents, useAppState } from '../api/store'
-import type { CompanionMessage, Config, Incident, Reading, Unit } from '../api/types'
+import type { CompanionMessage, Config, Incident, Reading, Sensor, Unit } from '../api/types'
 import { HOME_UNIT_ID, SensorGateway, readingForObject } from './integration/sensorGateway'
 import seed from '../../../shared/seed.json'
+import { SensorBeacons, type SensorPulses } from './SensorBeacons'
+import { Pause, Play, RotateCcw, Settings2, Square, X } from 'lucide-react'
 import './home.css'
 
 type Command = { action: 'reset' | 'in' | 'out' | 'left' | 'right' | 'plan'; id: number }
@@ -33,7 +35,8 @@ export function HouseModel({ interaction }: { interaction?: InteractionBindings 
     <Architecture interaction={interaction} /><Bedroom /><Bathroom interaction={interaction} /><Kitchen interaction={interaction} /><LivingRoom interaction={interaction} /><DiningArea />
   </group>
 }
-function Scene({ command, characterCommand, responderCommand, responderVisible, responderChecking, interaction, pose, speech, visible, paused, urgent, onCharacterStatus, onReached, onArrived, onResponderArrived, onAnimationComplete, onReady }: {
+function Scene({ command, characterCommand, responderCommand, responderVisible, responderChecking, interaction, pose, speech, visible, paused, urgent, sensorView, unit, pulses, onCharacterStatus, onReached, onArrived, onResponderArrived, onAnimationComplete, onReady }: {
+  sensorView: boolean; unit: Unit | null; pulses: SensorPulses
   command: Command; characterCommand: CharacterCommand; responderCommand: ResponderCommand; responderVisible: boolean; responderChecking: boolean
   interaction: InteractionBindings; pose: InteractionPose; speech: string | null; visible: boolean; paused: boolean; urgent: boolean
   onCharacterStatus: (status: CharacterStatus) => void; onReached: (id: number, target: InteractionId) => void
@@ -49,12 +52,18 @@ function Scene({ command, characterCommand, responderCommand, responderVisible, 
     const room = new RoomEnvironment()
     const target = generator.fromScene(room, .04)
     scene.environment = target.texture
-    scene.environmentIntensity = .35
     invalidate()
     room.dispose()
     generator.dispose()
     return () => { scene.environment = null; target.dispose() }
   }, [getRoot])
+  useEffect(() => {
+    const { scene, invalidate } = getRoot()
+    scene.environmentIntensity = sensorView ? .12 : .35
+    invalidate()
+  }, [getRoot, sensorView])
+  // Sensor view dims the home so only the three metered objects read clearly.
+  const light = sensorView ? .38 : 1
   const baseZoom = Math.min(size.width / 16.8, size.height / 12.7)
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
   useEffect(() => {
@@ -91,16 +100,17 @@ function Scene({ command, characterCommand, responderCommand, responderVisible, 
       mouseButtons={{ left: CameraControlsImpl.ACTION.ROTATE, middle: CameraControlsImpl.ACTION.NONE, right: CameraControlsImpl.ACTION.NONE, wheel: CameraControlsImpl.ACTION.ZOOM }}
       touches={{ one: CameraControlsImpl.ACTION.TOUCH_ROTATE, two: CameraControlsImpl.ACTION.TOUCH_ZOOM, three: CameraControlsImpl.ACTION.NONE }} />
     <color attach="background" args={['#eeeae1']} />
-    <ambientLight intensity={.35} />
-    <hemisphereLight args={['#fff4db', '#a8b6a5', .85]} />
-    <directionalLight position={[-4, 12, 6]} intensity={2.5} color="#fff1d7" castShadow
+    <ambientLight intensity={.35 * light} />
+    <hemisphereLight args={['#fff4db', '#a8b6a5', .85 * light]} />
+    <directionalLight position={[-4, 12, 6]} intensity={2.5 * light} color="#fff1d7" castShadow
       shadow-radius={8} shadow-mapSize={[2048, 2048]} shadow-camera-left={-9} shadow-camera-right={9}
       shadow-camera-top={9} shadow-camera-bottom={-9} shadow-normalBias={.035} shadow-bias={-.0001} />
-    <directionalLight position={[5, 8, -7]} intensity={.8} color="#e8efff" />
+    <directionalLight position={[5, 8, -7]} intensity={.8 * light} color="#e8efff" />
     <HouseModel interaction={interaction} />
-    <ElderlyCharacter command={characterCommand} pose={pose} speech={speech} visible={visible} paused={paused} urgent={urgent}
+    <ElderlyCharacter command={characterCommand} pose={pose} speech={sensorView ? null : speech} visible={visible && !sensorView} paused={paused} urgent={urgent}
       onStatus={onCharacterStatus} onReached={onReached} onArrived={onArrived} onAnimationComplete={onAnimationComplete} />
-    <TownshipResponder command={responderCommand} visible={responderVisible} checking={responderChecking} paused={paused} onArrived={onResponderArrived} />
+    <SensorBeacons unit={unit} pulses={pulses} sensorView={sensorView} />
+    <TownshipResponder command={responderCommand} visible={responderVisible && !sensorView} checking={responderChecking} paused={paused} onArrived={onResponderArrived} />
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -.48, 0]} receiveShadow>
       <planeGeometry args={[200, 200]} /><meshStandardMaterial color="#eeeae1" roughness={1} />
     </mesh>
@@ -158,6 +168,11 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
   const [scenarioState, setScenarioState] = useState<'idle' | 'running' | 'paused' | 'complete' | 'stopped'>('idle')
   const [scenarioProgress, setScenarioProgress] = useState<{ index: number; total: number; label: string; kind: ScenarioStep['kind'] } | null>(null)
   const [timing, setTiming] = useState<ScenarioTiming>(DEFAULT_TIMING)
+  const [picked, setPicked] = useState<ScenarioId>('normalMorning')
+  const [sensorView, setSensorView] = useState(false)
+  const [toolsOpen, setToolsOpen] = useState(false)
+  const [pulses, setPulses] = useState<SensorPulses>({ water: 0, electricity: 0, door: 0 })
+  const pulseTimers = useRef<Partial<Record<Sensor, ReturnType<typeof setTimeout>>>>({})
   const active = useRef<{ id: number; target: InteractionId; aborter: AbortController } | null>(null)
   const characterSequence = useRef(0)
   const responderSequence = useRef(0)
@@ -184,6 +199,7 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
     setSpeech(null)
   }
   useEffect(() => () => {
+    Object.values(pulseTimers.current).forEach(timer => clearTimeout(timer))
     runner.current?.stop()
     active.current?.aborter.abort()
     pending.current.forEach(item => item.reject(new DOMException('Viewer unmounted', 'AbortError')))
@@ -639,6 +655,11 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
       setRecentReadings(items => [event.data, ...items.filter(item =>
         item.recorded_at !== event.data.recorded_at || item.sensor !== event.data.sensor || item.value !== event.data.value)].slice(0, 5))
       if (scenarioRef.current === 'falseAlarmRecovery' && event.data.sensor === 'water' && event.data.value === 6) lastPositiveWaterAt.current = event.data.recorded_at
+      const sensor = event.data.sensor
+      const pulse = Date.now()
+      setPulses(value => ({ ...value, [sensor]: pulse }))
+      clearTimeout(pulseTimers.current[sensor])
+      pulseTimers.current[sensor] = setTimeout(() => setPulses(value => value[sensor] === pulse ? { ...value, [sensor]: 0 } : value), 3200)
     }
     else if (event.type === 'companion.message_delivered' && event.data.unit_id === HOME_UNIT_ID && !deliveredCalls.current.has(event.data.message_id)) {
       deliveredCalls.current.add(event.data.message_id)
@@ -653,8 +674,47 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
       if (!(error instanceof DOMException && error.name === 'AbortError')) setIntegrationError(error instanceof Error ? error.message : 'Companion call failed')
     })
   }, [queuedCalls, scenarioActive, resetBusy, visible, characterStatus.phase])
-  return <section className={`home-environment ${className}`} aria-label="Interactive furnished 3D home">
-    <div className="home-scene-body">
+  const characterBusy = characterStatus.phase === 'loading' || characterStatus.phase === 'error'
+  const canStart = !scenarioActive && !resetBusy && !!homeUnit && (usingMock || appState.connected) && !characterBusy
+  const shownScenario = scenario ?? picked
+  const timelineSteps = scenarioSteps(shownScenario, timing, usingMock)
+  const stepIndex = scenarioState === 'complete' ? timelineSteps.length : scenarioProgress?.index ?? 0
+  const residentStatus = characterStatus.phase === 'loading' ? 'Loading character…' : characterStatus.phase === 'error' ? 'Character could not load'
+    : scenario === 'unusualInactivity' && (scenarioProgress?.index ?? 0) >= 7 ? 'On the living-room floor · Guard Ali checking'
+    : scenarioActive ? `In the ${ROOM_LABELS[characterStatus.room] ?? 'home'}`
+    : selected && characterStatus.phase === 'walking' ? `Walking to ${INTERACTIONS[selected].label}`
+    : selected && characterStatus.phase === 'interacting' ? `Using ${INTERACTIONS[selected].label}`
+    : characterStatus.destination ? `Walking to ${ROOM_LABELS[characterStatus.destination as RoomId] ?? 'next point'}`
+    : `At ${ROOM_LABELS[characterStatus.room] ?? 'home'}`
+  const caption = scenarioState === 'complete' ? 'Scenario complete' : scenarioState === 'stopped' ? 'Scenario stopped'
+    : scenarioProgress?.label ?? (canStart ? `Press play to run “${SCENARIO_LABELS[picked]}”` : 'Preparing the home…')
+  const playback = scenarioState === 'running' && scenarioProgress?.kind === 'hold' ? 'Awaiting outcome'
+    : scenarioState === 'idle' ? 'Ready' : scenarioState[0].toUpperCase() + scenarioState.slice(1)
+  const demoNote = scenario === 'unusualInactivity' && (scenarioProgress?.index ?? 0) >= 7
+    ? 'Guard Ali’s visit is a reenactment after the township acknowledgement. A human must still record the outcome.'
+    : (scenario === 'unusualInactivity' || scenario === 'falseAlarmRecovery') && scenarioActive
+      ? usingMock ? 'Demo time is compressed: the quiet gap stands in for several hours without water use. The fall is for the audience, not a sensor reading.'
+        : 'Waiting for the backend to establish a prolonged water quiet gap. The fall is for the audience, not a sensor reading.'
+      : null
+  const pickScenario = (id: ScenarioId) => {
+    if (scenarioActive) return
+    setPicked(id)
+    if (scenarioState !== 'idle') { setScenario(null); setScenarioProgress(null); setScenarioState('idle'); setIntegrationError(null) }
+  }
+  const togglePlayback = () => {
+    if (scenarioState === 'running') pauseScenario()
+    else if (scenarioState === 'paused') resumeScenario()
+    else startScenario(picked)
+  }
+  const meters: { sensor: Sensor; label: string; icon: string; value: string }[] = [
+    { sensor: 'water', label: 'Water', icon: '◉', value: homeUnit ? `${homeUnit.latest.water_lpm.toFixed(1)} L/min` : '—' },
+    { sensor: 'electricity', label: 'Power', icon: 'ϟ', value: homeUnit ? `${homeUnit.latest.power_kw.toFixed(2)} kW` : '—' },
+    { sensor: 'door', label: 'Door', icon: '▣', value: homeUnit ? homeUnit.latest.door === 'open' ? 'Open' : 'Closed' : '—' },
+  ]
+  const config = appState.config ?? fetchedConfig
+
+  return <section className={`home-environment live-stage ${sensorView ? 'is-sensor-view' : ''} ${className}`} aria-label="Interactive 3D home demo"
+    onKeyDown={event => { if (event.key === 'Escape' && toolsOpen) setToolsOpen(false) }}>
     <div className="home-canvas" tabIndex={0} aria-label="3D home. Drag to rotate, scroll to zoom. Arrow keys rotate; plus and minus zoom; Home resets the camera."
       onKeyDown={event => {
         const action = ({ ArrowLeft: 'left', ArrowRight: 'right', '+': 'in', '=': 'in', '-': 'out', Home: 'reset' } as Record<string, Command['action']>)[event.key]
@@ -666,99 +726,112 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
           responderVisible={responderVisible} responderChecking={responderChecking} interaction={interaction}
           pose={pose} speech={speech} visible={visible} paused={paused}
           urgent={scenario === 'falseAlarmRecovery' && (scenarioProgress?.index ?? 0) >= 5}
+          sensorView={sensorView} unit={homeUnit} pulses={pulses}
           onCharacterStatus={setCharacterStatus} onReached={onReached} onArrived={onArrived} onResponderArrived={onResponderArrived}
           onAnimationComplete={onAnimationComplete} onReady={ready} /></Suspense>
       </Canvas></SceneBoundary>
     </div>
-    <div className="home-view-switch" aria-label="Camera views">
-      <button aria-pressed={view === 'dollhouse'} className={view === 'dollhouse' ? 'selected' : ''} onClick={() => send('reset')}><span aria-hidden="true">◇</span> Dollhouse</button>
-      <button aria-pressed={view === 'plan'} className={view === 'plan' ? 'selected' : ''} onClick={() => send('plan')}><span aria-hidden="true">⊞</span> Top view</button>
+
+    <div className="live-card live-scenarios">
+      <div className="live-scenario-tabs" role="radiogroup" aria-label="Choose a scenario">
+        {(Object.keys(SCENARIO_LABELS) as ScenarioId[]).map(id => <button key={id} type="button" role="radio" aria-checked={shownScenario === id}
+          className={shownScenario === id ? 'is-current' : ''} disabled={scenarioActive && scenario !== id} onClick={() => pickScenario(id)}>{SCENARIO_LABELS[id]}</button>)}
+      </div>
+      <div className="live-scenarios-foot">
+        <div className="live-view-mode" role="radiogroup" aria-label="What to show">
+          <button type="button" role="radio" aria-checked={!sensorView} onClick={() => setSensorView(false)}>Demo view</button>
+          <button type="button" role="radio" aria-checked={sensorView} onClick={() => setSensorView(true)}>Sensor view</button>
+        </div>
+        <button type="button" className="live-icon-button" aria-expanded={toolsOpen} aria-controls="live-tools" onClick={() => setToolsOpen(value => !value)} title="Presenter tools" aria-label="Presenter tools">
+          <Settings2 size={15} aria-hidden="true" />
+        </button>
+      </div>
     </div>
+
+    {toolsOpen && <div className="live-card live-tools" id="live-tools" role="dialog" aria-label="Presenter tools">
+      <div className="live-tools-head">
+        <h2 className="live-card-kicker">Presenter tools</h2>
+        <button type="button" className="live-icon-button" onClick={() => setToolsOpen(false)} aria-label="Close presenter tools"><X size={16} aria-hidden="true" /></button>
+      </div>
+      <div className="live-tools-group" data-character-state={characterStatus.phase}>
+        <strong>Move Madam Lee</strong>
+        <div className="live-tools-buttons">
+          {(Object.keys(ROOM_LABELS) as RoomId[]).map(room => <button key={room} type="button" onClick={() => moveCharacter(room)} disabled={scenarioActive || resetBusy || characterBusy}>{ROOM_LABELS[room]}</button>)}
+          <button type="button" className="is-muted" onClick={() => moveCharacter('reset')} disabled={scenarioActive || resetBusy || characterBusy}>Reset character</button>
+        </div>
+      </div>
+      <div className="live-tools-group">
+        <strong>Test an object</strong>
+        <div className="live-tools-buttons">
+          {(['bathroomTap', 'kitchenKettle', 'mainDoor'] as const).map(id => <button key={id} type="button" onClick={() => manualInteract(id)} disabled={scenarioActive || resetBusy || !homeUnit || characterBusy || selected === id} aria-pressed={states[id]}>{interactionPrompt(id, states)}</button>)}
+          <button type="button" onClick={() => manualInteract('telephone', true)} disabled={scenarioActive || resetBusy || characterBusy || selected === 'telephone'}>Test incoming call</button>
+          <button type="button" className="is-muted" onClick={resetInteractions} disabled={scenarioActive || resetBusy}>Stop interaction</button>
+        </div>
+        <p className="live-tools-states" role="status">Tap <b>{states.bathroomTap ? 'ON' : 'OFF'}</b> · Kettle <b>{states.kitchenKettle ? 'ON' : 'OFF'}</b> · Door <b>{states.mainDoor ? 'OPEN' : 'CLOSED'}</b> · Phone <b>{states.telephone.toUpperCase()}</b></p>
+      </div>
+      <div className="live-tools-group">
+        <strong>Timing</strong>
+        <label className="live-tools-timing">Outside stay <input type="number" min="1" max="15" value={timing.outsideSeconds} disabled={scenarioActive} onChange={event => setTiming(value => ({ ...value, outsideSeconds: Math.min(15, Math.max(1, Number(event.target.value) || 1)) }))} /> s</label>
+      </div>
+      <div className="live-tools-group live-tools-status" role="status">
+        <strong>Integration</strong>
+        <span>{appState.connected ? usingMock ? 'Mock connected' : 'Backend connected' : usingMock ? 'Mock disconnected' : 'Realtime disconnected'} · Reading: {transmission} · Last: {lastReading ? new Date(lastReading.recorded_at).toLocaleTimeString() : 'none since reset'}</span>
+        {config && <span>{usingMock ? 'Mock thresholds' : 'Backend thresholds'}: grace {config.grace_period_seconds}s · quiet gap {homeUnit?.quiet_gap.usual_max_seconds ?? '—'}s · outing {homeUnit?.baseline.usual_outing_seconds ?? '—'}s</span>}
+        {scenario === 'unusualInactivity' && <span>Backend status: {homeUnit?.status ?? 'unavailable'} · Incident: {appState.incidents.find(item => item.incident_id === homeUnit?.active_incident_id)?.state ?? 'none'}</span>}
+        {queuedCalls.length > 0 && <span>{queuedCalls.length} companion call{queuedCalls.length > 1 ? 's' : ''} queued until Madam Lee is available.</span>}
+        {recentReadings.length > 0 && <span>Recent: {recentReadings.map(reading => `${reading.sensor} ${reading.sensor === 'door' ? String(reading.value) : Number(reading.value).toFixed(reading.sensor === 'water' ? 1 : 2)}`).join(' · ')}</span>}
+      </div>
+    </div>}
+
+    <div className="live-top-right">
+      <p className="live-demo-badge"><b>Demo only</b>Real homes are sensed, never seen.</p>
+      <p className="live-resident-status" role="status">{sensorView ? 'Resident hidden · sensors only' : <><b>Madam Lee</b> · {residentStatus}</>}</p>
+    </div>
+
     <div className="home-camera-tools" aria-label="Camera controls">
-      <button onClick={() => send('in')} aria-label="Zoom in" title="Zoom in">+</button>
-      <button onClick={() => send('out')} aria-label="Zoom out" title="Zoom out">−</button>
+      <button type="button" onClick={() => send('in')} aria-label="Zoom in" title="Zoom in">+</button>
+      <button type="button" onClick={() => send('out')} aria-label="Zoom out" title="Zoom out">−</button>
       <span />
-      <button onClick={() => send('left')} aria-label="Rotate left" title="Rotate left">↶</button>
-      <button onClick={() => send('right')} aria-label="Rotate right" title="Rotate right">↷</button>
+      <button type="button" onClick={() => send('left')} aria-label="Rotate left" title="Rotate left">↶</button>
+      <button type="button" onClick={() => send('right')} aria-label="Rotate right" title="Rotate right">↷</button>
     </div>
-    <div className="home-camera-bottom">
-      <p><span aria-hidden="true">⤧</span> Drag to explore <i /> Scroll to zoom</p>
-      <button className="home-reset" onClick={() => send('reset')}><span aria-hidden="true">↺</span> Reset camera</button>
+
+    <div className="live-bottom">
+      <div className="live-bottom-row">
+        <div className="live-meters" aria-label={appState.connected ? 'Live A-105 sensor values' : 'Last confirmed A-105 sensor values'}>
+          {meters.map(meter => <span key={meter.sensor} className={pulses[meter.sensor] ? 'is-pulsing' : ''}>
+            <i aria-hidden="true">{meter.icon}</i><small>{meter.label}</small><b>{meter.value}</b>
+          </span>)}
+        </div>
+        <div className="live-views" aria-label="Camera views">
+          <button type="button" aria-pressed={view === 'dollhouse'} onClick={() => send('reset')}><span aria-hidden="true">◇</span>Dollhouse</button>
+          <button type="button" aria-pressed={view === 'plan'} onClick={() => send('plan')}><span aria-hidden="true">⊞</span>Top view</button>
+          <button type="button" onClick={() => send('reset')}><span aria-hidden="true">↺</span>Reset camera</button>
+        </div>
+      </div>
+      {integrationError && <p className="live-error" role="alert">{scenarioState === 'stopped' ? 'Scenario stopped: ' : ''}{integrationError}</p>}
+      <div className="live-player" role="group" aria-label="Scenario playback">
+        <button type="button" className="live-play" onClick={togglePlayback} disabled={scenarioState === 'running' || scenarioState === 'paused' ? false : !canStart}
+          aria-label={scenarioState === 'running' ? 'Pause scenario' : scenarioState === 'paused' ? 'Resume scenario' : `Play ${SCENARIO_LABELS[picked]}`}>
+          {scenarioState === 'running' ? <Pause size={22} aria-hidden="true" /> : <Play size={22} aria-hidden="true" />}
+        </button>
+        <div className="live-player-body">
+          <div className="live-player-caption" role="status" aria-live="polite">
+            <strong>{caption}</strong>
+            <span>{SCENARIO_LABELS[shownScenario]} · {stepIndex ? `Step ${stepIndex} of ${timelineSteps.length}` : `${timelineSteps.length} steps`} · <em className={`live-playback-${scenarioState}`}>{playback}</em></span>
+          </div>
+          <div className="live-timeline" aria-hidden="true">
+            <span className="live-timeline-fill" style={{ width: `${stepIndex / timelineSteps.length * 100}%` }} />
+            {timelineSteps.map((step, index) => <i key={index} title={step.label} className={index < stepIndex ? 'is-done' : ''}
+              style={{ left: `${(index + 1) / timelineSteps.length * 100}%` }} />)}
+          </div>
+          <p className="live-player-note">{demoNote ?? SCENARIO_DESCRIPTIONS[shownScenario]}</p>
+        </div>
+        <div className="live-player-actions">
+          <button type="button" onClick={() => stopScenario()} disabled={!scenarioActive} title="Stop scenario"><Square size={14} aria-hidden="true" /><span>Stop</span></button>
+          <button type="button" onClick={() => void resetDemo()} disabled={resetBusy} title="Reset the demo and backend data"><RotateCcw size={14} aria-hidden="true" /><span>{resetBusy ? 'Resetting…' : 'Reset demo'}</span></button>
+        </div>
+      </div>
     </div>
-    </div>
-    <aside className="home-controls" aria-label="Presenter controls">
-    <details className="character-panel" aria-label="Character movement test controls" data-character-state={characterStatus.phase}>
-      <summary className="character-panel-heading"><span className="character-avatar" aria-hidden="true">ML</span><span><strong>Madam Lee Mei Ling</strong><span role="status">{characterStatus.phase === 'loading' ? 'Loading character…' : characterStatus.phase === 'error' ? 'Character could not load' : scenario === 'unusualInactivity' && (scenarioProgress?.index ?? 0) >= 7 ? 'On the living-room floor · Guard Ali checking' : scenarioActive ? scenarioProgress?.label ?? 'Scenario starting' : selected && characterStatus.phase === 'walking' ? `Walking to ${INTERACTIONS[selected].label}` : selected && characterStatus.phase === 'interacting' ? `Using ${INTERACTIONS[selected].label}` : characterStatus.destination ? `Walking to ${ROOM_LABELS[characterStatus.destination as RoomId] ?? 'next point'}` : `At ${ROOM_LABELS[characterStatus.room] ?? 'home'}`}</span></span><span className="character-panel-toggle">Movement controls ▾</span></summary>
-      <div className="character-moves">
-        {(Object.keys(ROOM_LABELS) as RoomId[]).map(room => <button key={room} onClick={() => moveCharacter(room)} disabled={scenarioActive || resetBusy || characterStatus.phase === 'loading' || characterStatus.phase === 'error'}>Go to {ROOM_LABELS[room]}</button>)}
-        <button className="character-reset" onClick={() => moveCharacter('reset')} disabled={scenarioActive || resetBusy || characterStatus.phase === 'loading' || characterStatus.phase === 'error'}>Reset Character</button>
-      </div>
-    </details>
-    <details className="interaction-panel" aria-label="Household interaction development controls">
-      <summary className="interaction-panel-heading"><strong>INTERACTION TEST</strong><span>Development controls · local only ▾</span></summary>
-      <div className="interaction-actions">
-        {(['bathroomTap', 'kitchenKettle', 'mainDoor'] as const).map(id => <button key={id} onClick={() => manualInteract(id)} disabled={scenarioActive || resetBusy || !homeUnit || characterStatus.phase === 'loading' || characterStatus.phase === 'error' || selected === id} aria-pressed={states[id]}>{interactionPrompt(id, states)}</button>)}
-        <button onClick={() => manualInteract('telephone', true)} disabled={scenarioActive || resetBusy || characterStatus.phase === 'loading' || characterStatus.phase === 'error' || selected === 'telephone'}>Test Incoming Call</button>
-        <button className="interaction-reset" onClick={resetInteractions} disabled={scenarioActive || resetBusy}>Stop Interaction</button>
-      </div>
-      <div className="interaction-states" role="status">
-        <span>Tap <b>{states.bathroomTap ? 'ON' : 'OFF'}</b></span><span>Kettle <b>{states.kitchenKettle ? 'ON' : 'OFF'}</b></span><span>Door <b>{states.mainDoor ? 'OPEN' : 'CLOSED'}</b></span><span>Telephone <b>{states.telephone.toUpperCase()}</b></span>
-      </div>
-    </details>
-    <div className="scenario-panel" aria-label="Demo scenarios">
-      <div className="scenario-panel-heading"><strong>DEMO SCENARIOS</strong><span>Sensor actions use {usingMock ? 'the mock API' : 'the live API'}</span></div>
-      <div className="home-scenario-buttons">
-        {(Object.keys(SCENARIO_LABELS) as ScenarioId[]).map(id => <button key={id} className={scenario === id ? 'is-current' : ''}
-          onClick={() => startScenario(id)} disabled={scenarioActive || resetBusy || !homeUnit || (!usingMock && !appState.connected) || characterStatus.phase === 'loading' || characterStatus.phase === 'error'}>{SCENARIO_LABELS[id]}</button>)}
-      </div>
-      <div className="scenario-progress" role="status" aria-live="polite">
-        <div><span>SCENARIO</span><strong>{scenario ? SCENARIO_LABELS[scenario] : 'Ready to play'}</strong></div>
-        <div><span>CURRENT ACTION</span><strong>{scenarioState === 'complete' ? 'Scenario complete' : scenarioState === 'stopped' ? 'Scenario stopped' : scenarioProgress?.label ?? 'Choose a scenario above'}</strong></div>
-        <div><span>PROGRESS</span><strong>{scenarioProgress ? `Step ${scenarioProgress.index} of ${scenarioProgress.total}` : '—'}</strong></div>
-        <div><span>PLAYBACK</span><strong className={`scenario-playback-${scenarioState}`}>{scenarioState === 'running' && scenarioProgress?.kind === 'hold' ? 'Awaiting outcome' : scenarioState === 'idle' ? 'Ready' : scenarioState[0].toUpperCase() + scenarioState.slice(1)}</strong></div>
-        {scenarioProgress && <progress value={scenarioProgress.index} max={scenarioProgress.total} aria-label="Scenario progress" />}
-      </div>
-      {scenarioState === 'stopped' && integrationError && <p className="home-integration-error" role="alert">Scenario stopped: {integrationError}</p>}
-      {(scenario === 'unusualInactivity' || scenario === 'falseAlarmRecovery') &&
-        <p className="home-demo-time-note">{usingMock ? 'Demo time is compressed: the quiet gap represents several hours without water use and no outing evidence.' : 'Waiting for the backend to establish a prolonged water quiet gap with no outing evidence.'} The animated fall is for the audience; it is not a sensor reading.</p>}
-      {scenario === 'unusualInactivity' && (scenarioProgress?.index ?? 0) >= 7 &&
-        <p className="home-demo-time-note">Guard Ali’s visit is a 3D reenactment after the township acknowledgement. His door movement sends no resident sensor reading; a human must still record the outcome.</p>}
-      <div className="scenario-transport">
-        <button onClick={pauseScenario} disabled={scenarioState !== 'running'}>Pause</button>
-        <button onClick={resumeScenario} disabled={scenarioState !== 'paused'}>Resume</button>
-        <button onClick={() => stopScenario()} disabled={!scenarioActive}>Stop</button>
-        <button onClick={() => void resetDemo()} disabled={resetBusy}>{resetBusy ? 'Resetting…' : 'Reset Demo'}</button>
-      </div>
-      <details className="scenario-timing"><summary>Timing</summary>
-        <label>Outside stay <input type="number" min="1" max="15" value={timing.outsideSeconds} disabled={scenarioActive} onChange={event => setTiming(value => ({ ...value, outsideSeconds: Math.min(15, Math.max(1, Number(event.target.value) || 1)) }))} /> s</label>
-      </details>
-      <p className="home-meter-heading">Current sensor values <span>{appState.connected ? 'Live A-105 readings' : 'Last confirmed A-105 readings'}</span></p>
-      <div className="home-live-meter" aria-label="Current 3D home sensor values">
-        <span>WATER <b>{homeUnit ? `${homeUnit.latest.water_lpm.toFixed(1)} L/min` : '—'}</b></span>
-        <span>ELECTRICITY <b>{homeUnit ? `${homeUnit.latest.power_kw.toFixed(2)} kW` : '—'}</b></span>
-        <span>DOOR <b>{homeUnit ? homeUnit.latest.door.toUpperCase() : '—'}</b></span>
-      </div>
-      <div className="home-reading-history" aria-label="Recent sensor changes">
-        <strong>Recent sensor changes</strong>
-        {recentReadings.length ? <ol>{recentReadings.map((reading, index) =>
-          <li key={`${reading.recorded_at}-${reading.sensor}-${index}`}>
-            <span>{reading.sensor === 'water' ? 'Water' : reading.sensor === 'electricity' ? 'Electricity' : 'Door'}</span>
-            <b>{reading.sensor === 'door' ? String(reading.value).toUpperCase() : `${Number(reading.value).toFixed(reading.sensor === 'water' ? 1 : 2)} ${reading.sensor === 'water' ? 'L/min' : 'kW'}`}</b>
-            <time dateTime={reading.recorded_at}>{new Date(reading.recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</time>
-          </li>)}
-        </ol> : <p>No sensor changes yet. Use an object or run a scenario.</p>}
-      </div>
-      <div className="home-integration-status" role="status">
-        <span>{appState.connected ? usingMock ? 'Mock connected' : 'Backend connected' : usingMock ? 'Mock disconnected' : 'Realtime disconnected'}</span>
-        <span>Reading: {transmission}</span>
-        <span>Last reading: {lastReading ? new Date(lastReading.recorded_at).toLocaleTimeString() : 'none since reset'}</span>
-      </div>
-      {(appState.config ?? fetchedConfig) && <div className="home-backend-baseline">{usingMock ? 'Mock thresholds' : 'Backend thresholds'}: grace {(appState.config ?? fetchedConfig)!.grace_period_seconds}s · quiet gap {homeUnit?.quiet_gap.usual_max_seconds ?? '—'}s · outing {homeUnit?.baseline.usual_outing_seconds ?? '—'}s</div>}
-      {scenario === 'unusualInactivity' && <div className="home-backend-baseline">Backend status: {homeUnit?.status ?? 'unavailable'} · Incident: {appState.incidents.find(item => item.incident_id === homeUnit?.active_incident_id)?.state ?? 'none'}</div>}
-      {queuedCalls.length > 0 && <div className="home-backend-baseline">{queuedCalls.length} companion call{queuedCalls.length > 1 ? 's' : ''} queued until Madam Lee is available.</div>}
-      {integrationError && scenarioState !== 'stopped' && <p className="home-integration-error" role="alert">{integrationError}</p>}
-      <p className="home-privacy">3D simulation for demonstration only. TemanMu receives only water, electricity and door data.</p>
-    </div>
-    </aside>
   </section>
 }

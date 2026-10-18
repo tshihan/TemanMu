@@ -8,6 +8,12 @@ export const SCENARIO_LABELS: Record<ScenarioId, string> = {
   normalMorning: 'Normal Morning', goingOut: 'Going Out',
   unusualInactivity: 'Unusual Inactivity', falseAlarmRecovery: 'False Alarm Recovery',
 }
+export const SCENARIO_DESCRIPTIONS: Record<ScenarioId, string> = {
+  normalMorning: 'Wakes, uses the tap and kettle. Readings stay within routine.',
+  goingOut: 'Door opens, the home goes quiet, she returns. Read as a possible outing.',
+  unusualInactivity: 'A long water quiet gap with no outing evidence escalates to the township.',
+  falseAlarmRecovery: 'She gets up and uses the tap during the grace period, so the alert resolves itself.',
+}
 
 export type ScenarioStep =
   | { kind: 'move'; to: Waypoint; label: string }

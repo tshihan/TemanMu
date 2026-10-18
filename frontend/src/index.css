@@ -35,19 +35,11 @@ h1, h2, h3, p { margin-top: 0; }
 .panel-heading h1, .dashboard-header h1, .dashboard-header h2 { margin-bottom: 0; font-size: clamp(19px, 1.5vw, 25px); line-height: 1.2; font-weight: 720; }
 .panel-tag { white-space: nowrap; font-size: 11px; font-weight: 700; color: #61736d; padding: 7px 9px; border-radius: 6px; background: #edf2ef; }
 .home-stage { flex: 1; min-height: 0; display: grid; place-items: center; padding: 18px; overflow: auto; background: linear-gradient(145deg, #eef4ef, #e7efeb); }
-.home-stage-3d { position: relative; display: flex; padding: 0; overflow: hidden; container-type: inline-size; }
-.home-stage > .home-environment { flex: 1; height: 100%; min-height: 0; border: 0; border-radius: 0; }
 .home-scene-loading { align-self: center; width: 100%; text-align: center; color: #61736d; }
 .home-demo-controls { position: absolute; z-index: 2; top: 12px; left: 12px; width: min(300px, calc(100% - 64px)); max-height: calc(100% - 24px); overflow: auto; border: 1px solid #d9d9cd; border-radius: 9px; background: #faf9f2ee; box-shadow: 0 4px 18px #292e2720; }
 .home-demo-controls summary { cursor: pointer; padding: 9px 12px; color: #435943; font-size: 12px; font-weight: 700; }
 .home-demo-controls summary:focus-visible { outline: 2px solid #435943; outline-offset: -2px; }
 .home-demo-controls .mock-panel { margin: 0; padding: 10px 12px 12px; }
-.home-stage-3d .home-view-switch { top: 12px; left: auto; right: 55px; }
-.home-stage-3d .home-camera-tools { right: 12px; }
-.home-stage-3d .home-camera-bottom { left: 12px; right: 12px; bottom: 12px; }
-@container (max-width: 560px) {
-  .home-stage-3d .home-view-switch { top: 54px; left: 12px; right: auto; }
-}
 .home-placeholder { width: min(100%, 470px); min-height: 260px; margin: auto; padding: 24px; border: 1px dashed #a9bdb3; border-radius: 18px; background: #ffffffba; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
 .placeholder-icon { height: 66px; width: 66px; display: grid; place-items: center; margin-bottom: 13px; border-radius: 18px; background: #dbece2; color: #277259; font-size: 45px; line-height: 1; }
 .home-placeholder h2 { font-size: 20px; margin-bottom: 8px; }
@@ -275,10 +267,4 @@ h1, h2, h3, p { margin-top: 0; }
   .app-header { height: auto; min-height: 74px; flex-wrap: wrap; padding-top: 10px; padding-bottom: 10px; }
   .view-navigation { order: 3; width: 100%; justify-content: center; margin-left: 0; }
   .workspace-dashboard > .dashboard-panel, .workspace-simulator > .home-panel { min-height: 0; }
-}
-@media (max-width: 960px) {
-  .app-shell:has(.workspace-simulator) { height: auto; min-height: 100vh; overflow: visible; }
-  .workspace-simulator > .home-panel, .workspace-simulator .home-stage-3d { overflow: visible; }
-  .workspace-simulator .home-stage-3d { height: auto; }
-  .workspace-simulator .home-environment { height: auto; }
 }

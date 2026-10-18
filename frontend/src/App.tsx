@@ -2,8 +2,11 @@ import { lazy, Suspense, useEffect, useState } from 'react'
 import { usingMock } from './api'
 import { connectStore, markRoleViewed, useAppState } from './api/store'
 import type { Role } from './api/types'
+import { Box, Building2, House } from 'lucide-react'
 import { CaregiverView } from './dashboard/CaregiverView'
+import { LiveTownshipPanel } from './dashboard/LiveTownshipPanel'
 import { TownshipView } from './dashboard/TownshipView'
+import './live.css'
 
 const Landing = lazy(() => import('./landing/Landing').then(module => ({ default: module.Landing })))
 const HomeEnvironment = lazy(() => import('./home/HomeEnvironment').then(module => ({ default: module.HomeEnvironment })))
@@ -36,7 +39,33 @@ export default function App() {
 
   if (page === 'landing') return <Suspense fallback={null}><Landing /></Suspense>
 
-  return <div className={`app-shell ${page === 'dashboard' && role === 'caregiver' ? 'caregiver-shell' : ''}`}>
+  if (page === 'simulator') return <div className="live-shell">
+    <nav className="live-rail" aria-label="TemanMu views">
+      <a className="live-rail-logo" href="#" aria-label="TemanMu home">
+        <svg width="30" height="30" viewBox="0 0 64 64" aria-hidden="true">
+          <path d="M14 29 L32 15 L50 29 V50 H14 Z" fill="none" stroke="#fef9ef" strokeWidth="3.6" strokeLinejoin="round" />
+          <path d="M14 31 H50 M32 31 V50" stroke="#fef9ef" strokeWidth="3.6" />
+          <rect x="35" y="34" width="12" height="13" fill="#f0b25a" />
+        </svg>
+      </a>
+      <a href="#" title="Landing page" aria-label="Landing page"><House size={19} aria-hidden="true" /></a>
+      <a href="#simulator" title="Live 3D view" aria-label="Live 3D view" aria-current="page"><Box size={19} aria-hidden="true" /></a>
+      <a href="#dashboard" target="_blank" rel="noopener" title="Product dashboard (new tab)" aria-label="Product dashboard, opens in a new tab"><Building2 size={19} aria-hidden="true" /></a>
+      <span className={`live-rail-status ${connected ? 'is-connected' : ''}`} role="status" title={`${usingMock ? 'Simulated data' : 'Live backend'} · ${connected ? 'Connected' : 'Connecting'}`}>
+        <span className="connection-dot" aria-hidden="true" /><span>{usingMock ? 'Mock' : 'Live'}</span>
+      </span>
+    </nav>
+    <main className="live-main">
+      <div className="live-stage-wrap">
+        <Suspense fallback={<p className="home-scene-loading" role="status">Preparing the 3D home…</p>}>
+          <HomeEnvironment />
+        </Suspense>
+      </div>
+      <LiveTownshipPanel unitId={homeUnit?.unit_id ?? 'A-105'} />
+    </main>
+  </div>
+
+  return <div className={`app-shell ${role === 'caregiver' ? 'caregiver-shell' : ''}`}>
     <header className="app-header">
       <a className="brand-block" href="#" aria-label="TemanMu home" style={{ color: 'inherit', textDecoration: 'none' }}>
         <span className="brand-mark" aria-hidden="true">
@@ -52,8 +81,8 @@ export default function App() {
         </div>
       </a>
       <nav className="view-navigation" aria-label="Presentation views">
-        <a href="#dashboard" target="_blank" rel="noopener" aria-current={page === 'dashboard' ? 'page' : undefined}>Product dashboard</a>
-        <a href="#simulator" target="_blank" rel="noopener" aria-current={page === 'simulator' ? 'page' : undefined}>Presenter simulator <span aria-hidden="true">↗</span></a>
+        <a href="#dashboard" target="_blank" rel="noopener" aria-current="page">Product dashboard</a>
+        <a href="#simulator" target="_blank" rel="noopener">Live 3D view <span aria-hidden="true">↗</span></a>
       </nav>
       <div className="header-meta">
         <span className="environment-label">{usingMock ? 'Simulated data' : 'Live backend'}</span>
@@ -63,22 +92,7 @@ export default function App() {
       </div>
     </header>
 
-    {page === 'simulator' ? <main className="workspace workspace-simulator">
-      <section className="home-panel" aria-labelledby="home-heading">
-        <div className="panel-heading">
-          <div>
-            <p className="eyebrow">Presenter tool · Demo input for {homeUnit?.unit_id || 'A-105'}</p>
-            <h1 id="home-heading">Madam Lee’s <em>simulated home</em></h1>
-          </div>
-          <span className="panel-tag">Not part of the resident product</span>
-        </div>
-        <div className="home-stage home-stage-3d">
-          <Suspense fallback={<p className="home-scene-loading" role="status">Preparing the 3D home…</p>}>
-            <HomeEnvironment />
-          </Suspense>
-        </div>
-      </section>
-    </main> : <main className="workspace workspace-dashboard">
+    <main className="workspace workspace-dashboard">
       <section className="dashboard-panel" aria-label="TemanMu product dashboard">
         <div className="dashboard-header">
           <div>
@@ -104,6 +118,6 @@ export default function App() {
           <span>Grace {config?.grace_period_seconds ?? '—'}s · Reminder {config?.reminder_interval_seconds ?? '—'}s</span>
         </div>}
       </section>
-    </main>}
+    </main>
   </div>
 }
