@@ -22,6 +22,10 @@ function timeLabel(iso: string): string {
   }).format(new Date(iso))
 }
 
+function clockLabel(iso: string): string {
+  return new Intl.DateTimeFormat('en-MY', { timeZone: 'Asia/Kuala_Lumpur', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(iso))
+}
+
 function countdown(deadline: string | null, current: number): string {
   if (!deadline) return '—'
   const seconds = Math.max(0, Math.ceil((new Date(deadline).getTime() - current) / 1000))
@@ -60,7 +64,97 @@ export function AcknowledgeButton({ incident, unit, role }: { incident: Incident
   </div>
 }
 
-export function IncidentPanel({ incident, unit, role }: { incident: Incident | null; unit: Unit; role: Role }) {
+type CloseOutcome = Exclude<Outcome, 'resident_activity_detected'>
+
+/** The township responder's at-the-door screen: record the outcome; 999 stays one tap away. */
+function TownshipCheck({ incident, unit }: { incident: Incident; unit: Unit }) {
+  const [picked, setPicked] = useState<CloseOutcome | ''>('')
+  const [noteOpen, setNoteOpen] = useState(false)
+  const [note, setNote] = useState('')
+  const [moreOpen, setMoreOpen] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const actor = { role: 'township' as const, name: actorName('township', unit) }
+  const unable = incident.events.some(event => event.type === 'unable_to_verify')
+  const calledAt = incident.events.find(event => event.type === 'emergency_called')?.at
+  // The backend closes an unverified check only as Resident OK until a 999 call is recorded.
+  const allowed = (value: CloseOutcome) => !unable || !!calledAt || value === 'resident_ok'
+  const outcome = picked && allowed(picked) ? picked : ''
+
+  async function escalate(action: 'unable_to_verify' | 'emergency_called') {
+    setMoreOpen(false)
+    setBusy(true)
+    setError(null)
+    try { applyEvent({ type: 'incident.updated', at: new Date().toISOString(), data: await api.escalateIncident(incident.incident_id, { ...actor, action }) }) }
+    catch (cause) { setError(actionError(cause)); await refreshIncident(incident.incident_id) }
+    finally { setBusy(false) }
+  }
+
+  async function submit() {
+    if (!outcome) return
+    setBusy(true)
+    setError(null)
+    // The backend requires a township report; the outcome label stands in when no note is added.
+    const report = note.trim() || outcomes.find(item => item.value === outcome)!.label
+    try { applyEvent({ type: 'incident.updated', at: new Date().toISOString(), data: await api.closeIncident(incident.incident_id, { ...actor, outcome, report }) }) }
+    catch (cause) { setError(actionError(cause)); await refreshIncident(incident.incident_id) }
+    finally { setBusy(false) }
+  }
+
+  return <section className="ir" aria-label="Incident response">
+    <div className="ir-status">
+      <span>You're checking · reminders off</span>
+      {incident.acknowledged_by && <time dateTime={incident.acknowledged_by.at}>since {clockLabel(incident.acknowledged_by.at)}</time>}
+    </div>
+    {calledAt && <p className="ir-banner" role="status">999 call recorded at {clockLabel(calledAt)}. Keep this open until you know the outcome.</p>}
+    {unable && !calledAt && <p className="ir-banner" role="status">Safety not verified. Contact the duty supervisor and caregiver.</p>}
+
+    <form onSubmit={event => { event.preventDefault(); void submit() }} noValidate>
+      <h3 className="ir-title" id={`ir-outcome-${incident.incident_id}`}>Check outcome</h3>
+      <div className="ir-options" role="group" aria-labelledby={`ir-outcome-${incident.incident_id}`}>
+        {outcomes.map(item => <button key={item.value} type="button" className="ir-option" aria-pressed={outcome === item.value}
+          disabled={busy || !allowed(item.value)} onClick={() => setPicked(item.value)}>
+          <span className="ir-option-dot" aria-hidden="true" /><span>{item.label}</span>
+        </button>)}
+      </div>
+      {unable && !calledAt && <p className="ir-hint">Record a 999 call to choose another outcome.</p>}
+      {noteOpen
+        ? <textarea className="ir-note" rows={2} maxLength={500} aria-label="Note" placeholder="Anything the caregiver should know"
+            value={note} onChange={event => setNote(event.target.value)} autoFocus />
+        : <button type="button" className="ir-add-note" onClick={() => setNoteOpen(true)}>+ Add a note (optional)</button>}
+      <button type="submit" className="ir-submit" disabled={busy || !outcome}>{busy ? 'Recording…' : outcome ? 'Submit' : 'Select an outcome'}</button>
+      {error && <p className="ir-error" role="alert">{error}</p>}
+    </form>
+
+    <div className="ir-emergency">
+      <div className="ir-emergency-row">
+        <span>Emergency? Give unit {unit.unit_id}, Block A, and the access route.</span>
+        <a className="ir-call" href="tel:999">Call 999</a>
+        {!calledAt && <button type="button" className="ir-pill" aria-expanded={moreOpen}
+          onClick={() => setMoreOpen(open => !open)}>{moreOpen ? 'Less' : 'More'}</button>}
+      </div>
+      {moreOpen && <div className="ir-more">
+        {!calledAt && <button type="button" className="ir-pill" disabled={busy} onClick={() => void escalate('emergency_called')}>I called 999, record it</button>}
+        {!unable && !calledAt && <button type="button" className="ir-pill" disabled={busy} onClick={() => void escalate('unable_to_verify')}>I can't verify safety</button>}
+      </div>}
+    </div>
+  </section>
+}
+
+/** Confirmation after the incident ends, kept on screen until the responder dismisses it. */
+function TownshipDone({ incident, onDone }: { incident: Incident; onDone: () => void }) {
+  const closer = incident.events.find(event => event.type === 'closed')?.actor
+  const label = incident.outcome === 'resident_activity_detected' ? 'Resident activity detected'
+    : outcomes.find(item => item.value === incident.outcome)?.label ?? 'Resolved'
+  return <section className="ir-done" aria-label="Incident closed">
+    <span>Closed{incident.closed_at ? ` · ${clockLabel(incident.closed_at)}` : ''}</span>
+    <h3>{label}</h3>
+    <p>{closer ? `Recorded by ${closer.name}.` : 'Closed automatically after activity was detected.'} The caregiver has been told.</p>
+    <button type="button" onClick={onDone} autoFocus>Done</button>
+  </section>
+}
+
+export function IncidentPanel({ incident, unit, role, onDone }: { incident: Incident | null; unit: Unit; role: Role; onDone?: () => void }) {
   const [clock, setClock] = useState(() => Date.now())
   const [outcome, setOutcome] = useState<Exclude<Outcome, 'resident_activity_detected'> | ''>('')
   const [report, setReport] = useState('')
@@ -116,6 +210,8 @@ export function IncidentPanel({ incident, unit, role }: { incident: Incident | n
   const calledAt = incident.events.find(event => event.type === 'emergency_called')?.at
   const visitRequested = incident.events.some(event => event.type === 'township_requested')
   const caregiverCheckingIn = incident.events.some(event => event.type === 'caregiver_checking_in')
+  if (role === 'township' && canClose) return <TownshipCheck incident={incident} unit={unit} />
+  if (resolved && onDone) return <TownshipDone incident={incident} onDone={onDone} />
   return <section className={`incident-panel incident-${incident.state}`} aria-label="Incident response">
     <div className="incident-panel-head"><h4>Incident response</h4><span className={`incident-state ${resolved ? 'calm' : ''}`}>{statusText}</span></div>
     {incident.state === 'grace' && <p className="incident-lead">A possible break in routine was detected. A simulated voice call is being made before anyone is alerted.</p>}

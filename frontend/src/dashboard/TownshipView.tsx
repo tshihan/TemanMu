@@ -81,6 +81,7 @@ export function TownshipView() {
   const [query, setQuery] = useState('')
   const [queryMsg, setQueryMsg] = useState('')
   const [minimizedResponseId, setMinimizedResponseId] = useState<string | null>(null)
+  const [heldResponseId, setHeldResponseId] = useState<string | null>(null)
   const responseHeading = useRef<HTMLHeadingElement>(null)
 
   const step = (delta: number) => setFocus(current => Math.max(1, Math.min(FLOORS, current + delta)))
@@ -118,8 +119,14 @@ export function TownshipView() {
     return null
   }
 
-  const activeIncident = [...incidents].filter(item => ['notified', 'acknowledged'].includes(item.state) && units.some(unit => unit.unit_id === item.unit_id))
+  const liveIncident = [...incidents].filter(item => ['notified', 'acknowledged'].includes(item.state) && units.some(unit => unit.unit_id === item.unit_id))
     .sort((a, b) => b.opened_at.localeCompare(a.opened_at))[0]
+  // Once the open dialog's incident ends, keep its confirmation on screen until Done.
+  const liveId = liveIncident?.incident_id
+  if (liveId && minimizedResponseId !== liveId && heldResponseId !== liveId) setHeldResponseId(liveId)
+  const heldIncident = liveIncident ? undefined
+    : incidents.find(item => item.incident_id === heldResponseId && ['closed', 'auto_resolved'].includes(item.state))
+  const activeIncident = liveIncident ?? heldIncident
   const activeUnit = activeIncident && units.find(unit => unit.unit_id === activeIncident.unit_id)
   const activeIncidentId = activeIncident?.incident_id
   const responseOpen = !!activeIncidentId && minimizedResponseId !== activeIncidentId
@@ -127,11 +134,13 @@ export function TownshipView() {
     if (!responseOpen) return
     responseHeading.current?.focus()
     const onEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && activeIncidentId) setMinimizedResponseId(activeIncidentId)
+      if (event.key !== 'Escape') return
+      if (liveId) setMinimizedResponseId(liveId)
+      else setHeldResponseId(null)
     }
     window.addEventListener('keydown', onEscape)
     return () => window.removeEventListener('keydown', onEscape)
-  }, [responseOpen, activeIncidentId])
+  }, [responseOpen, activeIncidentId, liveId])
 
   function jump(value: string) {
     const digits = value.replace(/\D/g, '')
@@ -281,7 +290,7 @@ export function TownshipView() {
           </div>
         </section>
 
-        {activeIncident && activeUnit && !responseOpen && <button type="button" className="tm-response-entry"
+        {liveIncident && activeUnit && !responseOpen && <button type="button" className="tm-response-entry"
           onClick={() => { const row = rows.find(item => item.id === activeUnit.unit_id); if (row) select(row); setMinimizedResponseId(null) }}>
           <span><strong>Incident response · {activeUnit.unit_id}</strong><small>{activeIncident.state === 'acknowledged' ? 'Awaiting outcome report' : 'Action needed'}</small></span>
           <span aria-hidden="true">Open →</span>
@@ -292,10 +301,10 @@ export function TownshipView() {
       <div className="tm-response-window" role="dialog" aria-modal="true" aria-labelledby="tm-response-title">
         <div className="tm-response-head">
           <div><p>Unit {activeUnit.unit_id} · {activeUnit.resident_name}</p><h2 id="tm-response-title" tabIndex={-1} ref={responseHeading}>Incident response</h2></div>
-          <button type="button" onClick={() => setMinimizedResponseId(activeIncident.incident_id)} aria-label="Minimise incident response">Minimise</button>
+          {liveIncident && <button type="button" className="tm-response-min" onClick={() => setMinimizedResponseId(liveIncident.incident_id)} aria-label="Minimise incident response">–</button>}
         </div>
         <div className="tm-response-body">
-          <IncidentPanel key={activeIncident.incident_id} incident={activeIncident} unit={activeUnit} role="township" />
+          <IncidentPanel key={activeIncident.incident_id} incident={activeIncident} unit={activeUnit} role="township" onDone={() => setHeldResponseId(null)} />
         </div>
       </div>
     </div>}
