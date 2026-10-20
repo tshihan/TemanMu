@@ -15,6 +15,7 @@ ClockText = Callable[[datetime], str]
 OUTCOME_LABELS: dict[str, str] = {
     "resident_ok": "Resident OK",
     "assistance_provided": "Assistance provided",
+    "sent_to_hospital": "Sent to hospital",
     "resident_away": "Resident was away",
 }
 

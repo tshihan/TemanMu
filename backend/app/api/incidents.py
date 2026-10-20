@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 
 from app.db import incidents as db_incidents
-from app.models import AcknowledgeRequest, CloseRequest, EscalateRequest, Incident
+from app.models import AcknowledgeRequest, CaregiverResponseRequest, CloseRequest, EscalateRequest, Incident
 from app.services import monitoring
 
 router = APIRouter(tags=["incidents"])
@@ -25,9 +25,18 @@ async def get_incident(incident_id: str) -> Incident:
 
 @router.post("/incidents/{incident_id}/acknowledge", response_model=Incident)
 async def acknowledge_incident(incident_id: str, body: AcknowledgeRequest) -> Incident:
-    """Responder takes the incident. 409 if it is already acknowledged or closed."""
+    """Township takes the in-person visit. 409 if another role tries or it is no longer available."""
     try:
         return await monitoring.acknowledge(incident_id, body.role, body.name)
+    except (monitoring.IncidentNotFound, monitoring.IncidentConflict) as e:
+        raise _http_error(e) from None
+
+
+@router.post("/incidents/{incident_id}/caregiver-response", response_model=Incident)
+async def caregiver_response(incident_id: str, body: CaregiverResponseRequest) -> Incident:
+    """Remote check-in or township visit request; the incident remains open."""
+    try:
+        return await monitoring.caregiver_response(incident_id, body.name, body.action)
     except (monitoring.IncidentNotFound, monitoring.IncidentConflict) as e:
         raise _http_error(e) from None
 

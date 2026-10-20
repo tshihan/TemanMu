@@ -65,6 +65,7 @@ export const sharedMockApi: Api = {
   getNeighbours: unitId => call('getNeighbours', unitId),
   postReading: reading => call('postReading', reading),
   acknowledgeIncident: (id, actor) => call('acknowledgeIncident', id, actor),
+  caregiverResponse: (id, actor) => call('caregiverResponse', id, actor),
   escalateIncident: (id, actor) => call('escalateIncident', id, actor),
   closeIncident: (id, actor) => call('closeIncident', id, actor),
   markNotificationsRead: role => call('markNotificationsRead', role),

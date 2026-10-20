@@ -8,6 +8,7 @@ import type { Incident, Outcome, Role, Unit } from '../api/types'
 const outcomes: { value: Exclude<Outcome, 'resident_activity_detected'>; label: string }[] = [
   { value: 'resident_ok', label: 'Resident OK' },
   { value: 'assistance_provided', label: 'Assistance provided' },
+  { value: 'sent_to_hospital', label: 'Sent to hospital' },
   { value: 'resident_away', label: 'Resident was away' },
 ]
 
@@ -43,7 +44,7 @@ async function refreshIncident(id: string): Promise<void> {
 export function AcknowledgeButton({ incident, unit, role }: { incident: Incident; unit: Unit; role: Role }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  if (!['grace', 'notified'].includes(incident.state)) return null
+  if (incident.state !== 'notified') return null
 
   async function acknowledge() {
     setBusy(true)
@@ -61,7 +62,7 @@ export function AcknowledgeButton({ incident, unit, role }: { incident: Incident
 
 export function IncidentPanel({ incident, unit, role }: { incident: Incident | null; unit: Unit; role: Role }) {
   const [clock, setClock] = useState(() => Date.now())
-  const [outcome, setOutcome] = useState<Exclude<Outcome, 'resident_activity_detected'>>('resident_ok')
+  const [outcome, setOutcome] = useState<Exclude<Outcome, 'resident_activity_detected'> | ''>('')
   const [report, setReport] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -83,6 +84,10 @@ export function IncidentPanel({ incident, unit, role }: { incident: Incident | n
 
   async function close() {
     if (!incident) return
+    if (!outcome) {
+      setError('Select a confirmed outcome before closing the incident.')
+      return
+    }
     if (role === 'township' && !report.trim()) {
       setError('Add a short description before closing the incident.')
       return
@@ -109,10 +114,14 @@ export function IncidentPanel({ incident, unit, role }: { incident: Incident | n
   const acknowledgedAt = incident.acknowledged_by?.at ?? incident.events.find(event => event.type === 'acknowledged')?.at
   const unableAt = incident.events.find(event => event.type === 'unable_to_verify')?.at
   const calledAt = incident.events.find(event => event.type === 'emergency_called')?.at
+  const visitRequested = incident.events.some(event => event.type === 'township_requested')
+  const caregiverCheckingIn = incident.events.some(event => event.type === 'caregiver_checking_in')
   return <section className={`incident-panel incident-${incident.state}`} aria-label="Incident response">
     <div className="incident-panel-head"><h4>Incident response</h4><span className={`incident-state ${resolved ? 'calm' : ''}`}>{statusText}</span></div>
     {incident.state === 'grace' && <p className="incident-lead">A possible break in routine was detected. A simulated voice call is being made before anyone is alerted.</p>}
-    {incident.state === 'notified' && <p className="incident-lead urgent">Mum did not answer. Caregiver and township have both been alerted.</p>}
+    {incident.state === 'notified' && <p className="incident-lead urgent">Resident {unit.unit_id} · {unit.resident_name} did not answer. Caregiver and township have been alerted.</p>}
+    {visitRequested && incident.state === 'notified' && <p className="incident-lead urgent">Caregiver requested a township visit.</p>}
+    {caregiverCheckingIn && incident.state === 'notified' && <p className="incident-lead">Caregiver is checking in remotely. Resident safety is not confirmed.</p>}
     {incident.state === 'acknowledged' && <p className="incident-lead">{incident.acknowledged_by?.name} is checking. Reminders have stopped.</p>}
     {unable && !called && !resolved && <p className="incident-lead urgent">Resident safety could not be verified. Contact the duty supervisor and caregiver urgently; call 999 if an emergency is suspected.</p>}
     {called && !resolved && <p className="incident-lead urgent">{incident.events.find(event => event.type === 'emergency_called')?.actor?.name} reports calling 999. Keep this case open and help responders reach the unit. Dispatch is not confirmed.</p>}
@@ -130,21 +139,26 @@ export function IncidentPanel({ incident, unit, role }: { incident: Incident | n
       {calledAt && <div><dt>999 call reported</dt><dd><time dateTime={calledAt}>{timeLabel(calledAt)}</time></dd></div>}
     </dl>
 
-    {(incident.state === 'grace' || incident.state === 'notified') && <AcknowledgeButton incident={incident} unit={unit} role={role} />}
+    {incident.state === 'notified' && <AcknowledgeButton incident={incident} unit={unit} role={role} />}
     {canClose && <div className="emergency-handoff">
       <strong>Emergency handoff</strong>
-      <p>If the resident has collapsed or needs urgent help, call 999 immediately and request an ambulance. Give the operator the address, building, unit and access details. Follow the operator’s instructions.</p>
-      <p>Unit: <strong>{unit.unit_id}</strong>. Confirm the full site address and access route before the call.</p>
+      <ol>
+        <li>Emergency? Call 999. Request an ambulance.</li>
+        <li>Give the full address, unit {unit.unit_id}, and access route.</li>
+        <li>Follow the operator’s instructions. Guide responders in.</li>
+      </ol>
       <a className="primary-action" href="tel:999">Call 999</a>
-      {!called && <button type="button" disabled={busy} onClick={() => void escalate('emergency_called')}>I called 999 — record handoff</button>}
+      {!called && <button type="button" disabled={busy} onClick={() => void escalate('emergency_called')}>I called 999 — record call</button>}
       {!unable && !called && <button type="button" disabled={busy} onClick={() => void escalate('unable_to_verify')}>Unable to verify safety</button>}
-      {called && <p role="status">999 call reported. Record the eventual outcome only after the handoff or welfare check is confirmed.</p>}
+      {called && <p role="status">999 call recorded. Keep open until the outcome is confirmed.</p>}
       {error && <p className="action-error" role="alert">{error}</p>}
     </div>}
     {canClose && <form className="outcome-form" onSubmit={event => { event.preventDefault(); void close() }}>
-      <label htmlFor={`outcome-${role}`}>What happened?</label>
+      <label htmlFor={`outcome-${role}`}>Confirmed outcome</label>
+      <p className="outcome-hint">Choose this only after checking the resident. Recording the outcome closes the incident.</p>
       <div className="outcome-controls">
-        <select id={`outcome-${role}`} value={outcome} onChange={event => setOutcome(event.target.value as Exclude<Outcome, 'resident_activity_detected'>)}>
+        <select id={`outcome-${role}`} value={outcome} onChange={event => setOutcome(event.target.value as Exclude<Outcome, 'resident_activity_detected'> | '')} required>
+          <option value="">Select confirmed outcome</option>
           {outcomes.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
         </select>
       </div>
@@ -153,7 +167,7 @@ export function IncidentPanel({ incident, unit, role }: { incident: Incident | n
         <textarea id={`report-${incident.incident_id}`} value={report} onChange={event => setReport(event.target.value)}
           required maxLength={500} rows={3} placeholder="Describe what you found and what action was taken." />
       </>}
-      <button type="submit" className="primary-action" disabled={busy || (role === 'township' && !report.trim())}>{busy ? 'Recording…' : 'Record outcome and close'}</button>
+      <button type="submit" className="primary-action" disabled={busy || !outcome || (role === 'township' && !report.trim())}>{busy ? 'Recording…' : 'Record outcome and close'}</button>
       {error && <p className="action-error" role="alert">{error}</p>}
     </form>}
     {incident.state === 'acknowledged' && !canClose && <p className="incident-hint">{incident.acknowledged_by?.name} will log the outcome.</p>}

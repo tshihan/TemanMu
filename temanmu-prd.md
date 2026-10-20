@@ -157,8 +157,8 @@ The 3D home both **sends** readings (REST) and **receives** companion call event
 | --- | --- | --- | --- |
 | C1 | Resident status header | Resident name, unit, current status and last-updated time. | P0 |
 | C2 | Call button | "Call Mum" button (simulated, no real call). | P1 |
-| C3 | Notification feed | Morning reassurance, safety alerts and reminders in time order. Alerts include "I'll Check Now". | P0 |
-| C4 | Acknowledge and close | Caregiver can acknowledge and log an outcome, using the same flow as the Township Operator. | P0 |
+| C3 | Notification feed | Morning reassurance, safety alerts and reminders in time order. Alerts open the response choices. | P0 |
+| C4 | Caregiver response | Caregiver can record a remote check-in, request a township visit, or close after speaking directly with the resident and confirming no help is needed. Remote actions do not claim the in-person visit. | P0 |
 | C5 | Community card | Shows an upcoming community activity near the resident, with "Invite Mum" and "Join together" actions. | P1 |
 | C6 | "Thinking of you" message | Caregiver picks one of 3–4 **preset** messages and sends with one tap (no custom text). It is delivered to the resident as a **one-way simulated voice call**, e.g. "Your daughter Sarah says: Thinking of you, Mum." The resident cannot reply. The feed shows the message as delivered, tagged simulated. | P1 |
 | C7 | Community Buddy match | Caregiver taps "Request a Buddy". The backend matches a pre-seeded volunteer by shared interest and returns them. The view shows the matched buddy's name, shared interest and next activity together, with a simulated tag. | P1 |
@@ -219,10 +219,10 @@ The 3D home both **sends** readings (REST) and **receives** companion call event
 
 ### 6.2 Acknowledge and Close an Incident
 
-1. The caregiver or township operator taps "I'll Check Now".
-2. The backend records the acknowledgement and stops reminders for everyone.
-3. Both views show who acknowledged and when. The other role's switcher tab shows a badge.
-4. The person who acknowledged logs one outcome: **Resident OK**, **Assistance provided** or **Resident was away**.
+1. Caregiver and township receive the alert together. The caregiver can record a remote check-in or request a township visit; both actions stay visible to both roles and keep the incident open.
+2. The township operator taps "I'll Check Now" to take the in-person visit. This stops reminders and records the visit owner.
+3. The visit owner records a confirmed outcome: **Resident OK**, **Assistance provided**, **Sent to hospital**, or **Resident was away**.
+4. Before the township takes the visit, a caregiver who has started a check-in may close the incident only after explicitly reporting direct contact with the resident and no need for help.
 5. The backend closes the incident, writes it to history and returns the unit to Routine.
 
 **Emergency handoff:** After acknowledging, the responder can record that resident safety could not be verified, or that they personally called 999. The latter records a reported call, not confirmed dispatch. Both actions stay on the open incident timeline and notify caregiver and township; neither action places a call. The interface offers a `tel:999` link and prompts the caller to provide the full site address, unit and access details. The case remains open until the responder records the later outcome. Sensor activity cannot automatically close it. If safety could not be verified, the case cannot be closed as "assistance provided" or "resident away" without a recorded emergency handoff; a later in-person confirmation that the resident is OK can close it.
@@ -304,7 +304,7 @@ type Role = "township" | "caregiver";
 type Sensor = "water" | "electricity" | "door";
 type Status = "routine" | "possible_away" | "unusual_inactivity" | "unresolved_concern";
 type IncidentState = "grace" | "notified" | "acknowledged" | "closed" | "auto_resolved";
-type Outcome = "resident_ok" | "assistance_provided" | "resident_away" | "resident_activity_detected";
+type Outcome = "resident_ok" | "assistance_provided" | "sent_to_hospital" | "resident_away" | "resident_activity_detected";
 
 interface Reading {
   unit_id: UnitId;
@@ -346,7 +346,8 @@ interface Unit {
 interface IncidentEvent {
   type:
     | "detected" | "voice_call_started" | "voice_call_no_answer" | "voice_call_cancelled"
-    | "notified" | "reminder" | "acknowledged" | "closed" | "auto_resolved";
+    | "notified" | "reminder" | "acknowledged" | "caregiver_checking_in" | "township_requested"
+    | "unable_to_verify" | "emergency_called" | "closed" | "auto_resolved";
   at: string;
   actor?: { role: Role; name: string };
   detail?: string;                     // e.g. "Reminder #3", "simulated"
@@ -362,6 +363,7 @@ interface Incident {
   reminder_count: number;
   acknowledged_by: { role: Role; name: string; at: string } | null;
   outcome: Outcome | null;
+  report?: string | null;
   closed_at: string | null;
   events: IncidentEvent[];
 }
@@ -371,8 +373,9 @@ interface Notification {
   role: Role;
   unit_id: UnitId;
   kind:
-    | "morning_reassurance" | "alert" | "reminder" | "acknowledged" | "closed" | "auto_resolved"
-    | "message_delivered" | "buddy_matched";
+    | "morning_reassurance" | "alert" | "reminder" | "acknowledged" | "caregiver_checking_in"
+    | "township_requested" | "unable_to_verify" | "emergency_called" | "closed" | "auto_resolved"
+    | "message_delivered" | "buddy_matched" | "neighbour_introduced";
   message: string;
   incident_id: string | null;
   created_at: string;
@@ -452,8 +455,9 @@ The backend sends **deadlines** (`grace_ends_at`, `next_reminder_at`, `last_wate
 
 | Method | Path | Body | Response | Errors |
 | --- | --- | --- | --- | --- |
-| POST | `/api/incidents/{id}/acknowledge` | `{ "role": Role, "name": string }` | `200` `Incident` | `409` if already acknowledged or closed |
-| POST | `/api/incidents/{id}/close` | `{ "role": Role, "name": string, "outcome": "resident_ok" \| "assistance_provided" \| "resident_away" }` | `200` `Incident` | `409` if not acknowledged or already closed. `403` if caller is not the acknowledger |
+| POST | `/api/incidents/{id}/acknowledge` | `{ "role": "township", "name": string }` | `200` `Incident` | `409` if already acknowledged, closed, or called by another role |
+| POST | `/api/incidents/{id}/caregiver-response` | `{ "role": "caregiver", "name": string, "action": "caregiver_checking_in" \| "township_requested" \| "resident_confirmed_safe" }` | `200` `Incident` | `409` if closed, duplicate action, or direct safety confirmation without a prior check-in |
+| POST | `/api/incidents/{id}/close` | `{ "role": Role, "name": string, "outcome": "resident_ok" \| "assistance_provided" \| "sent_to_hospital" \| "resident_away", "report"?: string }` | `200` `Incident` | `409` if not acknowledged or already closed. `403` if caller is not the acknowledger |
 | POST | `/api/notifications/read` | `{ "role": Role }` | `204` | |
 | POST | `/api/community/activities/{id}/respond` | `{ "action": "invite_resident" \| "join_together" }` | `200` `{ "ok": true }` | |
 | POST | `/api/companion/messages` | `{ "unit_id": UnitId, "from_name": string, "preset_id": string }` | `201` `CompanionMessage` | `404` if preset does not exist |

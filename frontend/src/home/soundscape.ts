@@ -102,16 +102,43 @@ export class HomeSoundscape {
       return { stop: () => clearInterval(timer) }
     }
     if (kind === 'telephone') {
-      let timer: ReturnType<typeof setInterval> | null = null
-      const ring = () => {
-        this.tone(440, .23, .055, 'sine')
-        this.tone(480, .23, .04, 'sine')
-        this.tone(440, .23, .055, 'sine', .32)
-        this.tone(480, .23, .04, 'sine', .32)
+      // A synthesized marimba rendition of the classic iPhone ring: no media download.
+      const notes: (number | number[] | null)[] = [
+        493.88, 392, [587.33, 783.99], 392, 587.33, [987.77, 783.99],
+        587.33, 392, [987.77, 783.99], [587.33, 783.99], 392, [587.33, 783.99],
+        null, null, null,
+      ]
+      const master = ctx.createGain()
+      master.gain.value = .42
+      master.connect(ctx.destination)
+      const strike = (frequency: number) => {
+        const at = ctx.currentTime
+        for (const [ratio, level] of [[1, .12], [3.9, .035]] as const) {
+          const osc = ctx.createOscillator()
+          const envelope = ctx.createGain()
+          osc.type = 'sine'
+          osc.frequency.value = frequency * ratio
+          envelope.gain.setValueAtTime(.0001, at)
+          envelope.gain.exponentialRampToValueAtTime(level, at + .008)
+          envelope.gain.exponentialRampToValueAtTime(.0001, at + .42)
+          osc.connect(envelope).connect(master)
+          osc.start(at)
+          osc.stop(at + .44)
+        }
       }
-      ring()
-      timer = setInterval(ring, 1700)
-      return { stop: () => { if (timer) clearInterval(timer) } }
+      let index = 0
+      const playNext = () => {
+        const note = notes[index++ % notes.length]
+        if (typeof note === 'number') strike(note)
+        else if (note) note.forEach(strike)
+      }
+      playNext()
+      const timer = setInterval(playNext, 235)
+      return { stop: () => {
+        clearInterval(timer)
+        master.gain.cancelScheduledValues(ctx.currentTime)
+        master.gain.setValueAtTime(0, ctx.currentTime)
+      } }
     }
     const source = ctx.createBufferSource()
     source.buffer = this.noiseBuffer()

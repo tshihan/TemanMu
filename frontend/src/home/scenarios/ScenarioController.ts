@@ -15,6 +15,7 @@ export type ScenarioActions = {
   moveResponder: (to: Extract<ScenarioStep, { kind: 'responderMove' }>['to'], signal: AbortSignal) => Promise<void>
   checkResident: () => void
   waitForResolution: (signal: AbortSignal) => Promise<void>
+  waitForOutcome: (signal: AbortSignal) => Promise<void>
 }
 
 export class ScenarioController {
@@ -85,7 +86,7 @@ export class ScenarioController {
         case 'responderMove': await actions.moveResponder(step.to, this.signal); break
         case 'responderCheck': actions.checkResident(); break
         case 'resolution': await actions.waitForResolution(this.signal); break
-        case 'hold': await new Promise<void>((_, reject) => this.signal.addEventListener('abort', () => reject(new DOMException('Scenario stopped', 'AbortError')), { once: true })); break
+        case 'hold': await actions.waitForOutcome(this.signal); break
       }
     }
   }

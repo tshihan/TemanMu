@@ -11,6 +11,7 @@ export const GUARD = seed.responders.township
 export const OUTCOMES: { value: Exclude<Outcome, 'resident_activity_detected'>; label: string; help: string }[] = [
   { value: 'resident_ok', label: 'Resident OK', help: 'Checked in person, no help needed' },
   { value: 'assistance_provided', label: 'Assistance provided', help: 'Help was needed and given' },
+  { value: 'sent_to_hospital', label: 'Sent to hospital', help: 'Hospital transfer confirmed' },
   { value: 'resident_away', label: 'Resident was away', help: 'Not at home when checked' },
 ]
 export const outcomeLabel = (outcome: Outcome | null | undefined) =>
@@ -41,7 +42,7 @@ export function notificationCopy(n: Notification, ctx: Ctx, incident: Incident |
     case 'morning_reassurance':
       return { title: `${R}’s day has started.`, body: n.message.match(/day has started\.\s*(.+)$/)?.[1] || 'Activity detected at home.', Icon: Sunrise, tone: 'calm' }
     case 'alert':
-      return { title: 'Safety alert', body: `${cause(ctx, incident)}, and ${R} didn’t answer the simulated call. ${GUARD} has been alerted too.`, Icon: TriangleAlert, tone: 'alarm' }
+      return { title: 'Unusual inactivity', body: `${cause(ctx, incident)}. The simulated call went unanswered. You and the township operator have been alerted.`, Icon: TriangleAlert, tone: 'alarm' }
     case 'reminder': {
       const number = n.message.match(/#(\d+)/)?.[1]
       return { title: number ? `Reminder #${number}` : 'Reminder', body: `Nobody has responded yet. Sent to you and ${GUARD}.`, Icon: BellRing, tone: 'alarm' }
@@ -51,6 +52,10 @@ export function notificationCopy(n: Notification, ctx: Ctx, incident: Incident |
       const name = by ? actorName(ctx, by) : n.message.replace(/ is checking now\.?$/, '')
       return { title: name === 'You' ? 'You’re checking' : `${name} is checking`, body: `Reminders stopped for everyone. ${R} is not yet confirmed safe.`, Icon: ShieldCheck, tone: 'info' }
     }
+    case 'caregiver_checking_in':
+      return { title: 'Caregiver checking in', body: `${R} is not yet confirmed safe. Township can still visit.`, Icon: PhoneOutgoing, tone: 'info' }
+    case 'township_requested':
+      return { title: 'Township visit requested', body: `${GUARD} has been asked to check on ${R}.`, Icon: ShieldCheck, tone: 'alarm' }
     case 'unable_to_verify':
       return { title: 'Safety not verified', body: `${n.message} Keep in contact with ${GUARD}.`, Icon: TriangleAlert, tone: 'alarm' }
     case 'emergency_called':
@@ -58,7 +63,7 @@ export function notificationCopy(n: Notification, ctx: Ctx, incident: Incident |
     case 'closed':
       return {
         title: `Closed: ${incident ? outcomeLabel(incident.outcome) : n.message.replace(/^Incident closed: |\.$/g, '')}`,
-        body: `Recorded by ${actorName(ctx, incident?.acknowledged_by, false)}. The incident is closed.`, Icon: CircleCheck, tone: 'calm',
+        body: `Recorded by ${actorName(ctx, incident?.events.find(event => event.type === 'closed')?.actor ?? incident?.acknowledged_by, false)}. The incident is closed.`, Icon: CircleCheck, tone: 'calm',
       }
     case 'auto_resolved':
       return { title: 'Resident activity detected', body: 'Activity at home ended the alert. No in-person check was recorded.', Icon: CircleCheck, tone: 'calm' }
@@ -92,6 +97,10 @@ export function eventCopy(event: IncidentEvent, ctx: Ctx, incident: Incident): C
     case 'reminder': return { title: event.detail || 'Reminder', body: `Sent to you and ${GUARD}.`, Icon: BellRing, tone: 'alarm' }
     case 'acknowledged':
       return { title: `${actorName(ctx, event.actor)} tapped I’ll Check Now`, body: `Reminders stopped for everyone. ${R} not yet confirmed safe.`, Icon: ShieldCheck, tone: 'info' }
+    case 'caregiver_checking_in':
+      return { title: 'Caregiver checking in', body: `You are trying to contact ${R}. Township can still visit.`, Icon: PhoneOutgoing, tone: 'info' }
+    case 'township_requested':
+      return { title: 'Township visit requested', body: `You asked ${GUARD} to visit ${R}.`, Icon: ShieldCheck, tone: 'alarm' }
     case 'unable_to_verify':
       return { title: 'Safety not verified', body: `${actorName(ctx, event.actor)} could not verify ${R}’s safety. Urgent follow-up is needed.`, Icon: TriangleAlert, tone: 'alarm' }
     case 'emergency_called':
@@ -104,7 +113,7 @@ export function eventCopy(event: IncidentEvent, ctx: Ctx, incident: Incident): C
 }
 
 export const NOTIFICATION_TARGET: Record<Notification['kind'], 'incident' | 'home' | 'together'> = {
-  alert: 'incident', reminder: 'incident', acknowledged: 'incident', unable_to_verify: 'incident', emergency_called: 'incident', closed: 'incident', auto_resolved: 'incident',
+  alert: 'incident', reminder: 'incident', acknowledged: 'incident', caregiver_checking_in: 'incident', township_requested: 'incident', unable_to_verify: 'incident', emergency_called: 'incident', closed: 'incident', auto_resolved: 'incident',
   morning_reassurance: 'home', message_delivered: 'together', buddy_matched: 'together',
   neighbour_introduced: 'together',
 }

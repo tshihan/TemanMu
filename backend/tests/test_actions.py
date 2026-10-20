@@ -75,6 +75,45 @@ async def close(client, iid, actor=ALI, outcome="resident_ok", report="Resident 
     return await client.post(f"/api/incidents/{iid}/close", json={**actor, "outcome": outcome, **({"report": report} if report is not None else {})})
 
 
+async def test_caregiver_coordination_does_not_claim_visit(client):
+    iid = await notified_incident()
+    assert (await ack(client, iid, {"role": "caregiver", "name": "Sarah Lee"})).status_code == 409
+    path = f"/api/incidents/{iid}/caregiver-response"
+    for action in ("caregiver_checking_in", "township_requested"):
+        response = await client.post(path, json={"role": "caregiver", "name": "Sarah Lee", "action": action})
+        assert response.status_code == 200
+        assert response.json()["state"] == "notified"
+        assert response.json()["acknowledged_by"] is None
+        assert response.json()["next_reminder_at"] is not None
+        assert response.json()["events"][-1]["type"] == action
+        assert sorted(n.role for n in await notes(action)) == ["caregiver", "township"]
+        assert (await client.post(path, json={"role": "caregiver", "name": "Sarah Lee", "action": action})).status_code == 409
+    assert (await client.post(path, json={"role": "township", "name": "Guard Ali", "action": "township_requested"})).status_code == 422
+    response = await ack(client, iid)
+    assert response.status_code == 200
+    assert response.json()["acknowledged_by"]["name"] == "Guard Ali"
+
+
+async def test_caregiver_direct_confirmation_closes_only_before_visit(client):
+    iid = await notified_incident()
+    path = f"/api/incidents/{iid}/caregiver-response"
+    safe = {"role": "caregiver", "name": "Sarah Lee", "action": "resident_confirmed_safe"}
+    assert (await client.post(path, json=safe)).status_code == 409
+    await client.post(path, json={**safe, "action": "caregiver_checking_in"})
+    closed = await client.post(path, json=safe)
+    assert closed.status_code == 200
+    assert closed.json()["state"] == "closed"
+    assert closed.json()["outcome"] == "resident_ok"
+    assert closed.json()["events"][-1]["actor"]["role"] == "caregiver"
+    assert (await client.post(path, json=safe)).status_code == 409
+
+    second = await notified_incident()
+    second_path = f"/api/incidents/{second}/caregiver-response"
+    await client.post(second_path, json={**safe, "action": "caregiver_checking_in"})
+    await ack(client, second)
+    assert (await client.post(second_path, json=safe)).status_code == 409
+
+
 async def test_emergency_handoff_requires_acknowledger_and_stays_open(client):
     iid = await notified_incident()
     path = f"/api/incidents/{iid}/escalate"
@@ -129,28 +168,29 @@ async def test_acknowledge_from_notified_stops_reminders(client, broadcasts):
 async def test_acknowledge_during_grace(client):
     iid = await open_incident()
     r = await ack(client, iid)
-    assert r.status_code == 200
-    types = [e["type"] for e in r.json()["events"]]
-    assert types == ["detected", "voice_call_started", "voice_call_cancelled", "acknowledged"]
-    assert r.json()["grace_ends_at"] is None
-    assert f"grace:{iid}" not in timers.scheduled_keys()
+    assert r.status_code == 409
+    assert r.json()["detail"] == "Incident is not awaiting a township response"
+    assert (await incidents.get_incident(iid)).state == "grace"
 
-    await asyncio.sleep(1.3)
-    assert (await units.get_unit(UNIT)).status == "unusual_inactivity"
-    assert await notes("alert") == []
-    assert (await incidents.get_incident(iid)).state == "acknowledged"
+    async def is_notified():
+        return (await incidents.get_incident(iid)).state == "notified"
+
+    await wait_for(is_notified)
+    assert (await units.get_unit(UNIT)).status == "unresolved_concern"
+    assert len(await notes("alert")) == 2
+    assert (await incidents.get_incident(iid)).state == "notified"
 
 
 async def test_second_acknowledge_is_409(client):
-    iid = await open_incident()
+    iid = await notified_incident()
     assert (await ack(client, iid)).status_code == 200
     r = await ack(client, iid, {"role": "caregiver", "name": "Sarah Lee"})
     assert r.status_code == 409
-    assert r.json()["detail"] == "Incident already acknowledged or closed"
+    assert r.json()["detail"] == "Incident is not awaiting a township response"
 
 
 async def test_simultaneous_acknowledges(client):
-    iid = await open_incident()
+    iid = await notified_incident()
     results = await asyncio.gather(
         ack(client, iid), ack(client, iid, {"role": "caregiver", "name": "Sarah Lee"})
     )
@@ -159,7 +199,7 @@ async def test_simultaneous_acknowledges(client):
 
 
 async def test_close_errors(client):
-    iid = await open_incident()
+    iid = await notified_incident()
     r = await close(client, iid)
     assert r.status_code == 409
     assert r.json()["detail"] == "Incident must be acknowledged first"
@@ -216,10 +256,10 @@ async def test_township_report_is_saved_with_outcome(client):
 
 @pytest.mark.parametrize(
     ("outcome", "label"),
-    [("assistance_provided", "Assistance provided"), ("resident_away", "Resident was away")],
+    [("assistance_provided", "Assistance provided"), ("sent_to_hospital", "Sent to hospital"), ("resident_away", "Resident was away")],
 )
 async def test_close_outcome_labels(client, outcome, label):
-    iid = await open_incident()
+    iid = await notified_incident()
     await ack(client, iid)
     r = await close(client, iid, outcome=outcome)
     assert r.json()["events"][-1]["detail"] == label
@@ -227,7 +267,7 @@ async def test_close_outcome_labels(client, outcome, label):
 
 
 async def test_close_validation(client):
-    iid = await open_incident()
+    iid = await notified_incident()
     await ack(client, iid)
     r = await close(client, iid, outcome="resident_activity_detected")
     assert r.status_code == 422
@@ -236,7 +276,7 @@ async def test_close_validation(client):
 
 
 async def test_activity_while_acknowledged_auto_resolves(client):
-    iid = await open_incident()
+    iid = await notified_incident()
     await ack(client, iid)
     r = await client.post("/api/readings", json={"unit_id": UNIT, "sensor": "water", "value": 6})
     assert r.json()["unit"]["status"] == "routine"

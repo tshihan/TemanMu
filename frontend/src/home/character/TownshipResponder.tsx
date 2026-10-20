@@ -92,7 +92,7 @@ export function TownshipResponder({ command, visible, checking, paused, onArrive
     <group ref={leftLeg} position={[-.13, .78, 0]}><mesh position={[0, -.34, 0]} castShadow><capsuleGeometry args={[.1, .46, 4, 8]} /><meshStandardMaterial color="#1d2c3d" /></mesh><mesh position={[0, -.69, .09]} castShadow><boxGeometry args={[.19, .12, .36]} /><meshStandardMaterial color="#17212a" /></mesh></group>
     <group ref={rightLeg} position={[.13, .78, 0]}><mesh position={[0, -.34, 0]} castShadow><capsuleGeometry args={[.1, .46, 4, 8]} /><meshStandardMaterial color="#1d2c3d" /></mesh><mesh position={[0, -.69, .09]} castShadow><boxGeometry args={[.19, .12, .36]} /><meshStandardMaterial color="#17212a" /></mesh></group>
     {visible && <Html position={[0, 2.15, 0]} center style={{ pointerEvents: 'none' }}>
-      <span className="home-responder-label">Guard Ali · Township{checking ? ' · checking Mum' : ''}</span>
+      <span className="home-responder-label">Guard Ali · Township{checking ? ' · checking Madam Lee' : ''}</span>
     </Html>}
   </group>
 }

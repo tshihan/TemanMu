@@ -20,7 +20,7 @@ Sensor: TypeAlias = Literal["water", "electricity", "door"]
 DoorState: TypeAlias = Literal["open", "closed"]
 Status: TypeAlias = Literal["routine", "possible_away", "unusual_inactivity", "unresolved_concern"]
 IncidentState: TypeAlias = Literal["grace", "notified", "acknowledged", "closed", "auto_resolved"]
-Outcome: TypeAlias = Literal["resident_ok", "assistance_provided", "resident_away", "resident_activity_detected"]
+Outcome: TypeAlias = Literal["resident_ok", "assistance_provided", "sent_to_hospital", "resident_away", "resident_activity_detected"]
 IncidentEventType: TypeAlias = Literal[
     "detected",
     "voice_call_started",
@@ -29,6 +29,8 @@ IncidentEventType: TypeAlias = Literal[
     "notified",
     "reminder",
     "acknowledged",
+    "caregiver_checking_in",
+    "township_requested",
     "unable_to_verify",
     "emergency_called",
     "closed",
@@ -39,6 +41,8 @@ NotificationKind: TypeAlias = Literal[
     "alert",
     "reminder",
     "acknowledged",
+    "caregiver_checking_in",
+    "township_requested",
     "unable_to_verify",
     "emergency_called",
     "closed",
@@ -258,6 +262,12 @@ class AcknowledgeRequest(ContractModel):
     name: str = Field(min_length=1)
 
 
+class CaregiverResponseRequest(ContractModel):
+    role: Literal["caregiver"]
+    name: str = Field(min_length=1)
+    action: Literal["caregiver_checking_in", "township_requested", "resident_confirmed_safe"]
+
+
 class EscalateRequest(ContractModel):
     role: Role
     name: str = Field(min_length=1)
@@ -267,7 +277,7 @@ class EscalateRequest(ContractModel):
 class CloseRequest(ContractModel):
     role: Role
     name: str = Field(min_length=1)
-    outcome: Literal["resident_ok", "assistance_provided", "resident_away"]
+    outcome: Literal["resident_ok", "assistance_provided", "sent_to_hospital", "resident_away"]
     report: str | None = Field(default=None, min_length=1, max_length=500)
 
     @model_validator(mode="after")
