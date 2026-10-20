@@ -1,0 +1,154 @@
+.slides-root { min-height: 100vh; background: #fef9ef; color: #2a2b2f; font-family: Inter, 'Avenir Next', ui-sans-serif, system-ui, sans-serif; }
+.slides-toolbar { position: sticky; top: 0; z-index: 10; min-height: 68px; padding: 12px clamp(20px, 5vw, 72px); display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid #d1c9bf; background: #fef9eff2; backdrop-filter: blur(12px); font-size: 14px; }
+.slides-toolbar a { color: #8b4429; font-weight: 700; text-decoration: none; }
+.slides-toolbar button { border: 0; border-radius: 999px; padding: 12px 20px; background: #a95130; color: #fffaf2; font: inherit; font-weight: 700; cursor: pointer; }
+.slides-deck { max-width: 1440px; margin: 0 auto; }
+.slides-page { box-sizing: border-box; position: relative; min-height: min(820px, 88svh); padding: clamp(28px, 4.5vw, 64px); display: flex; flex-direction: column; overflow: hidden; background: linear-gradient(180deg, #fef9ef 0%, #f5eee1 58%, #fef9ef 100%); }
+.slides-page-bottom { position: relative; z-index: 2; margin-top: auto; display: flex; justify-content: space-between; gap: 20px; color: #756d64; font-size: 12px; }
+.slides-wordmark { display: inline-flex; align-items: center; gap: 12px; color: #2a2b2f; }
+.slides-mark { width: 40px; height: 40px; flex: none; display: grid; place-items: center; border-radius: 12px; background: #b05a36; }
+.slides-wordmark-text { display: flex; flex-direction: column; gap: 1px; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: 23px; line-height: 1.1; letter-spacing: 0; }
+.slides-wordmark-text small { color: #515151; font-family: Inter, 'Avenir Next', ui-sans-serif, system-ui, sans-serif; font-size: 12px; line-height: 1; }
+.slides-eyebrow { color: #a95130; font-size: clamp(11px, 1vw, 14px); font-weight: 750; letter-spacing: .09em; text-transform: uppercase; }
+.slides-cover { min-height: max(720px, calc(100svh - 68px)); background: #fef9ef; }
+.slides-live-scene { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.slides-live-scene canvas { display: block; width: 100%; height: 100%; }
+.slides-cover-top, .slides-section-top { position: relative; z-index: 2; display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
+.slides-sdp-logo { position: absolute; top: -62px; right: -32px; width: 95px; height: auto; object-fit: contain; mix-blend-mode: multiply; }
+.slides-cover-main { position: relative; flex: 1; display: flex; align-items: center; }
+.slides-cover-copy { position: relative; z-index: 2; width: min(53%, 670px); padding: 40px 0 72px; }
+.slides-cover h1 { margin: 20px 0 12px; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: clamp(76px, 9vw, 132px); font-weight: 400; line-height: .95; letter-spacing: -.055em; }
+.slides-cover-tagline { margin: 0 0 24px; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: clamp(39px, 4.2vw, 64px); line-height: 1.02; letter-spacing: -.035em; }
+.slides-cover-tagline em { color: #a95130; font-weight: 400; }
+.slides-cover-intro { max-width: 500px; margin: 0; color: #4e4a45; font-size: clamp(18px, 1.7vw, 24px); line-height: 1.45; }
+.slides-scroll-cue { display: inline-flex; align-items: center; gap: 12px; margin-top: 44px; color: #8b4429; font-size: 14px; font-weight: 700; }
+.slides-scroll-cue span { font-size: 24px; }
+.slides-team { background: linear-gradient(180deg, #fef9ef 0%, #f4e4d7 62%, #fef9ef 100%); }
+.slides-section-top > span:last-child { color: #8b4429; font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.slides-team-content { width: 100%; flex: 1; display: grid; grid-template-columns: minmax(240px, .72fr) minmax(0, 1.3fr); align-items: center; gap: clamp(30px, 4vw, 64px); padding: 34px 0 50px; }
+.slides-team-heading h2 { margin: 18px 0 44px; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: clamp(55px, 5.4vw, 82px); font-weight: 400; line-height: 1; letter-spacing: -.04em; }
+.slides-leader { display: flex; flex-direction: column; gap: 8px; padding-left: 22px; border-left: 3px solid #a95130; }
+.slides-leader span:first-child { color: #8b4429; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+.slides-leader strong { font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: clamp(27px, 2.7vw, 38px); font-weight: 400; }
+.slides-leader span:last-child { color: #625d58; font-size: 16px; }
+.slides-team-table-wrap { min-width: 0; padding: clamp(22px, 2.5vw, 34px); border: 1px solid #d1c9bf; border-radius: 24px; background: #fef9ef; box-shadow: 0 20px 40px #58473b12; }
+.slides-team-table-wrap h3 { margin: 0 0 24px; font-size: clamp(20px, 2vw, 28px); }
+.slides-team-table { width: 100%; border-collapse: collapse; text-align: left; font-size: clamp(12px, 1.05vw, 15px); }
+.slides-team-table th, .slides-team-table td { padding: 16px 8px; border-bottom: 1px solid #e2d8cb; vertical-align: top; overflow-wrap: anywhere; }
+.slides-team-table thead th { color: #8b4429; font-size: 12px; font-weight: 750; text-transform: uppercase; letter-spacing: .07em; }
+.slides-team-table tbody th { font-weight: 700; }
+.slides-temporary-note { margin: 20px 0 0; color: #756d64; font-size: 12px; line-height: 1.4; }
+.slides-problem { background: #fef9ef; }
+.slides-problem-main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.22fr) minmax(330px, .78fr); align-items: center; gap: clamp(36px, 5vw, 76px); padding: 24px 0 30px; }
+.slides-problem-copy h2 { max-width: 780px; margin: 18px 0 22px; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: clamp(49px, 5.3vw, 76px); font-weight: 400; line-height: 1.01; letter-spacing: -.04em; }
+.slides-problem-copy h2 em, .slides-problem-gap h3 em { color: #a95130; font-weight: 400; }
+.slides-problem-lead { max-width: 680px; margin: 0; color: #4e4a45; font-size: clamp(17px, 1.45vw, 21px); line-height: 1.48; }
+.slides-problem-stat { padding: clamp(22px, 2.5vw, 34px); border: 1px solid #d8c5ad; border-radius: 28px; background: #f4e4d7; box-shadow: 0 22px 60px #8b442918; }
+.slides-problem-stat-kicker { display: block; color: #8b4429; font-size: 13px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+.slides-problem-stat > strong { display: block; margin: 14px 0 0; color: #8b4429; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: clamp(84px, 8vw, 118px); font-weight: 400; line-height: .88; letter-spacing: -.06em; }
+.slides-problem-stat > strong span { font-size: .55em; }
+.slides-problem-stat > p:not(.slides-problem-support) { margin: 10px 0 22px; font-size: 20px; font-weight: 650; }
+.slides-problem-growth { display: flex; align-items: center; gap: 15px; padding: 16px 0; border-top: 1px solid #c9ac97; border-bottom: 1px solid #c9ac97; color: #5b524b; font-size: 23px; font-weight: 700; }
+.slides-problem-growth > span:nth-child(2) { color: #a95130; }
+.slides-problem-growth small { color: #756d64; font-size: 12px; font-weight: 600; }
+.slides-problem-support { margin: 18px 0 0; color: #4e4a45; font-size: 16px; line-height: 1.35; }
+.slides-problem-support b { color: #8b4429; }
+.slides-problem-gap { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); gap: clamp(28px, 4vw, 60px); padding: 26px 0 21px; border-top: 1px solid #d1c9bf; }
+.slides-problem-gap-title > span { color: #a95130; font-size: 12px; font-weight: 750; letter-spacing: .09em; text-transform: uppercase; }
+.slides-problem-gap h3 { margin: 9px 0 0; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: clamp(27px, 2.5vw, 36px); font-weight: 400; line-height: 1.08; letter-spacing: -.025em; }
+.slides-problem-gap-items { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.slides-problem-gap-items > div { padding: 18px 20px; border-radius: 18px; background: #f5eee1; }
+.slides-problem-gap-items b { display: block; margin-bottom: 7px; color: #8b4429; font-size: 17px; }
+.slides-problem-gap-items p { margin: 0; color: #4e4a45; font-size: 15px; line-height: 1.4; }
+.slides-problem-sources { position: relative; z-index: 2; margin: 0 0 12px; color: #756d64; font-size: 11px; line-height: 1.35; }
+.slides-problem-sources a { color: #8b4429; text-decoration: underline; text-underline-offset: 2px; }
+.slides-users { background: linear-gradient(180deg, #fef9ef 0%, #f5eee1 100%); }
+.slides-users-heading { margin: clamp(30px, 4vw, 56px) 0 clamp(22px, 2.5vw, 34px); }
+.slides-users-heading h2 { margin: 12px 0 0; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: clamp(46px, 5.1vw, 72px); font-weight: 400; line-height: 1.02; letter-spacing: -.04em; }
+.slides-users-heading h2 em { color: #a95130; font-weight: 400; }
+.slides-users-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(18px, 2.3vw, 32px); margin-bottom: 22px; }
+.slides-user-card { display: flex; flex-direction: column; min-width: 0; padding: clamp(24px, 2.5vw, 36px); border: 1px solid #d1c9bf; border-radius: 28px; background: #fef9ef; box-shadow: 0 20px 44px #58473b10; }
+.slides-user-family { background: #f4e4d7; border-color: #dfc9b7; }
+.slides-user-card-head { display: flex; align-items: center; gap: 20px; }
+.slides-user-number { width: 58px; height: 58px; flex: none; display: grid; place-items: center; border-radius: 50%; background: #a95130; color: #fef9ef; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: 27px; }
+.slides-user-family .slides-user-number { background: #2a2b2f; }
+.slides-user-overline { display: block; color: #8b4429; font-size: 12px; font-weight: 750; letter-spacing: .09em; text-transform: uppercase; }
+.slides-user-card h3 { margin: 4px 0 0; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: clamp(30px, 3vw, 42px); font-weight: 400; line-height: 1; }
+.slides-user-summary { min-height: 2.8em; margin: 20px 0 16px; color: #4e4a45; font-size: clamp(16px, 1.32vw, 19px); line-height: 1.42; }
+.slides-user-challenges { display: flex; flex-direction: column; gap: 0; margin: 0; padding: 0; list-style: none; }
+.slides-user-challenges li { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 12px; padding: 13px 0; border-top: 1px solid #d9cec0; font-size: clamp(14px, 1.12vw, 16px); line-height: 1.35; }
+.slides-user-challenges strong { color: #8b4429; }
+.slides-user-challenges span { color: #4e4a45; }
+.slides-user-need { margin: auto 0 0; padding-top: 20px; color: #2a2b2f; font-size: clamp(15px, 1.18vw, 17px); font-weight: 650; line-height: 1.35; }
+.slides-user-need span { display: block; margin-bottom: 5px; color: #8b4429; font-size: 11px; font-weight: 750; letter-spacing: .09em; text-transform: uppercase; }
+.slides-pending:nth-child(odd) { background: linear-gradient(180deg, #fef9ef, #f5eee1 55%, #fef9ef); }
+.slides-pending:nth-child(even) { background: linear-gradient(180deg, #fef9ef, #ede3d6 55%, #fef9ef); }
+.slides-pending-content { margin: auto 0; padding: 80px 0; }
+.slides-pending-content h2 { margin: 18px 0; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: clamp(56px, 8vw, 112px); font-weight: 400; letter-spacing: -.04em; }
+.slides-pending-content p { margin: 0; color: #756d64; font-size: clamp(16px, 1.5vw, 21px); }
+.slides-motion-ready [data-slide-reveal] { opacity: 0; transform: translate3d(0, 22px, 0) scale(.985); transition: opacity 900ms ease, transform 900ms cubic-bezier(.2, .75, .2, 1); }
+.slides-motion-ready [data-slide-reveal].is-visible { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+.slides-motion-ready .slides-team-table-wrap,
+.slides-motion-ready .slides-problem-stat,
+.slides-motion-ready .slides-user-family,
+.slides-motion-ready .slides-problem-gap-items > div:nth-child(2) { transition-delay: 120ms; }
+@media (prefers-reduced-motion: reduce) {
+  .slides-motion-ready [data-slide-reveal] { opacity: 1; transform: none; transition: none; }
+}
+@media (max-width: 850px) { .slides-cover-copy { width: 76%; } .slides-live-scene { opacity: .7; } .slides-sdp-logo { top: -12px; right: 0; width: 90px; } .slides-team-content { grid-template-columns: 1fr; align-items: start; } .slides-team-heading h2 { margin-bottom: 26px; } }
+@media (max-width: 850px) { .slides-problem-main, .slides-problem-gap { grid-template-columns: 1fr; } .slides-problem-stat { max-width: 520px; } }
+@media (max-width: 750px) { .slides-users-grid { grid-template-columns: 1fr; } .slides-user-summary { min-height: 0; } }
+@media (max-width: 600px) { .slides-toolbar > span { display: none; } .slides-page { min-height: 80svh; } .slides-cover { min-height: 86svh; } .slides-cover-copy { width: 100%; } .slides-cover h1 { font-size: clamp(72px, 15vw, 100px); } .slides-cover-tagline { font-size: clamp(36px, 8vw, 52px); } .slides-cover-intro { max-width: 360px; } .slides-live-scene { opacity: .28; } .slides-team-table-wrap { overflow-x: auto; } .slides-team-table { min-width: 540px; } .slides-problem-main { padding: 34px 0; } .slides-problem-copy h2 { font-size: clamp(45px, 11vw, 62px); } .slides-problem-gap-items { grid-template-columns: 1fr; } .slides-user-challenges li { grid-template-columns: 96px minmax(0, 1fr); } }
+@page { size: 13.333in 7.5in; margin: 0; }
+@media print {
+  .slides-motion-ready [data-slide-reveal] { opacity: 1; transform: none; transition: none; }
+  html, body, #root { width: 13.333in; margin: 0; padding: 0; background: #fef9ef; }
+  .slides-root, .slides-deck { width: 13.333in; max-width: none; margin: 0; padding: 0; display: block; background: #fef9ef; }
+  .slides-toolbar, .slides-scroll-cue { display: none; }
+  .slides-page { width: 13.333in; height: 7.5in; min-height: 0; margin: 0; padding: .48in .58in; break-after: page; page-break-after: always; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .slides-page:last-child { break-after: auto; page-break-after: auto; }
+  .slides-page-bottom { font-size: 10pt; }
+  .slides-sdp-logo { top: -.3in; right: -.18in; width: .95in; }
+  .slides-cover-copy { width: 53%; padding: 0; }
+  .slides-cover h1 { font-size: 80pt; }
+  .slides-cover-tagline { font-size: 42pt; }
+  .slides-cover-intro { font-size: 17pt; }
+  .slides-live-scene { opacity: 1; }
+  .slides-team-content { grid-template-columns: 3.7in minmax(0, 1fr); gap: .35in; padding: .25in 0 .35in; align-items: center; }
+  .slides-team-heading h2 { font-size: 48pt; margin: .15in 0 .4in; }
+  .slides-leader strong { font-size: 27pt; }
+  .slides-team-table-wrap { padding: .22in; border-radius: .18in; }
+  .slides-team-table-wrap h3 { font-size: 19pt; margin-bottom: .12in; }
+  .slides-team-table { font-size: 10pt; }
+  .slides-team-table th, .slides-team-table td { padding: .12in .06in; }
+  .slides-team-table thead th { font-size: 9pt; }
+  .slides-temporary-note { margin-top: .12in; font-size: 9pt; }
+  .slides-problem-main { grid-template-columns: 6.1in minmax(0, 1fr); gap: .45in; padding: .15in 0 .2in; }
+  .slides-problem-copy h2 { font-size: 44pt; margin: .1in 0 .16in; }
+  .slides-problem-lead { font-size: 15pt; }
+  .slides-problem-stat { padding: .22in; border-radius: .2in; }
+  .slides-problem-stat > strong { font-size: 70pt; }
+  .slides-problem-stat > p:not(.slides-problem-support) { font-size: 14pt; margin: .08in 0 .13in; }
+  .slides-problem-growth { font-size: 17pt; padding: .1in 0; }
+  .slides-problem-support { font-size: 11pt; margin-top: .11in; }
+  .slides-problem-gap { grid-template-columns: 5.6in minmax(0, 1fr); gap: .4in; padding: .17in 0 .1in; }
+  .slides-problem-gap h3 { font-size: 23pt; }
+  .slides-problem-gap-items > div { padding: .13in; border-radius: .1in; }
+  .slides-problem-gap-items b { font-size: 12pt; }
+  .slides-problem-gap-items p { font-size: 10pt; }
+  .slides-problem-sources { font-size: 8pt; margin-bottom: .07in; }
+  .slides-users-heading { margin: .22in 0 .18in; }
+  .slides-users-heading h2 { font-size: 43pt; margin-top: .06in; }
+  .slides-users-grid { gap: .22in; margin-bottom: .15in; }
+  .slides-user-card { padding: .2in; border-radius: .18in; }
+  .slides-user-number { width: .45in; height: .45in; font-size: 20pt; }
+  .slides-user-card-head { gap: .12in; }
+  .slides-user-overline { font-size: 8pt; }
+  .slides-user-card h3 { font-size: 26pt; }
+  .slides-user-summary { min-height: 0; margin: .12in 0 .08in; font-size: 12pt; }
+  .slides-user-challenges li { grid-template-columns: .8in minmax(0, 1fr); gap: .1in; padding: .08in 0; font-size: 10.5pt; }
+  .slides-user-need { padding-top: .1in; font-size: 11pt; }
+  .slides-user-need span { font-size: 8pt; }
+  .slides-pending-content { padding: 0; }
+  .slides-pending-content h2 { font-size: 65pt; }
+}

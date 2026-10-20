@@ -9,9 +9,10 @@ import './live.css'
 
 const Landing = lazy(() => import('./landing/Landing').then(module => ({ default: module.Landing })))
 const HomeEnvironment = lazy(() => import('./home/HomeEnvironment').then(module => ({ default: module.HomeEnvironment })))
-type Page = 'landing' | 'dashboard' | 'simulator' | 'caregiver'
+const Slides = lazy(() => import('./slides/Slides').then(module => ({ default: module.Slides })))
+type Page = 'landing' | 'dashboard' | 'simulator' | 'caregiver' | 'slides'
 // Any other hash (including the landing page's own #how / #roles anchors) stays on the landing page.
-const PAGES: Record<string, Page> = { '#simulator': 'simulator', '#dashboard': 'dashboard', '#caregiver': 'caregiver' }
+const PAGES: Record<string, Page> = { '#simulator': 'simulator', '#dashboard': 'dashboard', '#caregiver': 'caregiver', '#slides': 'slides' }
 const pageFromHash = (): Page => PAGES[window.location.hash] ?? 'landing'
 
 export default function App() {
@@ -22,7 +23,10 @@ export default function App() {
   const inactiveRole: Role = role === 'township' ? 'caregiver' : 'township'
   const inactiveUnread = notifications.filter(item => item.role === inactiveRole && !item.read).length
 
-  useEffect(() => connectStore(), [])
+  useEffect(() => {
+    if (page === 'slides') return
+    return connectStore()
+  }, [page])
   useEffect(() => {
     const onHashChange = () => setPage(pageFromHash())
     window.addEventListener('hashchange', onHashChange)
@@ -38,6 +42,8 @@ export default function App() {
   }, [page])
 
   if (page === 'landing') return <Suspense fallback={null}><Landing /></Suspense>
+
+  if (page === 'slides') return <Suspense fallback={null}><Slides /></Suspense>
 
   // The installed caregiver app (PWA start page): the phone screen only, no dashboard chrome.
   if (page === 'caregiver') return <CaregiverApp standalone />
