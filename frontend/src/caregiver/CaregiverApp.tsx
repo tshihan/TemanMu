@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import { Bell, Check, ChevronRight, HeartHandshake, House, Phone, PhoneOff, Settings, ShieldCheck, TriangleAlert, Volume2, VolumeX, WifiOff } from 'lucide-react'
+import { Bell, Check, ChevronRight, HeartHandshake, House, PhoneOff, Settings, ShieldCheck, TriangleAlert, Volume2, VolumeX, WifiOff } from 'lucide-react'
 import { api } from '../api'
 import { applyIncident, getAppState, loadUnitReadings, markNotificationViewed, markRoleViewed, subscribeAppEvents, useAppState } from '../api/store'
 import type { Notification } from '../api/types'
@@ -229,19 +229,14 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
           <div /><div /><div /><div />
           <p>{connectionTimedOut ? 'Cannot reach TemanMu. Check the backend connection and retry.' : 'Connecting to TemanMu…'}</p>
         </div> : !unit || !ctx ? <p className="cg-card-lead cg-pad">The resident’s home is unavailable.</p>
-          : tab === 'home' ? <HomeTab unit={unit} ctx={ctx} incident={incident} feed={feed} readings={readingsByUnit[unit.unit_id] || []} now={now}
+          : tab === 'home' ? <HomeTab unit={unit} ctx={ctx} incident={incident} readings={readingsByUnit[unit.unit_id] || []} now={now}
             ackBusy={ackBusy} responseError={ackError?.kind === 'failed'} onCheckIn={() => void respond('caregiver_checking_in')}
-            onRequestVisit={() => void respond('township_requested')} onOpenIncident={openIncident} />
+            onRequestVisit={() => void respond('township_requested')} onOpenIncident={openIncident} onCall={startCall} />
           : tab === 'updates' ? <UpdatesTab feed={feed} ctx={ctx} now={now} incidentFor={incidentFor} isUnread={isUnread} ackTargetId={ackTargetId}
             ackBusy={ackBusy} onOpen={open} onMarkAllRead={markAllRead} onAck={openIncident} />
           : tab === 'together' ? <TogetherTab unit={unit} ctx={ctx} companion={companion} onToast={showToast} />
           : <SettingsTab unit={unit} ctx={ctx} theme={theme} onTheme={setTheme} />}
       </div>
-
-      {/* Calling stays one tap away on Home, docked above the tab bar. */}
-      {tab === 'home' && !showIncident && loaded && ctx && <button type="button" className="cg-call-dock" onClick={startCall}>
-        <Phone size={18} aria-hidden="true" />Call {ctx.R}<span className="cg-call-dock-tag">Simulated</span>
-      </button>}
 
       <nav className="cg-nav" aria-label="Main" style={{ '--tab': TABS.findIndex(item => item.id === tab) } as CSSProperties}>
         <span className={`cg-nav-thumb ${showIncident ? 'is-hidden' : ''}`} aria-hidden="true" />

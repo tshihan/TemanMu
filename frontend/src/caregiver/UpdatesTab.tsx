@@ -21,7 +21,7 @@ export function UpdatesTab({ feed, ctx, now, incidentFor, isUnread, ackTargetId,
   }
 
   return <div className="cg-page">
-    <header className="cg-page-head">
+    <header className="cg-page-head cg-tab-head">
       <div>
         <p className="cg-eyebrow">{unread ? `${unread} new` : 'All caught up'}</p>
         <h1 className="cg-display">Updates</h1>

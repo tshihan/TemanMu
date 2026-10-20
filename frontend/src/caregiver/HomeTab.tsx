@@ -1,8 +1,8 @@
 import type { CSSProperties } from 'react'
 import type { LucideIcon } from 'lucide-react'
-import { ArrowRight, CircleCheck, Clock3, DoorOpen, Droplets, PhoneOutgoing, ShieldCheck, Sunrise, TriangleAlert, Zap } from 'lucide-react'
-import type { Incident, Notification, Reading, Unit } from '../api/types'
-import { actorName, isOuting, notificationCopy, outcomeLabel, STATUS_LABELS, type Ctx } from './copy'
+import { ArrowRight, CircleCheck, Clock3, DoorOpen, Droplets, Phone, PhoneOutgoing, ShieldCheck, TriangleAlert, Zap } from 'lucide-react'
+import type { Incident, Reading, Unit } from '../api/types'
+import { actorName, isOuting, outcomeLabel, STATUS_LABELS, type Ctx } from './copy'
 import { clock, dayFraction, dayLabel, greeting, isToday, until, when } from './format'
 
 type Variant = 'alarm' | 'checking' | 'quiet' | 'away' | 'calm' | 'pending'
@@ -53,11 +53,11 @@ function statusCard(unit: Unit, incident: Incident | null, ctx: Ctx, now: number
 }
 
 interface Props {
-  unit: Unit; ctx: Ctx; incident: Incident | null; feed: Notification[]; readings: Reading[]; now: number
-  ackBusy: boolean; responseError: boolean; onCheckIn: () => void; onRequestVisit: () => void; onOpenIncident: () => void
+  unit: Unit; ctx: Ctx; incident: Incident | null; readings: Reading[]; now: number
+  ackBusy: boolean; responseError: boolean; onCheckIn: () => void; onRequestVisit: () => void; onOpenIncident: () => void; onCall: () => void
 }
 
-export function HomeTab({ unit, ctx, incident, feed, readings, now, ackBusy, responseError, onCheckIn, onRequestVisit, onOpenIncident }: Props) {
+export function HomeTab({ unit, ctx, incident, readings, now, ackBusy, responseError, onCheckIn, onRequestVisit, onOpenIncident, onCall }: Props) {
   const { R } = ctx
   const today = readings.filter(reading => isToday(reading.recorded_at, now))
   const last = (match: (reading: Reading) => boolean) => [...today].reverse().find(match)
@@ -66,7 +66,6 @@ export function HomeTab({ unit, ctx, incident, feed, readings, now, ackBusy, res
     ? unit.quiet_gap.last_water_activity_at : null)
   const power = last(reading => reading.sensor === 'electricity')
   const powerUsed = last(reading => reading.sensor === 'electricity' && Number(reading.value) > unit.baseline.standby_power_kw)
-  const morning = feed.find(item => item.kind === 'morning_reassurance' && isToday(item.created_at, now))
   const card = statusCard(unit, incident, ctx, now, !!waterAt || !!powerUsed)
   const checkingIn = incident?.events.some(event => event.type === 'caregiver_checking_in') ?? false
   const visitRequested = incident?.events.some(event => event.type === 'township_requested') ?? false
@@ -88,21 +87,18 @@ export function HomeTab({ unit, ctx, incident, feed, readings, now, ackBusy, res
     { key: 'door', Icon: DoorOpen, label: 'Front door', value: unit.status === 'possible_away' ? 'Possibly away' : doorMarks.length ? 'Opened today' : 'No outing indicated',
       time: unit.status === 'possible_away' && unit.latest.last_door_event_at ? clock(unit.latest.last_door_event_at) : doorMarks.length ? clock(doorMarks.at(-1)!) : null, marks: doorMarks },
   ]
-  const events = [
-    ...(waterAt && !water ? [{ at: waterAt, Icon: Droplets, title: 'Water used at home' }] : []),
-    ...today.filter(active).map(reading => ({
-      at: reading.recorded_at,
-      Icon: reading.sensor === 'water' ? Droplets : reading.sensor === 'electricity' ? Zap : DoorOpen,
-      title: reading.sensor === 'water' ? 'Water used at home' : reading.sensor === 'electricity' ? 'Electricity used at home' : 'Front door opened',
-    })),
-    ...(morning && !waterAt && !powerUsed ? [{ at: morning.created_at, Icon: Sunrise, title: `${R}’s day has started`, detail: notificationCopy(morning, ctx, null).body }] : []),
-  ].sort((a, b) => b.at.localeCompare(a.at)).slice(0, 5)
   const nowAt = dayFraction(now)
 
   return <div className="cg-page cg-home">
     <header className="cg-intro">
-      <p className="cg-eyebrow"><time dateTime={new Date(now).toISOString()}>{dayLabel(now)}</time><span aria-hidden="true">·</span>{clock(now)}</p>
-      <h1 className="cg-display">{greeting(now)},<br /><em>{ctx.me.split(' ')[0]}.</em></h1>
+      <div>
+        <p className="cg-eyebrow"><time dateTime={new Date(now).toISOString()}>{dayLabel(now)}</time><span aria-hidden="true">·</span>{clock(now)}</p>
+        <h1 className="cg-display">{greeting(now)},<br /><em>{ctx.me.split(' ')[0]}.</em></h1>
+      </div>
+      <button type="button" className="cg-call-pill" onClick={onCall}>
+        <Phone aria-hidden="true" />
+        <span>Call {R}</span>
+      </button>
     </header>
 
     <section aria-label="Current status" className={`cg-status is-${card.variant}`}>
@@ -128,11 +124,11 @@ export function HomeTab({ unit, ctx, incident, feed, readings, now, ackBusy, res
     </section>
 
     <section className="cg-day" aria-labelledby="cg-day-heading">
+      <div className="cg-day-card" style={{ '--now': nowAt } as CSSProperties}>
       <div className="cg-section-head">
         <h2 id="cg-day-heading" className="cg-section-title">{R}’s day</h2>
         <span className="cg-section-note">Water, power &amp; door only</span>
       </div>
-      <div className="cg-day-card" style={{ '--now': nowAt } as CSSProperties}>
       <ul className="cg-lanes">
         {lanes.map(lane => <li key={lane.key} className={`cg-lane is-${lane.key}`}>
           <span className="cg-lane-icon"><lane.Icon size={17} aria-hidden="true" /></span>
@@ -149,21 +145,6 @@ export function HomeTab({ unit, ctx, incident, feed, readings, now, ackBusy, res
         <b>Now</b>
       </div>
       </div>
-    </section>
-
-    <section className="cg-recent" aria-labelledby="cg-recent-heading">
-      <div className="cg-section-head"><h2 id="cg-recent-heading" className="cg-section-title">Today’s activity</h2></div>
-      {events.length ? <ol className="cg-recent-list">
-        {events.map((event, index) => <li key={`${event.at}-${event.title}-${index}`} className="cg-recent-event">
-          <span className="cg-recent-icon"><event.Icon size={18} aria-hidden="true" /></span>
-          <span className="cg-recent-text"><strong>{event.title}</strong>
-            {'detail' in event && <span className="cg-recent-detail">{event.detail}</span>}</span>
-          <time className="cg-num" dateTime={event.at}>{clock(event.at)}</time>
-        </li>)}
-      </ol> : <div className="cg-recent-list"><div className="cg-recent-event">
-        <span className="cg-recent-icon"><Clock3 size={18} aria-hidden="true" /></span>
-        <span className="cg-recent-text"><strong>No activity detected yet today</strong></span>
-      </div></div>}
     </section>
   </div>
 }

@@ -11,7 +11,7 @@ interface Props {
 
 export function SettingsTab({ unit, ctx, theme, onTheme }: Props) {
   return <div className="cg-page">
-    <header className="cg-intro">
+    <header className="cg-intro cg-tab-head">
       <p className="cg-eyebrow">Settings</p>
       <h1 className="cg-display">Your <em>setup.</em></h1>
     </header>
