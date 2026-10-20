@@ -8,7 +8,7 @@ From `frontend`, run `npm install` and `npm run dev`. Open the local URL printed
 
 - Drag with the left mouse button to orbit; scroll to zoom.
 - Use the camera toolbar or focus the canvas and use Left/Right, +/− and Home.
-- **Top view** shows the floor plan; **Reset camera** restores the full dollhouse view.
+- **Reset camera** restores the full dollhouse view.
 - Camera easing respects the browser's reduced-motion preference.
 - Choose **Normal Morning**, **Going Out**, **Unusual Inactivity** or **False Alarm Recovery** in **3D Scenarios**. The panel shows the current action and step. Pause/resume, stop, or reset the demo at any point.
 - The speaker button beside the view controls mutes or enables home sounds; its setting is saved on this device. The first click or tap unlocks browser audio. The phone rings while the visual phone is ringing, water sounds run while the tap or shower is on, the kettle sounds while it is on, footsteps follow Madam Lee while she walks, door cues follow actual door changes, and wake/return cues follow their scenario steps. Pausing a scenario silences active loops until playback resumes. Sounds are synthesized locally and have no media downloads.

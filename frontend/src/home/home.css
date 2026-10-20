@@ -70,7 +70,7 @@
 .home-camera-tools button:hover { background: var(--color-terracotta-wash); color: var(--color-terracotta-dark); }
 .home-camera-tools > span { width: 22px; height: 1px; margin: 4px 0; background: var(--color-warm-taupe); }
 
-/* Bottom: live meters, camera views and the scenario player */
+/* Bottom: live meters, camera reset and the scenario player */
 .live-bottom { position: absolute; z-index: 3; left: 16px; right: 16px; bottom: 16px; display: grid; gap: 10px; pointer-events: none; }
 .live-bottom > * { pointer-events: auto; }
 .live-bottom-row { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 10px; pointer-events: none; }
@@ -85,7 +85,6 @@
 .live-views button { display: flex; align-items: center; gap: 6px; padding: 8px 12px; border: 0; border-radius: 10px; background: transparent; color: var(--color-charcoal); font-size: 12px; font-weight: 600; white-space: nowrap; }
 .live-views button span { font-size: 15px; line-height: 1; }
 .live-views button:hover { background: var(--color-aged-paper); }
-.live-views button[aria-pressed="true"] { background: var(--color-terracotta-wash); color: var(--color-terracotta-dark); }
 .live-error { margin: 0; padding: 9px 13px; border: 1px solid #e0a68c; border-radius: 12px; background: #fbe9e1f5; color: #8b2f19; font-size: 12.5px; line-height: 1.4; }
 .live-player { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 14px; padding: 9px 12px 9px 9px; border: 1px solid #d1c9bfcc; border-radius: 28px; background: #fef9eff0; box-shadow: 0 10px 30px #4a35261c; backdrop-filter: blur(14px); }
 .live-play { display: grid; place-items: center; width: 52px; height: 52px; border: 0; border-radius: 50%; background: var(--color-terracotta); color: var(--color-parchment); box-shadow: 0 6px 16px #b05a3640; }
@@ -127,7 +126,6 @@
   .live-player-caption strong { white-space: normal; }
 }
 @container stage (max-width: 520px) {
-  .live-views button:last-child { display: none; }
   .live-demo-badge { font-size: 12px; white-space: normal; }
 }
 @media (prefers-reduced-motion: reduce) {

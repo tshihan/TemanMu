@@ -26,7 +26,7 @@ import { Pause, Play, RotateCcw, Settings2, Square, Volume2, VolumeX, X } from '
 import { HomeSoundscape } from './soundscape'
 import './home.css'
 
-type Command = { action: 'reset' | 'in' | 'out' | 'left' | 'right' | 'plan'; id: number }
+type Command = { action: 'reset' | 'in' | 'out' | 'left' | 'right'; id: number }
 const HOME_CAMERA = [8.8, 17, 22] as const
 const HOME_TARGET = [0, .25, -.55] as const
 
@@ -82,10 +82,6 @@ function Scene({ command, characterCommand, responderCommand, responderVisible, 
       case 'reset':
         void camera.setLookAt(...HOME_CAMERA, ...HOME_TARGET, smooth)
         void camera.zoomTo(baseZoom, smooth)
-        break
-      case 'plan':
-        void camera.setLookAt(0, 28, .21, ...HOME_TARGET, smooth)
-        void camera.zoomTo(baseZoom * 1.05, smooth)
         break
       case 'in': void camera.zoom(camera.camera.zoom * .22, smooth); break
       case 'out': void camera.zoom(-camera.camera.zoom * .18, smooth); break
@@ -158,7 +154,6 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
   const [responderChecking, setResponderChecking] = useState(false)
   const [responderDoorOpen, setResponderDoorOpen] = useState(false)
   const [characterStatus, setCharacterStatus] = useState<CharacterStatus>({ room: 'bedroom', destination: null, phase: 'loading' })
-  const [view, setView] = useState<'dollhouse' | 'plan'>('dollhouse')
   const [states, setStates] = useState<ObjectStates>(INITIAL_OBJECT_STATES)
   const [selected, setSelected] = useState<InteractionId | null>(null)
   const [hovered, setHovered] = useState<InteractionId | null>(null)
@@ -613,8 +608,6 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
     else { setScenarioProgress(null); setScenarioState('stopped') }
   }
   const send = (action: Command['action']) => {
-    if (action === 'reset' || action === 'left' || action === 'right') setView('dollhouse')
-    if (action === 'plan') setView('plan')
     setCommand(value => ({ action, id: value.id + 1 }))
   }
   const moveCharacter = (destination: CharacterCommand['destination']) => {
@@ -886,9 +879,7 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
             <i aria-hidden="true">{meter.icon}</i><small>{meter.label}</small><b>{meter.value}</b>
           </span>)}
         </div>
-        <div className="live-views" aria-label="Camera views">
-          <button type="button" aria-pressed={view === 'dollhouse'} onClick={() => send('reset')}><span aria-hidden="true">◇</span>Dollhouse</button>
-          <button type="button" aria-pressed={view === 'plan'} onClick={() => send('plan')}><span aria-hidden="true">⊞</span>Top view</button>
+        <div className="live-views" aria-label="Camera reset">
           <button type="button" onClick={() => send('reset')}><span aria-hidden="true">↺</span>Reset camera</button>
         </div>
       </div>
