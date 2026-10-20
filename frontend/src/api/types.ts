@@ -5,7 +5,7 @@ export type Sensor = 'water' | 'electricity' | 'door'
 export type DoorState = 'open' | 'closed'
 export type Status = 'routine' | 'possible_away' | 'unusual_inactivity' | 'unresolved_concern'
 export type IncidentState = 'grace' | 'notified' | 'acknowledged' | 'closed' | 'auto_resolved'
-export type Outcome = 'resident_ok' | 'assistance_provided' | 'resident_away' | 'resident_activity_detected'
+export type Outcome = 'resident_ok' | 'assistance_provided' | 'sent_to_hospital' | 'resident_away' | 'resident_activity_detected'
 
 export interface Reading {
   unit_id: UnitId
@@ -46,7 +46,7 @@ export interface Unit {
 
 export type IncidentEventType =
   | 'detected' | 'voice_call_started' | 'voice_call_no_answer' | 'voice_call_cancelled'
-  | 'notified' | 'reminder' | 'acknowledged' | 'unable_to_verify' | 'emergency_called' | 'closed' | 'auto_resolved'
+  | 'notified' | 'reminder' | 'acknowledged' | 'caregiver_checking_in' | 'township_requested' | 'unable_to_verify' | 'emergency_called' | 'closed' | 'auto_resolved'
 
 export interface IncidentEvent {
   type: IncidentEventType
@@ -72,7 +72,7 @@ export interface Incident {
 
 export type NotificationKind =
   | 'morning_reassurance' | 'alert' | 'reminder' | 'acknowledged' | 'closed'
-  | 'unable_to_verify' | 'emergency_called' | 'auto_resolved' | 'message_delivered' | 'buddy_matched'
+  | 'caregiver_checking_in' | 'township_requested' | 'unable_to_verify' | 'emergency_called' | 'auto_resolved' | 'message_delivered' | 'buddy_matched'
   | 'neighbour_introduced'
 
 export interface Notification {
@@ -171,6 +171,7 @@ export interface Api {
   getNeighbours(unitId: UnitId): Promise<NeighbourState>
   postReading(reading: Omit<Reading, 'recorded_at'> & { recorded_at?: string }): Promise<{ accepted: true; unit: Unit }>
   acknowledgeIncident(id: string, actor: { role: Role; name: string }): Promise<Incident>
+  caregiverResponse(id: string, actor: { role: 'caregiver'; name: string; action: 'caregiver_checking_in' | 'township_requested' | 'resident_confirmed_safe' }): Promise<Incident>
   escalateIncident(id: string, actor: { role: Role; name: string; action: 'unable_to_verify' | 'emergency_called' }): Promise<Incident>
   closeIncident(id: string, actor: { role: Role; name: string; outcome: Exclude<Outcome, 'resident_activity_detected'>; report?: string }): Promise<Incident>
   markNotificationsRead(role: Role): Promise<void>

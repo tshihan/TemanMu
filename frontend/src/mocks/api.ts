@@ -327,8 +327,9 @@ export const mockApi: Api = {
     return { accepted: true, unit: clone(unit) }
   },
   async acknowledgeIncident(id, actor) {
+    if (actor.role !== 'township') throw new ApiError(409, 'Only township can take the in-person visit')
     const incident = incidentOrThrow(id)
-    if (!['grace', 'notified'].includes(incident.state)) throw new ApiError(409, 'Incident already acknowledged or closed')
+    if (incident.state !== 'notified') throw new ApiError(409, 'Incident is not awaiting a township response')
     clearScenarioTimers()
     incident.state = 'acknowledged'
     incident.acknowledged_by = { ...actor, at: now() }
@@ -337,6 +338,37 @@ export const mockApi: Api = {
     incident.events.push({ type: 'acknowledged', at: now(), actor })
     publish('incident.updated', clone(incident))
     for (const role of ['township', 'caregiver'] as Role[]) notify({ role, unit_id: incident.unit_id, kind: 'acknowledged', message: `${actor.name} is checking now.`, incident_id: id })
+    return clone(incident)
+  },
+  async caregiverResponse(id, actor) {
+    const incident = incidentOrThrow(id)
+    if (!['notified', 'acknowledged'].includes(incident.state)) throw new ApiError(409, 'Incident is not awaiting a response')
+    if (actor.action === 'resident_confirmed_safe') {
+      if (incident.state !== 'notified' || !incident.events.some(event => event.type === 'caregiver_checking_in'))
+        throw new ApiError(409, 'Speak directly with the resident before confirming safety; an active visit must finish first')
+      clearScenarioTimers()
+      incident.state = 'closed'
+      incident.outcome = 'resident_ok'
+      incident.report = `${actor.name} reports speaking directly with the resident; no help needed.`
+      incident.closed_at = now()
+      incident.events.push({ type: 'closed', at: incident.closed_at, actor: { role: 'caregiver', name: actor.name }, detail: 'Resident OK' })
+      const unit = unitOrThrow(incident.unit_id)
+      unit.status = 'routine'
+      unit.status_reason = `Incident closed by ${actor.name}: Resident OK`
+      unit.status_since = incident.closed_at
+      unit.active_incident_id = null
+      publish('incident.updated', clone(incident))
+      publish('unit.updated', clone(unit))
+      for (const role of ['township', 'caregiver'] as Role[]) notify({ role, unit_id: incident.unit_id, kind: 'closed', message: 'Incident closed: Resident OK.', incident_id: id })
+      return clone(incident)
+    }
+    if (incident.events.some(event => event.type === actor.action)) throw new ApiError(409, 'This caregiver response has already been recorded')
+    const message = actor.action === 'caregiver_checking_in'
+      ? `${actor.name} is checking in with the resident. Safety is not yet confirmed.`
+      : `${actor.name} requested a township welfare visit.`
+    incident.events.push({ type: actor.action, at: now(), actor: { role: 'caregiver', name: actor.name }, detail: message })
+    publish('incident.updated', clone(incident))
+    for (const role of ['township', 'caregiver'] as Role[]) notify({ role, unit_id: incident.unit_id, kind: actor.action, message, incident_id: id })
     return clone(incident)
   },
   async escalateIncident(id, actor) {
@@ -374,7 +406,10 @@ export const mockApi: Api = {
     unit.active_incident_id = null
     publish('incident.updated', clone(incident))
     publish('unit.updated', clone(unit))
-    for (const role of ['township', 'caregiver'] as Role[]) notify({ role, unit_id: incident.unit_id, kind: 'closed', message: `Incident closed: ${actor.outcome.replaceAll('_', ' ')}.`, incident_id: id })
+    const outcomeLabel = actor.outcome === 'resident_ok' ? 'Resident OK'
+      : actor.outcome === 'assistance_provided' ? 'Assistance provided'
+      : actor.outcome === 'sent_to_hospital' ? 'Sent to hospital' : 'Resident was away'
+    for (const role of ['township', 'caregiver'] as Role[]) notify({ role, unit_id: incident.unit_id, kind: 'closed', message: `Incident closed: ${outcomeLabel}.`, incident_id: id })
     return clone(incident)
   },
   async markNotificationsRead(role) {

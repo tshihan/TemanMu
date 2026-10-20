@@ -225,11 +225,14 @@ h1, h2, h3, p { margin-top: 0; }
 .action-error { margin: 8px 0 0; color: #ad3d34; font-size: 11px; line-height: 1.35; }
 .outcome-form { display: grid; gap: 8px; margin-top: 14px; padding-top: 13px; border-top: 1px solid #e1e9e2; }
 .outcome-form label { font-size: 11px; font-weight: 750; }
+.outcome-hint { margin: 0; color: #53645a; font-size: 12px; line-height: 1.45; }
 .outcome-controls { display: flex; flex-wrap: wrap; gap: 7px; }
 .outcome-controls select { min-width: 155px; flex: 1; padding: 8px; border: 1px solid #bdcfc1; border-radius: 7px; background: #fff; font: inherit; font-size: 11px; }
 .incident-hint { margin: 10px 0 0; color: #738176; font-size: 11px; }
 .emergency-handoff { display: grid; justify-items: start; gap: 9px; margin-top: 14px; padding: 13px; border: 1px solid #e9ad9f; border-radius: 10px; background: #fff8f6; font-size: 12px; line-height: 1.45; }
 .emergency-handoff p { margin: 0; }
+.emergency-handoff ol { display: grid; gap: 6px; margin: 0; padding-left: 24px; list-style: decimal outside; }
+.emergency-handoff li::marker { color: #8e372c; font-weight: 750; }
 .emergency-handoff .primary-action { display: inline-block; background: #a84d40; text-decoration: none; }
 .emergency-handoff button:not(.primary-action) { padding: 8px 10px; border: 1px solid #a84d40; border-radius: 8px; background: transparent; color: #8e372c; font: inherit; cursor: pointer; }
 

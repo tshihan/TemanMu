@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from pydantic import ValidationError
 
-from app.models import Actor, CloseRequest, CompanionMessage, Incident, IncidentEvent, Reading
+from app.models import Actor, CaregiverResponseRequest, CloseRequest, CompanionMessage, Incident, IncidentEvent, Reading
 
 T = datetime(2026, 10, 15, 1, 2, 3, 123456, tzinfo=timezone.utc)
 
@@ -74,6 +74,13 @@ def test_close_request_trims_and_limits_report():
         CloseRequest(**body, report="x" * 501)
     with pytest.raises(ValidationError):
         CloseRequest(**body)
+
+
+def test_caregiver_response_actions_require_caregiver_role():
+    for action in ("caregiver_checking_in", "township_requested", "resident_confirmed_safe"):
+        assert CaregiverResponseRequest(role="caregiver", name="Sarah Lee", action=action).action == action
+    with pytest.raises(ValidationError):
+        CaregiverResponseRequest(role="township", name="Guard Ali", action="township_requested")
 
 
 def test_companion_message_constants():

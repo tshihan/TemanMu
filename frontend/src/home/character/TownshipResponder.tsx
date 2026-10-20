@@ -128,7 +128,7 @@ export function TownshipResponder({ command, visible, checking, paused, onArrive
   return <group ref={root} name="township-responder-guard-ali" visible={visible} position={[WAYPOINTS.outside[0], .05, WAYPOINTS.outside[1]]}>
     {model && <primitive object={model} />}
     {visible && <Html position={[0, 2, 0]} center style={{ pointerEvents: 'none' }}>
-      <span className="home-responder-label">Guard Ali · Township{checking ? ' · checking Mum' : ''}</span>
+      <span className="home-responder-label">Guard Ali · Township{checking ? ' · checking Madam Lee' : ''}</span>
     </Html>}
   </group>
 }

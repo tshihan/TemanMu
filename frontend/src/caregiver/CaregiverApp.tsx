@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { Bell, Check, ChevronRight, HeartHandshake, House, Phone, PhoneOff, Settings, ShieldCheck, TriangleAlert, Volume2, VolumeX, WifiOff } from 'lucide-react'
 import { api } from '../api'
-import { ApiError } from '../api/live'
 import { applyIncident, getAppState, loadUnitReadings, markNotificationViewed, markRoleViewed, subscribeAppEvents, useAppState } from '../api/store'
 import type { Notification } from '../api/types'
 import { actorName, ctxFor, NOTIFICATION_TARGET, notificationCopy } from './copy'
@@ -170,20 +169,18 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
       showToast('Could not mark updates as read')
     })
   }
-  async function acknowledge() {
-    if (!unit || !incident || incident.state !== 'notified' || ackBusy) return
+  async function respond(action: 'caregiver_checking_in' | 'township_requested' | 'resident_confirmed_safe') {
+    if (!unit || !incident || !['notified', 'acknowledged'].includes(incident.state) || ackBusy) return
     const id = incident.incident_id
-    setIncidentOpen(true)
     setLiveNote(false)
     setAckBusy(true)
     setAckError(null)
     try {
-      applyIncident(await api.acknowledgeIncident(id, { role: 'caregiver', name: unit.caregiver_name }))
-    } catch (error) {
-      // 409: someone else acknowledged first, or the alert resolved. Show what actually happened.
+      applyIncident(await api.caregiverResponse(id, { role: 'caregiver', name: unit.caregiver_name, action }))
+    } catch {
       const latest = await api.getIncident(id).catch(() => null)
       if (latest) applyIncident(latest)
-      setAckError(error instanceof ApiError && error.status === 409 ? { kind: 'taken', name: latest?.acknowledged_by?.name ?? null } : { kind: 'failed' })
+      setAckError({ kind: 'failed' })
     } finally { setAckBusy(false) }
   }
   function startCall() {
@@ -218,7 +215,7 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
 
       {ctx && !showIncident && tab !== 'home' && incident?.state === 'notified' && <button type="button" className="cg-concern is-alarm" onClick={openIncident}>
         <TriangleAlert size={22} aria-hidden="true" />
-        <span><strong>Unresolved concern: {ctx.R} didn’t answer</strong><span>{incident.reminder_count ? `Reminder #${incident.reminder_count}` : 'Alert sent'} · Tap to respond</span></span>
+        <span><strong>Unusual inactivity</strong><span>{incident.reminder_count ? `Reminder #${incident.reminder_count}` : 'Alert sent'} · Tap to respond</span></span>
         <ChevronRight size={20} aria-hidden="true" />
       </button>}
       {ctx && !showIncident && tab !== 'home' && incident?.state === 'acknowledged' && <button type="button" className="cg-concern is-checking" onClick={openIncident}>
@@ -233,9 +230,10 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
           <p>{connectionTimedOut ? 'Cannot reach TemanMu. Check the backend connection and retry.' : 'Connecting to TemanMu…'}</p>
         </div> : !unit || !ctx ? <p className="cg-card-lead cg-pad">The resident’s home is unavailable.</p>
           : tab === 'home' ? <HomeTab unit={unit} ctx={ctx} incident={incident} feed={feed} readings={readingsByUnit[unit.unit_id] || []} now={now}
-            ackBusy={ackBusy} onAck={() => void acknowledge()} onOpenIncident={openIncident} />
+            ackBusy={ackBusy} responseError={ackError?.kind === 'failed'} onCheckIn={() => void respond('caregiver_checking_in')}
+            onRequestVisit={() => void respond('township_requested')} onOpenIncident={openIncident} />
           : tab === 'updates' ? <UpdatesTab feed={feed} ctx={ctx} now={now} incidentFor={incidentFor} isUnread={isUnread} ackTargetId={ackTargetId}
-            ackBusy={ackBusy} onOpen={open} onMarkAllRead={markAllRead} onAck={() => void acknowledge()} />
+            ackBusy={ackBusy} onOpen={open} onMarkAllRead={markAllRead} onAck={openIncident} />
           : tab === 'together' ? <TogetherTab unit={unit} ctx={ctx} companion={companion} onToast={showToast} />
           : <SettingsTab unit={unit} ctx={ctx} theme={theme} onTheme={setTheme} />}
       </div>
@@ -259,7 +257,7 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
       </nav>
 
       {showIncident && unit && ctx && <IncidentView key={incident.incident_id} incident={incident} unit={unit} ctx={ctx} now={now} liveNote={liveNote}
-        ackBusy={ackBusy} ackError={ackError} onAck={() => void acknowledge()} onBack={() => { setIncidentOpen(false); setLiveNote(false) }} />}
+        ackBusy={ackBusy} ackError={ackError} onAck={() => void respond('township_requested')} onCheckIn={() => void respond('caregiver_checking_in')} onConfirmSafe={() => void respond('resident_confirmed_safe')} onBack={() => { setIncidentOpen(false); setLiveNote(false) }} />}
 
       {call && ctx && <div className="cg-scrim" onClick={event => { if (event.target === event.currentTarget) setCall(null) }}>
         <div className={`cg-call ${call === 'calling' ? 'is-calling' : ''}`} role="dialog" aria-modal="true" aria-label="Simulated call">

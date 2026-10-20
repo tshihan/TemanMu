@@ -147,6 +147,7 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
   const reconnecting = useRef(false)
   const deliveredCalls = useRef(new Set<string>())
   const graceIncident = useRef<string | null>(null)
+  const [responseIncidentId, setResponseIncidentId] = useState<string | null>(null)
   const graceDeadline = useRef<string | null>(null)
   const lastPositiveWaterAt = useRef<string | null>(null)
   const scenarioRef = useRef<ScenarioId | null>(null)
@@ -187,6 +188,8 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
   const monitoringOn = useRef(false)
   const monitoringQueue = useRef<Promise<void>>(Promise.resolve())
   const homeUnit = fetchedUnit ?? storeUnit ?? null
+  const responseIncident = appState.incidents.find(item => item.incident_id === responseIncidentId)
+  const showResponder = responderVisible && responseIncident?.state === 'acknowledged'
   const setVisualStates = (next: ObjectStates) => {
     const previous = localStates.current
     localStates.current = next
@@ -412,6 +415,7 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
     const incident = getAppState().incidents.find(item => item.unit_id === HOME_UNIT_ID && item.state === 'grace')
     if (!incident) throw new Error('The backend grace state ended before recovery could begin')
     graceIncident.current = incident.incident_id
+    setResponseIncidentId(incident.incident_id)
     graceDeadline.current = incident.grace_ends_at
   }
   const waitForQuietGap = async (signal: AbortSignal) => {
@@ -434,6 +438,7 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
       if (!incident || incident.unit_id !== HOME_UNIT_ID || incident.state !== 'grace')
         throw new Error('The mock session did not create a new inactivity incident. Close every TemanMu tab, then reopen the app to refresh its SharedWorker.')
       graceIncident.current = incident.incident_id
+      setResponseIncidentId(incident.incident_id)
       graceDeadline.current = incident.grace_ends_at
       applyEvent({ type: 'incident.updated', at: incident.opened_at, data: incident })
     } else await waitForGrace(signal)
@@ -485,12 +490,16 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
     const id = graceIncident.current
     if (!id) throw new Error('No inactivity incident was observed for the township response')
     const incident = getAppState().incidents.find(item => item.incident_id === id)
+    if (incident?.state === 'closed' || incident?.state === 'auto_resolved')
+      throw new DOMException('The incident was resolved before the township visit', 'AbortError')
     if (usingMock && incident?.state === 'notified')
       await api.acknowledgeIncident(id, { role: 'township', name: seed.responders.township })
     else if (usingMock && (incident?.state !== 'acknowledged' || incident.acknowledged_by?.role !== 'township'))
       throw new Error('The incident cannot be dispatched to Guard Ali. Reset Demo and try again.')
     await waitForIncident(items => items.some(item => item.incident_id === id && ['acknowledged', 'closed', 'auto_resolved'].includes(item.state)), signal)
     const response = getAppState().incidents.find(item => item.incident_id === id)
+    if (response?.state === 'closed' || response?.state === 'auto_resolved')
+      throw new DOMException('The incident was resolved before the township visit', 'AbortError')
     if (response?.acknowledged_by?.role !== 'township')
       throw new Error('This incident was not acknowledged by the township, so Guard Ali’s visit will not be reenacted.')
   }
@@ -505,11 +514,18 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
       throw new Error('The activity was not confirmed within the backend grace period')
     setVisualStates({ ...localStates.current, telephone: 'idle' })
   }
+  const waitForOutcome = async (signal: AbortSignal) => {
+    const id = graceIncident.current
+    if (!id) throw new Error('No incident was recorded for the township response')
+    await waitForIncident(items => items.some(item => item.incident_id === id && item.state === 'closed'), signal)
+    resetResponder()
+  }
   const startScenario = (id: ScenarioId) => {
     if (scenarioActive || resetBusy || !homeUnit || (!usingMock && !appState.connected) || characterStatus.phase === 'loading' || characterStatus.phase === 'error') return
     cancelSequence()
     resetResponder()
     graceIncident.current = null
+    setResponseIncidentId(null)
     graceDeadline.current = null
     lastPositiveWaterAt.current = null
     scenarioRef.current = id
@@ -527,7 +543,7 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
       moveTo,
       playAnimation,
       interactWith: (object, value, approach, signal) => interactWith(object, false, approach, signal, value),
-      setCharacterVisible: setVisible, setObject, waitForQuietGap, waitForNoAnswer, waitForCaregiverAlert, waitForResolution,
+      setCharacterVisible: setVisible, setObject, waitForQuietGap, waitForNoAnswer, waitForCaregiverAlert, waitForResolution, waitForOutcome,
       dispatchResponder, setResponderVisible: () => setResponderVisible(true), setResponderDoor: open => {
         setResponderDoorOpen(open)
         sound.current.play(open ? 'doorOpen' : 'doorClose')
@@ -628,6 +644,7 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
     setQueuedCalls([])
     setIntegrationError(null)
     graceIncident.current = null
+    setResponseIncidentId(null)
     graceDeadline.current = null
     lastPositiveWaterAt.current = null
     nextCharacterCommand('reset')
@@ -781,7 +798,7 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
       <SceneBoundary><Canvas shadows={{ type: PCFShadowMap }} frameloop="demand" dpr={[1, 1.7]} gl={{ antialias: true, toneMapping: ACESFilmicToneMapping, toneMappingExposure: 1 }}
         fallback={<div className="home-fallback">This home needs a browser with WebGL enabled.</div>}>
         <Suspense fallback={null}><Scene command={command} characterCommand={characterCommand} responderCommand={responderCommand}
-          responderVisible={responderVisible} responderChecking={responderChecking} interaction={interaction}
+          responderVisible={showResponder} responderChecking={responderChecking} interaction={interaction}
           pose={pose} speech={speech} visible={visible} paused={paused}
           urgent={scenario === 'falseAlarmRecovery' && (scenarioProgress?.index ?? 0) >= 5}
           sensorView={sensorView} unit={homeUnit} pulses={pulses}

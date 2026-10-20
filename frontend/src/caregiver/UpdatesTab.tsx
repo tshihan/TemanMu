@@ -1,4 +1,4 @@
-import { Bell, ShieldCheck } from 'lucide-react'
+import { Bell } from 'lucide-react'
 import type { Incident, Notification } from '../api/types'
 import { notificationCopy, type Ctx } from './copy'
 import { clock, dayKey, dayLabel } from './format'
@@ -44,7 +44,7 @@ export function UpdatesTab({ feed, ctx, now, incidentFor, isUnread, ackTargetId,
               <time className="cg-num" dateTime={n.created_at}>{clock(n.created_at)}</time>
             </button>
             {n.notification_id === ackTargetId && <button type="button" className="cg-btn cg-btn-alarm cg-feed-ack" onClick={onAck} disabled={ackBusy}>
-              {!ackBusy && <ShieldCheck size={20} aria-hidden="true" />}{ackBusy ? 'Recording…' : 'I’ll Check Now'}
+              {ackBusy ? 'Opening…' : 'Respond to alert'}
             </button>}
           </li>
         })}

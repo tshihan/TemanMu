@@ -6,35 +6,38 @@ import type { Incident, Outcome, Unit } from '../api/types'
 import { actorName, eventCopy, GUARD, isOuting, OUTCOMES, outcomeLabel, STATUS_LABELS, type Ctx } from './copy'
 import { clock, initials, until } from './format'
 
-export type AckError = { kind: 'taken'; name: string | null } | { kind: 'failed' } | null
+export type AckError = { kind: 'failed' } | null
 type Pick = Exclude<Outcome, 'resident_activity_detected'>
 
 interface Props {
   incident: Incident; unit: Unit; ctx: Ctx; now: number; liveNote: boolean
-  ackBusy: boolean; ackError: AckError; onAck: () => void; onBack: () => void
+  ackBusy: boolean; ackError: AckError; onAck: () => void; onCheckIn: () => void; onConfirmSafe: () => void; onBack: () => void
 }
 
-export function IncidentView({ incident, unit, ctx, now, liveNote, ackBusy, ackError, onAck, onBack }: Props) {
+export function IncidentView({ incident, unit, ctx, now, liveNote, ackBusy, ackError, onAck, onCheckIn, onConfirmSafe, onBack }: Props) {
   const { R } = ctx
   const [outcome, setOutcome] = useState<Pick | null>(null)
   const [closing, setClosing] = useState(false)
   const [closeFailed, setCloseFailed] = useState(false)
   const state = incident.state
   const ack = incident.acknowledged_by
+  const closer = incident.events.find(event => event.type === 'closed')?.actor ?? ack
   const mine = ack?.role === 'caregiver' && ack.name === ctx.me
   const unable = incident.events.some(event => event.type === 'unable_to_verify')
   const called = incident.events.some(event => event.type === 'emergency_called')
+  const checkingIn = incident.events.some(event => event.type === 'caregiver_checking_in')
+  const visitRequested = incident.events.some(event => event.type === 'township_requested')
   const lastWater = unit.quiet_gap.last_water_activity_at
   const cause = isOuting(incident) ? `${R} has been out longer than usual.` : lastWater ? `No water use since ${clock(lastWater)}, longer than the usual gap.` : 'No water use for longer than the usual gap.'
 
   const hero = state === 'notified'
-    ? { variant: 'alarm', chip: 'Needs response', Icon: TriangleAlert, badge: STATUS_LABELS[unit.status], title: `${R} didn’t answer`, body: `${cause} The simulated call to ${R} went unanswered.` }
+    ? { variant: 'alarm', chip: 'Needs response', Icon: TriangleAlert, badge: STATUS_LABELS[unit.status], title: 'Unusual inactivity', body: `${cause} The simulated call to ${R} went unanswered. You and the township operator have been alerted.` }
     : state === 'acknowledged'
       ? { variant: called || unable ? 'alarm' : 'checking', chip: called ? '999 called' : unable ? 'Urgent follow-up' : 'Awaiting outcome', Icon: called || unable ? TriangleAlert : ShieldCheck, badge: called ? 'Emergency handoff' : unable ? 'Safety not verified' : 'Someone is checking', title: called ? '999 call reported' : unable ? 'Safety not verified' : mine ? 'You’re checking' : `${actorName(ctx, ack)} is checking`,
         body: called ? `${actorName(ctx, ack)} reports calling 999. Dispatch has not been confirmed. Help responders reach ${R} and await an outcome.` : unable ? `${actorName(ctx, ack)} could not verify ${R}’s safety. Contact the duty supervisor urgently; call 999 if an emergency is suspected.` : `${actorName(ctx, ack)} took this at ${ack ? clock(ack.at) : '—'}. Reminders have stopped for everyone. ${R} is not yet confirmed safe.` }
       : state === 'closed'
         ? { variant: 'calm', chip: 'Closed', Icon: CircleCheck, badge: 'Incident closed', title: outcomeLabel(incident.outcome),
-          body: `Recorded by ${actorName(ctx, ack, false)} at ${incident.closed_at ? clock(incident.closed_at) : '—'}.` }
+          body: `Recorded by ${actorName(ctx, closer, false)} at ${incident.closed_at ? clock(incident.closed_at) : '—'}.` }
         : { variant: 'calm', chip: 'Resolved', Icon: CircleCheck, badge: 'Resolved by activity', title: 'Resident activity detected',
           body: `Activity at home ended this alert at ${incident.closed_at ? clock(incident.closed_at) : '—'}. No in-person check was recorded.` }
 
@@ -43,7 +46,7 @@ export function IncidentView({ incident, unit, ctx, now, liveNote, ackBusy, ackE
     { key: 'guard', name: GUARD, role: 'Township guard', initials: initials(GUARD), mine: false },
   ].map(person => {
     const has = !!ack && (person.mine ? mine : !mine)
-    return { ...person, has, state: has ? `Checking since ${clock(ack!.at)}` : ack ? 'Stood down' : 'Alerted' }
+    return { ...person, has, state: has ? `Visiting since ${clock(ack!.at)}` : person.mine && checkingIn ? 'Checking in remotely' : person.mine && visitRequested ? 'Visit requested' : 'Alerted' }
   })
 
   async function record() {
@@ -77,18 +80,16 @@ export function IncidentView({ incident, unit, ctx, now, liveNote, ackBusy, ackE
         {state === 'notified' && <p className="cg-hero-reminder"><BellRing size={16} aria-hidden="true" />
           <span>{incident.reminder_count ? `Reminder #${incident.reminder_count} sent` : 'Alert sent'}</span><span className="cg-hero-next">next in <span className="cg-num">{until(incident.next_reminder_at, now)}</span></span>
         </p>}
-        {state === 'notified' && <>
-          <button type="button" className="cg-btn cg-btn-inverse cg-btn-tall" onClick={onAck} disabled={ackBusy}>
-            {!ackBusy && <ShieldCheck size={22} aria-hidden="true" />}{ackBusy ? 'Recording…' : 'I’ll Check Now'}
-          </button>
-          <p className="cg-hero-note">Reminders stop for everyone once someone taps.</p>
-        </>}
+        {state === 'notified' && <p className="cg-hero-note">Township can visit while you check in. Reminders continue until someone takes the visit.</p>}
+        {(state === 'notified' || state === 'acknowledged') && !mine && <div className="cg-hero-actions">
+          {!checkingIn && <button type="button" className="cg-btn cg-btn-inverse cg-btn-tall" onClick={onCheckIn} disabled={ackBusy}>I’ll check in with {R}</button>}
+          {!visitRequested && state === 'notified' && <button type="button" className="cg-btn cg-btn-outline cg-btn-tall" onClick={onAck} disabled={ackBusy}>Ask township to visit</button>}
+          {checkingIn && <p role="status">Check-in recorded. {R} is not yet confirmed safe.</p>}
+          {checkingIn && state === 'notified' && <button type="button" className="cg-btn cg-btn-outline" onClick={onConfirmSafe} disabled={ackBusy}>I spoke to {R} — no help needed</button>}
+          {visitRequested && <p role="status">Township visit requested.</p>}
+        </div>}
       </section>
 
-      {ackError?.kind === 'taken' && state !== 'notified' && <div className="cg-notice" role="alert"><Info size={18} aria-hidden="true" />
-        {ackError.name ? <span><strong>{ackError.name} is already handling this.</strong> Your tap arrived just after theirs, so it wasn’t recorded. You don’t need to do anything else.</span>
-          : <span><strong>This alert changed before your tap arrived.</strong> The latest status is shown here.</span>}
-      </div>}
       {ackError?.kind === 'failed' && <div className="cg-warning" role="alert"><Info size={18} aria-hidden="true" /><span>Your response couldn’t be recorded. Check your connection and try again.</span></div>}
 
       {(state === 'notified' || state === 'acknowledged') && <section className="cg-responders">
@@ -122,7 +123,7 @@ export function IncidentView({ incident, unit, ctx, now, liveNote, ackBusy, ackE
         <button type="button" className="cg-btn cg-btn-accent cg-record" onClick={() => void record()} disabled={!outcome || closing}>{closing ? 'Recording…' : 'Record outcome'}</button>
       </section>}
 
-      {state === 'acknowledged' && !mine && <p className="cg-fineprint cg-pad">Only {actorName(ctx, ack)} can record the outcome. You’ll get an update here when it’s recorded.</p>}
+      {state === 'acknowledged' && !mine && <p className="cg-fineprint cg-pad">{actorName(ctx, ack)} is responsible for the in-person outcome. You’ll get an update when it’s recorded.</p>}
 
       <section className="cg-card">
         <h2 className="cg-card-title">Timeline</h2>

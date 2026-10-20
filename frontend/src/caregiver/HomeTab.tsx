@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { ArrowRight, CircleCheck, Clock3, DoorOpen, Droplets, PhoneOutgoing, ShieldCheck, Sunrise, TriangleAlert, Zap } from 'lucide-react'
 import type { Incident, Notification, Reading, Unit } from '../api/types'
-import { actorName, GUARD, isOuting, notificationCopy, outcomeLabel, STATUS_LABELS, type Ctx } from './copy'
+import { actorName, isOuting, notificationCopy, outcomeLabel, STATUS_LABELS, type Ctx } from './copy'
 import { clock, dayFraction, dayLabel, greeting, isToday, until, when } from './format'
 
 type Variant = 'alarm' | 'checking' | 'quiet' | 'away' | 'calm' | 'pending'
@@ -14,8 +14,8 @@ function statusCard(unit: Unit, incident: Incident | null, ctx: Ctx, now: number
   if (incident?.state === 'notified') {
     const cause = isOuting(incident) ? `${R} has been out longer than usual` : 'No water use for longer than the usual gap'
     const reminder = incident.reminder_count ? ` Reminder #${incident.reminder_count}.` : ''
-    return { variant: 'alarm', Icon: TriangleAlert, badge: STATUS_LABELS[unit.status], headline: `${R} didn’t answer`, ack: true,
-      reason: `${cause}, and the simulated call went unanswered. You and ${GUARD} have been alerted.${reminder}` }
+    return { variant: 'alarm', Icon: TriangleAlert, badge: STATUS_LABELS[unit.status], headline: 'Unusual inactivity', ack: true,
+      reason: `${cause}. The simulated call went unanswered. You and the township operator have been alerted.${reminder}` }
   }
   if (incident?.state === 'acknowledged' && incident.acknowledged_by) {
     const who = actorName(ctx, incident.acknowledged_by)
@@ -42,7 +42,7 @@ function statusCard(unit: Unit, incident: Incident | null, ctx: Ctx, now: number
   const recent = incident?.closed_at && ['closed', 'auto_resolved'].includes(incident.state)
     && new Date(incident.closed_at).getTime() >= new Date(unit.status_since).getTime() - 2000
   if (recent && incident.state === 'closed') return { variant: 'calm', Icon: CircleCheck, badge: STATUS_LABELS.routine, headline: 'Alert closed',
-    reason: `Outcome: ${outcomeLabel(incident.outcome)}. Recorded by ${actorName(ctx, incident.acknowledged_by, false)} at ${clock(incident.closed_at!)}.` }
+    reason: `Outcome: ${outcomeLabel(incident.outcome)}. Recorded by ${actorName(ctx, incident.events.find(event => event.type === 'closed')?.actor ?? incident.acknowledged_by, false)} at ${clock(incident.closed_at!)}.` }
   if (recent) return { variant: 'calm', Icon: CircleCheck, badge: STATUS_LABELS.routine, headline: 'Activity has resumed',
     reason: `Resident activity detected at ${clock(incident!.closed_at!)}. The alert ended on its own.` }
   return hasRoutineEvidence
@@ -54,10 +54,10 @@ function statusCard(unit: Unit, incident: Incident | null, ctx: Ctx, now: number
 
 interface Props {
   unit: Unit; ctx: Ctx; incident: Incident | null; feed: Notification[]; readings: Reading[]; now: number
-  ackBusy: boolean; onAck: () => void; onOpenIncident: () => void
+  ackBusy: boolean; responseError: boolean; onCheckIn: () => void; onRequestVisit: () => void; onOpenIncident: () => void
 }
 
-export function HomeTab({ unit, ctx, incident, feed, readings, now, ackBusy, onAck, onOpenIncident }: Props) {
+export function HomeTab({ unit, ctx, incident, feed, readings, now, ackBusy, responseError, onCheckIn, onRequestVisit, onOpenIncident }: Props) {
   const { R } = ctx
   const today = readings.filter(reading => isToday(reading.recorded_at, now))
   const last = (match: (reading: Reading) => boolean) => [...today].reverse().find(match)
@@ -68,6 +68,8 @@ export function HomeTab({ unit, ctx, incident, feed, readings, now, ackBusy, onA
   const powerUsed = last(reading => reading.sensor === 'electricity' && Number(reading.value) > unit.baseline.standby_power_kw)
   const morning = feed.find(item => item.kind === 'morning_reassurance' && isToday(item.created_at, now))
   const card = statusCard(unit, incident, ctx, now, !!waterAt || !!powerUsed)
+  const checkingIn = incident?.events.some(event => event.type === 'caregiver_checking_in') ?? false
+  const visitRequested = incident?.events.some(event => event.type === 'township_requested') ?? false
   const lastReadingAt = readings.at(-1)?.recorded_at
   const lastIncidentAt = incident?.events.at(-1)?.at
   const updatedAt = Math.max(new Date(unit.status_since).getTime(),
@@ -112,9 +114,14 @@ export function HomeTab({ unit, ctx, incident, feed, readings, now, ackBusy, onA
       <p className="cg-status-reason">{card.reason}</p>
       {card.grace && <p className="cg-status-meta"><span className="cg-status-timer cg-num">{card.grace}</span>
         <span>left in the simulated call window. You’ll only be alerted if {R} doesn’t answer.</span></p>}
-      {card.ack && <button type="button" className="cg-btn cg-btn-inverse cg-btn-tall" onClick={onAck} disabled={ackBusy}>
-        {!ackBusy && <ShieldCheck size={22} aria-hidden="true" />}{ackBusy ? 'Recording…' : 'I’ll Check Now'}
-      </button>}
+      {card.ack && <div className="cg-status-actions">
+        {!checkingIn && <button type="button" className="cg-btn cg-btn-inverse cg-btn-tall" onClick={onCheckIn} disabled={ackBusy}>I’ll check in with {R}</button>}
+        {!visitRequested && <button type="button" className="cg-btn cg-btn-outline cg-btn-tall" onClick={onRequestVisit} disabled={ackBusy}>Ask township to visit</button>}
+        {checkingIn && <p role="status">Check-in recorded. Safety is not yet confirmed.</p>}
+        {visitRequested && <p role="status">Township visit requested.</p>}
+        {(checkingIn || visitRequested) && <button type="button" className="cg-status-details" onClick={onOpenIncident}>View alert details</button>}
+        {responseError && <p role="alert">Couldn’t record your response. Please try again.</p>}
+      </div>}
       {card.open && <button type="button" className="cg-btn cg-btn-ghost" onClick={onOpenIncident}>{card.open}<ArrowRight size={18} aria-hidden="true" /></button>}
       <p className="cg-status-who"><span className="cg-status-name">{R}</span><span>{unit.resident_name} · {unit.unit_id}</span>
         <span className="cg-status-updated">{when(updatedAt, now)}</span></p>

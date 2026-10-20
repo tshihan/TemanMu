@@ -330,8 +330,61 @@ async def _incident_unit_id(incident_id: str) -> str:
     return incident.unit_id
 
 
+async def caregiver_response(incident_id: str, name: str, action: str) -> Incident:
+    """Log remote caregiver coordination without claiming the in-person welfare check."""
+    unit_id = await _incident_unit_id(incident_id)
+    async with _unit_lock(unit_id):
+        async with get_pool().acquire() as conn, conn.transaction():
+            incident = await db_incidents.get_incident_for_update(incident_id, conn)
+            if incident is None:
+                raise IncidentNotFound(incident_id)
+            if incident.state not in ("notified", "acknowledged"):
+                raise IncidentConflict("Incident is not awaiting a response")
+            if action == "resident_confirmed_safe":
+                if incident.state != "notified" or not _has_event(incident, "caregiver_checking_in"):
+                    raise IncidentConflict("Speak directly with the resident before confirming safety; an active visit must finish first")
+                report = f"{name} reports speaking directly with the resident; no help needed."
+                now = utc_now()
+                await db_incidents.update_incident(
+                    incident_id, state="closed", outcome="resident_ok", report=report, closed_at=now, conn=conn
+                )
+                incident = await db_incidents.add_incident_event(
+                    incident_id, "closed", now, actor=Actor(role="caregiver", name=name), detail="Resident OK", conn=conn
+                )
+                unit = await db_units.update_unit_state(
+                    unit_id, status="routine", status_reason=reasons.closed_reason(name, "resident_ok"),
+                    status_since=now, last_water_activity_at=now, conn=conn
+                )
+            else:
+                if _has_event(incident, action):
+                    raise IncidentConflict("This caregiver response has already been recorded")
+                detail = (
+                    "Caregiver is trying to contact the resident; safety is not confirmed."
+                    if action == "caregiver_checking_in" else
+                    "Caregiver requested a township welfare visit; safety is not confirmed."
+                )
+                incident = await db_incidents.add_incident_event(
+                    incident_id, action, utc_now(), actor=Actor(role="caregiver", name=name), detail=detail, conn=conn
+                )
+        await realtime.broadcast("incident.updated", incident)
+        if action == "resident_confirmed_safe":
+            timers.cancel_incident(incident_id)
+            await realtime.broadcast("unit.updated", unit)
+            await _notify_both(unit_id, "closed", reasons.closed_message("resident_ok"), incident_id)
+            return incident
+        message = (
+            f"{name} is checking in with the resident. Safety is not yet confirmed."
+            if action == "caregiver_checking_in" else
+            f"{name} requested a township welfare visit."
+        )
+        await _notify_both(unit_id, action, message, incident_id)
+        return incident
+
+
 async def acknowledge(incident_id: str, role: Role, name: str) -> Incident:
-    """POST /api/incidents/{id}/acknowledge: stops grace and reminders; the unit's status stays."""
+    """POST /api/incidents/{id}/acknowledge: takes a notified visit and stops reminders."""
+    if role != "township":
+        raise IncidentConflict("Only township can take the in-person visit")
     unit_id = await _incident_unit_id(incident_id)
     async with _unit_lock(unit_id):
         now = utc_now()
@@ -339,12 +392,8 @@ async def acknowledge(incident_id: str, role: Role, name: str) -> Incident:
             incident = await db_incidents.get_incident_for_update(incident_id, conn)
             if incident is None:
                 raise IncidentNotFound(incident_id)
-            if incident.state not in ("grace", "notified"):
-                raise IncidentConflict("Incident already acknowledged or closed")
-            if incident.state == "grace" and not _has_event(incident, "voice_call_no_answer"):
-                await db_incidents.add_incident_event(
-                    incident_id, "voice_call_cancelled", now, detail=reasons.VOICE_CANCELLED, conn=conn
-                )
+            if incident.state != "notified":
+                raise IncidentConflict("Incident is not awaiting a township response")
             await db_incidents.update_incident(
                 incident_id,
                 state="acknowledged",
