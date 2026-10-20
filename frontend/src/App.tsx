@@ -18,7 +18,7 @@ const pageFromHash = (): Page => PAGES[window.location.hash] ?? 'landing'
 export default function App() {
   const { connected, loaded, notifications, config } = useAppState()
   const [page, setPage] = useState<Page>(pageFromHash)
-  const [role, setRole] = useState<Role>('township')
+  const [role] = useState<Role>('township')
   const activeUnread = notifications.filter(item => item.role === role && !item.read).length
   const inactiveRole: Role = role === 'township' ? 'caregiver' : 'township'
   const inactiveUnread = notifications.filter(item => item.role === inactiveRole && !item.read).length
@@ -108,18 +108,8 @@ export default function App() {
             <p className="eyebrow">TemanMu product · {role === 'township' ? 'Township operator' : 'Caregiver'}</p>
             <h1>{role === 'township' ? 'Unit status' : <>Caregiver <em>view</em></>}</h1>
           </div>
-          <div className="role-switcher" role="tablist" aria-label="Dashboard role">
-            {(['township', 'caregiver'] as Role[]).map(tabRole => {
-              const unread = notifications.filter(item => item.role === tabRole && !item.read).length
-              return <button key={tabRole} type="button" role="tab" id={`tab-${tabRole}`} aria-selected={role === tabRole} aria-controls={`panel-${tabRole}`}
-                className={`role-tab ${role === tabRole ? 'is-active' : ''}`} onClick={() => setRole(tabRole)}>
-                {tabRole === 'township' ? 'Township' : 'Caregiver'}
-                {role !== tabRole && unread > 0 && <span className="role-badge" aria-label={`${unread} unread notifications`}>{unread}</span>}
-              </button>
-            })}
-          </div>
         </div>
-        <div className="dashboard-content" role="tabpanel" id={`panel-${role}`} aria-labelledby={`tab-${role}`}>
+        <div className="dashboard-content">
           {!loaded ? <p className="loading-state" role="status">Waiting for the first snapshot…</p> : role === 'caregiver' ? <CaregiverApp /> : <TownshipView />}
         </div>
         {role === 'township' && <div className="dashboard-footer">

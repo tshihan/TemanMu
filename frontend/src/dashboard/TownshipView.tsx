@@ -21,7 +21,10 @@ const isAlert = (status: Shown): status is AlertStatus => status === 'unresolved
 
 // Only floor 1 is backed by the live store; the rest of Block A is illustrative sample data.
 const FLOORS = 24
-const SAMPLE_ALERTS: Record<string, { status: Shown; start: number }> = { 'A-1204': { status: 'unusual_inactivity', start: 70 }, 'A-2106': { status: 'unusual_inactivity', start: 160 } }
+const SAMPLE_ALERTS: Record<string, { status: Shown; start: number; name: string }> = {
+  'A-1204': { status: 'unusual_inactivity', start: 70, name: 'Mr Lim' },
+  'A-2106': { status: 'unusual_inactivity', start: 160, name: 'Mdm Wong' },
+}
 const responder = seed.responders.township
 
 interface Row {
@@ -50,7 +53,7 @@ function sampleRows(start: number, now: number): Row[] {
     const offset = alert?.start ?? (i * 7 + floor * 3) % 30
     const seconds = offset + (now - start) / 1000
     rows.push({
-      id, floor, short: alert ? 'Sample' : '', status: alert?.status ?? 'routine',
+      id, floor, short: alert?.name ?? '', status: alert?.status ?? 'routine',
       usual: 40, elapsed: alert ? seconds : seconds % 34,
     })
   }
