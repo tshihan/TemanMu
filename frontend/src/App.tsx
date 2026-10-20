@@ -93,12 +93,12 @@ export default function App() {
         <a href="#simulator" target="_blank" rel="noopener">Live 3D view <span aria-hidden="true">↗</span></a>
         <a href="#caregiver" target="_blank" rel="noopener">Caregiver app <span aria-hidden="true">↗</span></a>
       </nav>
-      <div className="header-meta">
+      {/* <div className="header-meta">
         <span className="environment-label">{usingMock ? 'Simulated data' : 'Live backend'}</span>
         <span className={`connection-label ${connected ? 'is-connected' : ''}`} role="status">
           <span className="connection-dot" aria-hidden="true" />{connected ? 'Connected' : 'Connecting'}
         </span>
-      </div>
+      </div> */}
     </header>
 
     <main className="workspace workspace-dashboard">
