@@ -2,7 +2,7 @@
 
 **Scope:** Hackathon prototype for Sime Darby Property Township of Tomorrow 2026
 **Companion document:** [temanmu.md](temanmu.md) (full proposal)
-**Readers:** frontend, backend and 3D (ChatGPT Astra) builders, and the UI design pass
+**Readers:** frontend, backend and 3D builders, the UI design pass, and the pitch/slides team
 
 This PRD defines **what** the prototype does. All visual design (colours, typography, icons, spacing, layout styling) is intentionally left to the UI design pass. Where this document says a status must "stand out" or "look calm", it describes intent, not styling.
 
@@ -19,7 +19,12 @@ Existing solutions each have a gap:
 - **Dedicated indoor sensors** add hardware and continuous movement tracking.
 - **Single-signal utility monitoring** (water only, fixed threshold) produces false alarms, and often has no clear process for who responds.
 
-**How might we** use everyday household utility data (water, electricity and the front door) to notice when an elderly resident's routine breaks, get a human to check on them quickly, and give families daily reassurance, without watching the resident's every movement?
+Two further gaps make this worse:
+
+- **Families live far away.** A caregiver in another city cannot check in person, so they either call anxiously every day or hear nothing until something goes wrong.
+- **Living alone often means being isolated.** Older residents may share a block with hundreds of neighbours yet know none of them. Nobody nearby notices a missed morning routine, and safety tools usually only contact people when something is wrong.
+
+**How might we** use everyday household utility data (water, electricity and the front door) to notice when an elderly resident's routine breaks, get a human to check on them quickly, give families daily reassurance and help residents connect with their neighbours, without watching the resident's every movement?
 
 ---
 
@@ -27,20 +32,38 @@ Existing solutions each have a gap:
 
 ### In scope
 
-- One web application on a single screen: a **simulated 3D home** on the left and a **dashboard** on the right, separated by a draggable divider.
-- Two dashboard roles, switched with a role switcher: **Township Operator** and **Caregiver**.
-- A Python backend that ingests simulated sensor readings, runs the status rules and timers, and pushes updates live.
+One web application (one frontend build) with separate pages, opened in separate browser tabs or devices during the pitch:
+
+| Page | URL | Purpose |
+| --- | --- | --- |
+| Landing page | `/#` | Explains the product and links to every view |
+| **Township dashboard** | `/#dashboard` | Township Operator view of the whole housing block |
+| **Caregiver app** | `/#caregiver` | Mobile app for the family caregiver. Installable on a phone as a PWA |
+| **Live 3D view** | `/#simulator` | Presenter stage: the **simulated 3D home** of unit A-105, scenarios and sensor controls |
+| Slides | `/#slides` | Pitch slides |
+
+All pages share one live state: the real backend over REST and WebSocket, or a shared in-browser mock (section 10.3).
+
+A Python backend ingests simulated sensor readings, runs the status rules and timers, and pushes updates live.
 
 ### Out of scope (pitch slides only)
 
 - Real smart meter or door sensor hardware.
 - Resident-facing app or resident mode.
 - Real automated voice call (it is **simulated** in the prototype).
-- Separate neighbour view (neighbours are described verbally as opt-in responders receiving the same alert as the township guard).
-- Native mobile app (the Caregiver view is web; mobile is future work).
+- Neighbours as emergency responders (neighbours appear only as opt-in **same-hour neighbour** introductions, section 5.4; alerts go to the caregiver and the township guard).
+- Native app-store app (the Caregiver app is an installable PWA).
 - Machine-learned baselines (baselines are pre-filled values in the prototype).
 - Automatically contacting emergency services. A human-initiated 999 handoff is supported by the incident workflow.
 - "Appliance left on" detection (future work, see section 7).
+
+### Cut during the build
+
+These were in the first PRD but were dropped after testing because they added little to the demo. Their backend APIs may remain, but the UI does not use them.
+
+- Single-screen split layout, draggable divider, role switcher and inactive-role badge (replaced by separate pages).
+- Township unit detail panel with per-sensor timelines and reason line, and the incident history list.
+- Caregiver "thinking of you" preset messages delivered as a simulated voice call. The 3D phone call animation remains as a presenter test.
 
 ---
 
@@ -48,9 +71,9 @@ Existing solutions each have a gap:
 
 | Role | Who | Where in the UI |
 | --- | --- | --- |
-| **Township Operator** | Township management and guard, merged into one role | Dashboard, Township tab |
-| **Caregiver** | The resident's designated family member | Dashboard, Caregiver tab |
-| **Presenter** (demo only) | The team member running the pitch | Simulator controls in the 3D home panel |
+| **Township Operator** | Township management and guard (Guard Ali), merged into one role | Township dashboard |
+| **Caregiver** | The resident's designated family member (Sarah) | Caregiver app (phone) |
+| **Presenter** (demo only) | The team member running the pitch | Live 3D view controls |
 | **Resident** (passive) | The elderly person, shown as the animated character | No UI. Confirms wellbeing passively through activity |
 
 ---
@@ -61,33 +84,34 @@ Existing solutions each have a gap:
 
 - As a caregiver, I want a short message each morning when Mum's routine starts, so I know she is fine without calling to check.
 - As a caregiver, I want to be alerted when Mum's routine breaks and she cannot be reached, so I can act quickly.
+- As a caregiver, I want to see Mum's day at a glance (when water, electricity and the door were used), so I can check on her without calling.
 - As a caregiver, I want reminders until someone responds, so an alert is never silently missed.
-- As a caregiver, I want to tap "I'll Check Now" so the township knows I'm handling it and stops reminding everyone.
-- As a caregiver, I want to see who has acknowledged an alert and its outcome, so I know the situation is resolved.
+- As a caregiver, I want to tell everyone I'm checking in with Mum, or ask the township to visit, so the right person goes and nobody assumes someone else is handling it.
+- As a caregiver, I want to close an alert myself after I've spoken to Mum and she's fine, so the guard isn't sent for nothing.
+- As a caregiver, I want to see who is checking on Mum and the outcome they recorded, so I know the situation is resolved.
 - As a caregiver, I want to see community activities near Mum and invite her or join with her, so she stays socially connected without needing to use technology herself.
-- As a caregiver, I want to send Mum a short "thinking of you" message that reaches her as a voice call, so she hears from me even when I can't call, without her needing an app.
-- As a caregiver, I want to request a Community Buddy for Mum and see who she's matched with, so she has a friendly neighbour to join activities with.
-
-### Resident (companionship)
-
-- As an elderly resident, I want to hear warm messages from my family through an ordinary phone call, so the system doesn't only contact me when something is wrong.
+- As a caregiver, I want to request a Community Buddy for Mum and see who she's matched with, so she has a friendly volunteer who shares her interests.
+- As a caregiver, I want to be introduced to a neighbour in Mum's block who keeps the same hours, with Mum's consent and without her routine being exposed, so she has a friend whose day naturally crosses hers.
 
 ### Township Operator
 
-- As a township operator, I want to see the status of every enrolled unit at a glance, so I can focus on the ones that need attention.
-- As a township operator, I want to see **why** a unit was flagged (for example, water silent longer than this resident's usual gap), so I trust the alert.
+- As a township operator, I want to see every unit in the block, floor by floor, with the units that need attention standing out, so I can focus on them.
+- As a township operator, I want to see how long a flagged unit has been quiet compared with this resident's usual gap, so I trust the alert.
 - As a township operator, I want to be alerted at the same time as the caregiver when a resident cannot be reached, so help can arrive even if the family is far away.
-- As a township operator, I want to acknowledge and close an incident with an outcome, so there is an accountable record.
+- As a township operator, I want to acknowledge, then close an incident with an outcome and short report, so there is an accountable record.
+- As a township operator, I want to call 999 and record that I did, or record that I couldn't verify the resident's safety, so a serious case is escalated and never closed by mistake.
 
 ### Resident (passive)
 
 - As an elderly resident, I want the system to confirm I'm fine from my normal activity, so I'm never asked to use an app.
 - As an elderly resident, I want my outings to be left alone, so my family isn't alarmed every time I leave home.
+- As an elderly resident, I want my daily routine kept private, so neighbours only learn that we keep similar hours, never when I'm out.
 
 ### Presenter
 
 - As a presenter, I want one-click scenarios, so the demo runs reliably under pressure.
 - As a presenter, I want to trigger sensors manually by clicking objects in the home, so judges can see it is live and try it themselves.
+- As a presenter, I want a "sensor view" that dims everything except the metered objects, so judges see exactly what TemanMu receives.
 - As a presenter, I want to reset the demo in one click, so each judge sees a clean run.
 - As a presenter, I want timings to be shortened through configuration, so a multi-hour real-world flow fits into a few minutes.
 
@@ -101,44 +125,49 @@ Priority: **P0** is required for the demo, **P1** is strongly wanted, **P2** is 
 
 | ID | Feature | Requirement | Priority |
 | --- | --- | --- | --- |
-| G1 | Split screen | 3D home panel on the left, dashboard on the right, on a single page. | P0 |
-| G2 | Draggable divider | Resizable split with minimum widths on both panels. Double-click resets to the default split. Position persists across page refresh. | P1 |
-| G3 | Role switcher | Switch the dashboard between Township and Caregiver views without leaving the page. | P0 |
-| G4 | Inactive-role badge | When a new notification arrives for the role not currently shown, its switcher tab shows a badge until viewed. | P0 |
-| G5 | Light/dark theme toggle | User can switch between light and dark themes. | P1 |
-| G6 | Sound with mute | Distinct subtle sounds for morning reassurance, new alert, and reminder. On by default, with a mute toggle. The demo must be fully understandable with sound muted. | P1 |
-| G7 | Screen support | Designed for 1920×1080. Must remain fully usable at 1366×768 with nothing hidden. Not required to support mobile. | P0 |
+| G1 | Separate pages | Landing, Township dashboard, Caregiver app, Live 3D view and Slides as hash-routed pages of one app (section 2). Each view links to the others and opens in a new tab, so the presenter can place them side by side or on different devices. | P0 |
+| G2 | Shared live state | Every open page and device sees the same state, from the backend WebSocket or the shared mock (section 10.3). A reading sent from the 3D view appears in the dashboard and caregiver app within a second. | P0 |
+| G3 | Landing page | Explains the problem, the three signals, the human response and both audiences (families and townships), and links into the live prototype. | P1 |
+| G4 | Installable caregiver app | The Caregiver app installs to a phone home screen as a PWA and works over the same Wi-Fi as the presenting laptop. | P1 |
+| G5 | Light/dark theme toggle | The caregiver app has a light/dark setting, remembered per device. | P1 |
+| G6 | Sound with mute | Caregiver app: distinct subtle sounds for morning reassurance, new alert and reminder, with a mute toggle. 3D home: ambient sounds for tap, kettle, footsteps, door and ringing phone, with its own mute. The demo must be fully understandable with sound muted. | P1 |
+| G7 | Screen support | Dashboard and 3D view are designed for 1920×1080 and remain usable at 1366×768. The caregiver app is designed for phone screens and shows in a phone frame on a laptop. | P0 |
 | G8 | Config-driven durations | The UI never hard-codes durations. All countdowns and duration labels use values from the backend (`GET /api/config` and per-unit baselines). | P0 |
 | G9 | Language | English only. | P0 |
 
-### 5.2 Simulated 3D Home (built with ChatGPT Astra)
+### 5.2 Simulated 3D Home (Live 3D view, built with React Three Fiber)
 
 | ID | Feature | Requirement | Priority |
 | --- | --- | --- | --- |
-| S1 | Sims-like home | A Sims-style 3D home for the controllable unit, containing a water point (tap), an electricity point (kettle or light) and the main door. Must embed in the web app. | P0 |
-| S2 | Animated resident | A fully animated elderly character who walks between rooms in sync with sensor events. **Fallback:** if walking animation is not ready, the character snaps between fixed positions per scenario. | P0 (fallback), P1 (walking) |
-| S3 | Clickable sensor objects | Clicking the tap, kettle/light or door triggers the character's action and sends the corresponding reading to the backend. | P0 |
-| S4 | Meter readout panel | A panel inside the 3D home showing current water flow, electricity power and door state with last-event time. Updates as readings are sent. | P0 |
-| S5 | Audience-only label | A permanent label stating the 3D view is for the audience only and TemanMu receives only water, electricity and door data. | P0 |
-| S6 | Scenario buttons | Four one-click scenarios (see section 6.1). Each plays a scripted sequence of character actions and sensor readings. | P0 |
+| S1 | Sims-like home | A furnished cutaway 3D home for unit A-105 (bedroom, bathroom, kitchen, dining and living room), with orbit, zoom and camera reset. Water points (bathroom tap, shower), electricity points (kettle, TV, bedroom lamp) and the main door. | P0 |
+| S2 | Animated resident | Madam Lee, a rigged and animated elderly character, walks between rooms along a waypoint graph and performs each action. | P0 |
+| S3 | Clickable sensor objects | Clicking a sensor object walks the character to it and, once the action completes, sends the reading to the backend. Water objects add up to one household water reading; electricity objects add up to one household electricity reading. | P0 |
+| S4 | Meter readout panel | Shows current A-105 water flow, electricity power and door state. Pulses when a reading is confirmed, and marks values as "last confirmed" while disconnected. | P0 |
+| S5 | Sensor view and audience labels | A **Demo view / Sensor view** toggle. Sensor view dims the home so only the metered objects stand out. Scenario labels state that the fall is for the audience only and is not a sensor reading. | P0 |
+| S6 | Scenario player | Four scenarios (see section 6.1) chosen from tabs, with play, pause, stop and a step timeline showing the current action. | P0 |
 | S7 | Reset demo | Button with a confirmation step. Calls `POST /api/demo/reset` and returns the character and scene to the starting state. | P0 |
-| S8 | Incoming companion call | When a "thinking of you" message is delivered, the phone rings in the 3D home. The character walks to the phone, picks it up, and a speech bubble shows the message. She then puts the phone down and returns to what she was doing. Triggered by the `companion.message_delivered` WebSocket event. | P1 |
+| S8 | Incoming phone call | The living-room phone rings, the character answers and a speech bubble shows the text. Triggered by the `companion.message_delivered` event or by "Test incoming call" in the presenter tools. | P2 |
+| S9 | Township responder | In the Unusual Inactivity scenario, Guard Ali (a separate animated character) arrives from outside after the township acknowledges, opens the door, walks to Madam Lee and crouches to check her. | P1 |
+| S10 | Presenter tools | Collapsed panel to move the character to named rooms, toggle each sensor object, test an incoming call and set how long the Going Out scenario stays outside. Disabled while a scenario plays. | P1 |
+| S11 | Monitoring switch | The 3D view turns A-105's quiet-gap watch on while a scenario plays and off when it stops (`POST /api/demo/monitoring`), so the unit does not raise alerts while the presenter is talking. | P0 |
 
-The character is for the audience only. **The character never sends data.** Only sensor-object events (tap, kettle/light, door) produce readings. Answering the companion phone call is **not** a sensor event and does not count as activity for the status rules.
+The character is for the audience only. **The character never sends data.** Only sensor-object events (tap, shower, kettle, TV, lamp, door) produce readings. Answering the phone and Guard Ali's staged door movement are **not** sensor events and do not count as activity for the status rules.
 
-The 3D home both **sends** readings (REST) and **receives** companion call events (it subscribes to the same WebSocket as the dashboard).
+The 3D home both **sends** readings (REST) and **receives** events (it subscribes to the same WebSocket as the dashboard).
 
 ### 5.3 Township View
 
 | ID | Feature | Requirement | Priority |
 | --- | --- | --- | --- |
-| T1 | Unit grid | Six units: one controllable (the 3D home unit, highlighted) and five scripted background units. Each shows unit ID, resident name and status. Units in Unresolved Concern sort to the top. | P0 |
-| T2 | Status distinction | The four statuses must be clearly distinguishable without relying on colour alone. Unresolved Concern must draw attention. Possible Away must look calm, reflecting that it is silent. | P0 |
-| T3 | Unit detail | Shows the selected unit's live water, electricity and door timelines, and a plain-language **reason line** explaining the current status. The reason line must name **every signal that decided the status**, so the water + electricity + door cross-check is visible (see examples below). The controllable unit is selected by default. Clicking a background unit shows its detail. | P0 |
-| T4 | Quiet-gap progress bar | In unit detail, shows how long water has been silent against this resident's usual maximum quiet gap. Visibly changes state when the usual maximum is exceeded. | P0 |
+| T1 | Block view | Housing Block A: 24 floors × 6 units (144 units). Floor 1 holds the six live units, including the controllable unit A-105. Floors 2–24 are illustrative sample data with two sample alerts (A-1204 Mr Lim, A-2106 Mdm Wong), so the view feels like a real block. | P0 |
+| T2 | Floor map and lens | A compact map of all 24 floors, marking floors with alerts, beside a three-floor "lens" showing unit tiles. Navigate by clicking a floor, ▲/▼ buttons or arrow keys. A "go to unit" search jumps to a unit number. | P0 |
+| T3 | Status distinction | Only units that need a response stand out: **Unusual Inactivity** and **Unresolved Concern** each have their own colour, glyph and pulse. Routine and Possible Away both read as "No action needed", so outings stay silent. Not reliant on colour alone. | P0 |
+| T4 | Quiet-gap progress bar | Each unit tile shows how long water has been silent against this resident's usual maximum quiet gap. An inactive unit shows the elapsed time. | P0 |
 | T5 | Baseline note | Indicates the baseline is "learned from history (simulated)". | P1 |
-| T6 | Incident panel | When the selected unit has an active incident, shows the incident timeline (detected, voice call, notifications, reminders, acknowledgement), the grace countdown or reminder count, the "I'll Check Now" button, and outcome logging. When there is no incident, this area shows the unit's latest reassurance state. | P0 |
-| T7 | Incident history | Closed incidents per unit with outcome and who resolved them. | P1 |
+| T6 | Needs attention list | A side list of every alerting unit, worst first, with the resident's short name and who is checking. Filter chips (Concern / Inactive) dim everything else. | P0 |
+| T7 | Incident response dialog | When a live incident is notified, an "Incident response" dialog opens automatically. It shows the incident and offers **I'll Check Now**. After acknowledging: choose an outcome, add an optional note, and submit. Also offers **Call 999** (`tel:999`), "I called 999, record it" and "I can't verify safety". It can be minimised to a side button and shows a confirmation when the incident ends. | P0 |
+
+**Reason lines.** The backend still generates a plain-language `status_reason` that names every signal that decided the status (examples below). The dashboard does not show it since the unit detail panel was cut; the caregiver app's status card shows its own short version of the same reason.
 
 **Reason line examples** (wording is illustrative; the backend generates `status_reason`):
 
@@ -151,19 +180,25 @@ The 3D home both **sends** readings (REST) and **receives** companion call event
 | Auto-resolved by electricity | "Resolved: electricity use detected (kettle on) during grace period" |
 | Auto-resolved by water | "Resolved: water use detected during grace period" |
 
-### 5.4 Caregiver View (web)
+### 5.4 Caregiver App (mobile PWA)
+
+A phone app with four tabs: **Home**, **Updates**, **Together** and **Settings**.
 
 | ID | Feature | Requirement | Priority |
 | --- | --- | --- | --- |
-| C1 | Resident status header | Resident name, unit, current status and last-updated time. | P0 |
-| C2 | Call button | "Call Mum" button (simulated, no real call). | P1 |
-| C3 | Notification feed | Morning reassurance, safety alerts and reminders in time order. Alerts open the response choices. | P0 |
-| C4 | Caregiver response | Caregiver can record a remote check-in, request a township visit, or close after speaking directly with the resident and confirming no help is needed. Remote actions do not claim the in-person visit. | P0 |
-| C5 | Community card | Shows an upcoming community activity near the resident, with "Invite Mum" and "Join together" actions. | P1 |
-| C6 | "Thinking of you" message | Caregiver picks one of 3–4 **preset** messages and sends with one tap (no custom text). It is delivered to the resident as a **one-way simulated voice call**, e.g. "Your daughter Sarah says: Thinking of you, Mum." The resident cannot reply. The feed shows the message as delivered, tagged simulated. | P1 |
-| C7 | Community Buddy match | Caregiver taps "Request a Buddy". The backend matches a pre-seeded volunteer by shared interest and returns them. The view shows the matched buddy's name, shared interest and next activity together, with a simulated tag. | P1 |
+| C1 | Status card (Home) | One card showing the resident's state in plain language: routine looks normal, routine not confirmed yet, probably out, checking quietly (with the simulated-call countdown), unusual inactivity (with response actions), someone is checking, emergency handoff, or alert closed. Shows resident name, unit and last-updated time. | P0 |
+| C2 | Call button | "Call Mum" button (simulated call screen, no real call). | P1 |
+| C3 | Mum's day (Home) | A 24-hour timeline with one lane each for water, electricity and front door, marking today's activity and the current state of each. Labelled "Water, power & door only". | P1 |
+| C4 | Updates feed | Morning reassurance, alerts, reminders and incident updates, grouped by day, with unread markers and "Mark all read". A new update shows an in-app push banner. Tapping an update opens the matching screen. | P0 |
+| C5 | Caregiver response | From an alert: "I'll check in with Mum" (records a remote check-in), "Ask township to visit", and after checking in, "I spoke to Mum, no help needed" (closes the incident). Remote actions never claim the in-person visit, so the township can still go. If the caregiver is the acknowledger, they can record an outcome. A banner on other tabs keeps an open alert one tap away. | P0 |
+| C6 | Community activity (Together) | Shows the next community activity near the resident, with "Invite Mum" and "I'll join too" actions. Saved only; TemanMu contacts nobody. | P1 |
+| C7 | Community Buddy (Together) | Caregiver taps "Find a buddy". The backend matches a pre-seeded volunteer by shared interest. The card shows the buddy's name, shared interest and next activity together, tagged simulated. | P1 |
+| C8 | Same-hour neighbour (Together) | Caregiver records Mum's consent ("Open to meeting neighbours"). The backend suggests another consenting resident in the block whose outings overlap hers. The card shows only their name, floor and coarse labels (for example "Both early risers who head out in the mornings"), plus a suggested first meeting activity. "Ask for an introduction" records a request for the community coordinator to introduce them in person. "Stop sharing Mum's routine" withdraws consent. | P1 |
+| C9 | Settings | Resident profile, responders (caregiver and Guard Ali), the three sensors, and the light/dark theme. | P2 |
 
-**Companion intent:** C5–C7 show that TemanMu supports companionship on normal days, not only during alerts. The resident stays tech-free: the caregiver acts on her behalf, and anything that reaches her arrives as an ordinary phone call or a person.
+**Companion intent:** C6–C8 show that TemanMu supports companionship on normal days, not only during alerts. The resident stays tech-free: the caregiver acts on her behalf, and anything that reaches her arrives as a person.
+
+**Neighbour privacy:** the API never exposes wake times, outing windows or the other resident's unit number. Knowing "she leaves every day at 7" would help a burglar. Both residents must consent, and a human makes the introduction.
 
 ### 5.5 Backend
 
@@ -173,8 +208,11 @@ The 3D home both **sends** readings (REST) and **receives** companion call event
 | B2 | Rules engine | Applies the status rules (section 7) per unit. Implemented as a separate pure module so it can be reused with real data later. | P0 |
 | B3 | Timers | Grace period and reminder timers run on the backend and survive a browser refresh. Single worker process. | P0 |
 | B4 | Live push | Pushes all state changes to connected dashboards over WebSocket. | P0 |
-| B5 | Simulated voice call | Writes voice-call events into the incident timeline during the grace period. Also delivers caregiver "thinking of you" messages as simulated calls. | P0 |
+| B5 | Simulated voice call | Writes voice-call events into the incident timeline during the grace period (rings for `VOICE_CALL_RING_SECONDS`, then "no answer"). The companion message API still exists but has no UI. | P0 |
 | B10 | Buddy matching | Matches a resident with a pre-seeded volunteer buddy by shared interest. Simple lookup, no algorithm required in the prototype. | P1 |
+| B11 | Same-hour neighbour matching | Matches consenting residents by overlap of their (seeded) outing windows, at least `NEIGHBOUR_MIN_OVERLAP_MINUTES`. Returns coarse labels only. Records consent and introduction requests. | P1 |
+| B12 | Emergency escalation | Records "unable to verify" and "999 call reported" on an acknowledged incident and notifies both roles. Never places a call. | P0 |
+| B13 | Monitoring switch | Turns the controllable unit's quiet-gap watch on or off (off after reset and restart). Grace and reminder timers of an active incident keep running. | P0 |
 | B6 | Background units | Seeds five background units with fixed scripted states on reset. | P0 |
 | B7 | Demo reset | Clears readings, incidents and notifications, and restores seed data. | P0 |
 | B8 | Configuration | Global timings from `.env`. Per-resident baselines from the database. | P0 |
@@ -192,7 +230,7 @@ The 3D home both **sends** readings (REST) and **receives** companion call event
 2. The character boils the kettle. The simulator sends an electricity reading.
 3. The backend registers the day's first activity and keeps the unit in Routine.
 4. The backend creates a morning reassurance notification for the caregiver.
-5. The Caregiver tab badge appears. The presenter switches to Caregiver to show the message.
+5. The caregiver app (on a phone or in its own tab) shows a push banner and chime: "Mum's day has started". Mum's day timeline marks the water and electricity use.
 
 **Scenario 2: Going Out** (shows the silent away status; can be cut if time is short)
 
@@ -203,10 +241,10 @@ The 3D home both **sends** readings (REST) and **receives** companion call event
 
 **Scenario 3: Unusual Inactivity** (shows the full safety flow)
 
-1. The character collapses in the living room. The simulator sends no further readings.
-2. The quiet-gap progress bar fills. When water silence exceeds the resident's usual maximum, the backend sets Unusual Inactivity and starts the grace period.
-3. The incident timeline shows the simulated voice call ("Calling Mum... no answer"), and the grace countdown runs.
-4. The grace period ends with no activity. The backend notifies the caregiver and the township at the same time.
+1. The character collapses in the living room (labelled as audience-only). The simulator sends no further readings.
+2. The quiet-gap progress bar on A-105's tile fills. When water silence exceeds the resident's usual maximum, the backend sets Unusual Inactivity and starts the grace period.
+3. The phone in the 3D home rings for the simulated voice call, then stops with no answer. The caregiver app shows "Checking on Mum quietly" with the grace countdown; nobody is alerted yet.
+4. The grace period ends with no activity. The backend notifies the caregiver and the township at the same time. The township's Incident response dialog opens, and the caregiver app shows the alert with its response actions.
 5. The backend sets Unresolved Concern. If nobody acknowledges, it sends reminders at the configured interval.
 6. In the presenter-only mock, Guard Ali acknowledges the township alert and a 3D responder reenacts arriving from outside, entering, and checking Mum. The staged door movement sends no resident sensor reading. The incident remains acknowledged until a human records the outcome in the dashboard (see 6.2). In live mode the scene waits for a real township acknowledgement; it never dispatches a person automatically.
 
@@ -220,8 +258,8 @@ The 3D home both **sends** readings (REST) and **receives** companion call event
 ### 6.2 Acknowledge and Close an Incident
 
 1. Caregiver and township receive the alert together. The caregiver can record a remote check-in or request a township visit; both actions stay visible to both roles and keep the incident open.
-2. The township operator taps "I'll Check Now" to take the in-person visit. This stops reminders and records the visit owner.
-3. The visit owner records a confirmed outcome: **Resident OK**, **Assistance provided**, **Sent to hospital**, or **Resident was away**.
+2. The township operator taps "I'll Check Now" in the Incident response dialog to take the in-person visit. This stops reminders and records the visit owner. Only the township can acknowledge.
+3. The visit owner records a confirmed outcome: **Resident OK**, **Assistance provided**, **Sent to hospital**, or **Resident was away**, with an optional note (the township record always carries a short report; the outcome label is used if no note is added).
 4. Before the township takes the visit, a caregiver who has started a check-in may close the incident only after explicitly reporting direct contact with the resident and no need for help.
 5. The backend closes the incident, writes it to history and returns the unit to Routine.
 
@@ -231,26 +269,26 @@ The 3D home both **sends** readings (REST) and **receives** companion call event
 
 ### 6.3 Manual Sensor Trigger
 
-1. The presenter or a judge clicks the tap, kettle/light or door in the 3D home.
+1. The presenter or a judge clicks the tap, shower, kettle, TV, lamp or door in the 3D home (or uses the presenter tools).
 2. The character walks to the object and performs the action.
 3. The simulator sends the reading. The meter panel updates.
-4. The dashboard reacts according to the rules.
+4. The dashboard and caregiver app react according to the rules.
 
 ### 6.4 Companion Flows
 
-**Send a "thinking of you" message**
-
-1. In the Caregiver view, the caregiver taps one of the preset messages.
-2. The backend records a one-way simulated voice call to the resident, marks it delivered, and broadcasts `companion.message_delivered`.
-3. In the 3D home, the phone rings and the character answers. A speech bubble shows the message.
-4. The Caregiver feed shows "Delivered to Mum by voice call", tagged simulated.
-
 **Request a Community Buddy**
 
-1. In the Caregiver view, the caregiver taps "Request a Buddy".
+1. In the caregiver app's Together tab, the caregiver taps "Find a buddy".
 2. The backend matches a pre-seeded volunteer who shares one of the resident's interests.
-3. The Caregiver view shows the matched buddy, the shared interest and the next activity they could attend together.
-4. The township operator sees the match in the unit detail (P2).
+3. The card shows the matched buddy, the shared interest and the next activity they could attend together. A "Buddy matched" update appears in the feed.
+
+**Meet a same-hour neighbour**
+
+1. In the Together tab, the caregiver taps "Open to meeting neighbours", recording Mum's consent.
+2. The backend finds the consenting resident whose outing windows overlap Mum's the most (at least `NEIGHBOUR_MIN_OVERLAP_MINUTES`).
+3. The card shows "Meet Madam Wong Siew Lan", her floor, why they match ("Both early risers who head out in the mornings") and a good first meeting (Morning Tai Chi), tagged simulated. No times or unit numbers are shown.
+4. The caregiver taps "Ask for an introduction". The card shows when it was requested, and an "Introduction requested" update appears in the feed. Nobody is actually contacted.
+5. "Stop sharing Mum's routine" withdraws consent and hides the match. Demo reset returns to step 1.
 
 ### 6.5 Demo Reset
 
@@ -268,6 +306,7 @@ All thresholds come from configuration or the resident's baseline profile, never
 
 - **Activity:** a water reading with flow above zero, an electricity reading above the resident's `standby_power_kw`, or a door event.
 - **Day start:** the moment of demo reset. In production this is the resident's usual wake window.
+- **Monitoring window (prototype only):** the controllable unit's quiet-gap and outing checks run only while the 3D view is playing a scenario (B13, S11), so A-105 does not raise alerts while the presenter is talking. Readings are always processed. In production every unit is watched continuously.
 
 | Status | Enters when | Leaves when | Action |
 | --- | --- | --- | --- |
@@ -421,6 +460,21 @@ interface BuddyMatch {
   simulated: true;
   matched_at: string;
 }
+
+interface NeighbourMatch {             // deliberately carries no times and no unit_id (privacy)
+  name: string;
+  floor: number;
+  labels: string[];                    // coarse, e.g. ["early riser", "morning"]
+  meeting_activity: CommunityActivity | null;
+  simulated: true;
+}
+
+interface NeighbourState {
+  unit_id: UnitId;
+  opted_in: boolean;
+  match: NeighbourMatch | null;        // always null while opted_in is false
+  introduction_requested_at: string | null;
+}
 ```
 
 The backend sends **deadlines** (`grace_ends_at`, `next_reminder_at`, `last_water_activity_at`), never ticking counters. The frontend computes countdowns and progress locally, which keeps it in sync with `.env` values automatically.
@@ -450,6 +504,7 @@ The backend sends **deadlines** (`grace_ends_at`, `next_reminder_at`, `last_wate
 | GET | `/api/companion/messages?unit_id={unit_id}` | `CompanionMessage[]` (newest first) |
 | GET | `/api/companion/message-presets` | `MessagePreset[]` |
 | GET | `/api/companion/buddy?unit_id={unit_id}` | `BuddyMatch` or `null` |
+| GET | `/api/companion/neighbours?unit_id={unit_id}` | `NeighbourState` |
 
 ### 8.4 Dashboard Actions
 
@@ -458,16 +513,23 @@ The backend sends **deadlines** (`grace_ends_at`, `next_reminder_at`, `last_wate
 | POST | `/api/incidents/{id}/acknowledge` | `{ "role": "township", "name": string }` | `200` `Incident` | `409` if already acknowledged, closed, or called by another role |
 | POST | `/api/incidents/{id}/caregiver-response` | `{ "role": "caregiver", "name": string, "action": "caregiver_checking_in" \| "township_requested" \| "resident_confirmed_safe" }` | `200` `Incident` | `409` if closed, duplicate action, or direct safety confirmation without a prior check-in |
 | POST | `/api/incidents/{id}/close` | `{ "role": Role, "name": string, "outcome": "resident_ok" \| "assistance_provided" \| "sent_to_hospital" \| "resident_away", "report"?: string }` | `200` `Incident` | `409` if not acknowledged or already closed. `403` if caller is not the acknowledger |
+| POST | `/api/incidents/{id}/escalate` | `{ "role": Role, "name": string, "action": "unable_to_verify" \| "emergency_called" }` | `200` `Incident` | `409` if not acknowledged, closed or duplicate. `403` if caller is not the acknowledger |
 | POST | `/api/notifications/read` | `{ "role": Role }` | `204` | |
+| POST | `/api/notifications/{id}/read` | `{ "role": Role }` | `200` `Notification` | `404` if not found |
 | POST | `/api/community/activities/{id}/respond` | `{ "action": "invite_resident" \| "join_together" }` | `200` `{ "ok": true }` | |
 | POST | `/api/companion/messages` | `{ "unit_id": UnitId, "from_name": string, "preset_id": string }` | `201` `CompanionMessage` | `404` if preset does not exist |
 | POST | `/api/companion/buddy/request` | `{ "unit_id": UnitId }` | `201` `BuddyMatch` | `409` if already matched. `404` if no buddy shares an interest |
+| POST | `/api/companion/neighbours/consent` | `{ "unit_id": UnitId, "open": boolean }` | `200` `NeighbourState` | `404` if unit not found |
+| POST | `/api/companion/neighbours/introduce` | `{ "unit_id": UnitId }` | `201` `NeighbourState` | `409` if not opted in or already requested. `404` if unit not found or no neighbour keeps the same hours |
+
+`POST /api/companion/messages` and the message-preset endpoints remain in the backend but are no longer used by the UI (section 2, "Cut during the build").
 
 ### 8.5 Demo Control
 
 | Method | Path | Body | Response |
 | --- | --- | --- | --- |
 | POST | `/api/demo/reset` | none | `200` `{ "units": Unit[] }`. Also broadcasts `snapshot` to all sockets. |
+| POST | `/api/demo/monitoring` | `{ "active": boolean }` | `200` `{ "unit_id": UnitId, "active": boolean }`. Turns the controllable unit's quiet-gap watch on (with a fresh clock) or off. `404` before the first reset. |
 
 ### 8.6 WebSocket (Backend → Dashboard)
 
@@ -488,7 +550,7 @@ Both role views run in the same page, so one connection receives events for both
 | `unit.updated` | Status, reason, latest values or quiet-gap data change | `Unit` |
 | `incident.updated` | Incident created, or any state or timeline change (voice call, notified, reminder, acknowledged, closed, auto-resolved) | `Incident` |
 | `notification.created` | A notification is created for either role | `Notification` |
-| `companion.message_delivered` | A "thinking of you" message is sent. The 3D home uses this to play the phone call | `CompanionMessage` |
+| `companion.message_delivered` | A companion message is sent (API only; no UI sends one now). The 3D home uses this to play the phone call | `CompanionMessage` |
 
 The client should reconnect automatically and treat the next `snapshot` as the source of truth.
 
@@ -499,9 +561,12 @@ See section 10.2 for the full `.env.example` of each app. Timing values:
 ```
 GRACE_PERIOD_SECONDS=15            # production: 900
 REMINDER_INTERVAL_SECONDS=15       # production: 900
+VOICE_CALL_RING_SECONDS=2          # simulated call rings this long before "no answer"
+NEIGHBOUR_MIN_OVERLAP_MINUTES=30   # same-hour neighbours: minimum outing overlap
+NEIGHBOUR_EARLY_RISER_BEFORE=06:30 # wakes before this local time = "early riser" label
 ```
 
-Per-resident values (`usual_quiet_gap_seconds`, `usual_outing_seconds`, `standby_power_kw`) live in the `resident_profiles` table and are demo-scaled in the seed data.
+Per-resident values (`usual_quiet_gap_seconds`, `usual_outing_seconds`, `standby_power_kw`) live in the `resident_profiles` table and are demo-scaled in the seed data. Each resident's daily rhythm (wake time and outing windows) lives in `resident_rhythms`.
 
 ### 8.8 Data Model (Supabase / Postgres)
 
@@ -510,7 +575,7 @@ Per-resident values (`usual_quiet_gap_seconds`, `usual_outing_seconds`, `standby
 | `units` | `unit_id` PK, `resident_name`, `caregiver_name`, `caregiver_relationship`, `controllable`, `status`, `status_reason`, `status_since`, `last_water_activity_at`, `last_door_event_at`, `latest_water_lpm`, `latest_power_kw`, `latest_door` |
 | `resident_profiles` | `unit_id` PK/FK, `usual_quiet_gap_seconds`, `usual_outing_seconds`, `standby_power_kw` |
 | `readings` | `id` PK, `unit_id` FK, `sensor`, `value_num`, `value_text`, `recorded_at` |
-| `incidents` | `incident_id` PK, `unit_id` FK, `state`, `opened_at`, `grace_ends_at`, `next_reminder_at`, `reminder_count`, `ack_role`, `ack_name`, `ack_at`, `outcome`, `closed_at` |
+| `incidents` | `incident_id` PK, `unit_id` FK, `state`, `opened_at`, `grace_ends_at`, `next_reminder_at`, `reminder_count`, `ack_role`, `ack_name`, `ack_at`, `outcome`, `report`, `closed_at` |
 | `incident_events` | `id` PK, `incident_id` FK, `type`, `at`, `actor_role`, `actor_name`, `detail` |
 | `notifications` | `notification_id` PK, `role`, `unit_id` FK, `kind`, `message`, `incident_id` FK nullable, `created_at`, `read` |
 | `community_activities` | `activity_id` PK, `title`, `starts_at`, `location`, `near_unit_id` FK |
@@ -520,6 +585,9 @@ Per-resident values (`usual_quiet_gap_seconds`, `usual_outing_seconds`, `standby
 | `buddy_matches` | `unit_id` PK/FK, `buddy_id` FK, `shared_interest`, `matched_at` |
 | `message_presets` | `preset_id` PK, `text` |
 | `companion_messages` | `message_id` PK, `unit_id` FK, `from_name`, `preset_id` FK, `text`, `channel`, `status`, `sent_at` |
+| `resident_rhythms` | `unit_id` PK/FK, `wake_local`, `outings` (jsonb list of local `start`/`end`) |
+| `neighbour_consents` | `unit_id` PK/FK, `consented_at` |
+| `neighbour_introductions` | `unit_id` PK/FK, `neighbour_unit_id` FK, `requested_at` |
 
 - `units.latest_water_lpm`, `latest_power_kw` and `latest_door` hold each unit's current values for `Unit.latest`. Background units never receive readings, so these cannot be derived from `readings`. Reset fills them from `seed.json`, and reading ingestion updates them for the controllable unit.
 - `resident_interests.position` keeps the interest order from `seed.json`. Buddy matching (section 9.6) depends on this order.
@@ -528,8 +596,9 @@ Per-resident values (`usual_quiet_gap_seconds`, `usual_outing_seconds`, `standby
 
 | Layer | Choice |
 | --- | --- |
-| Frontend | React + Vite + Tailwind |
-| 3D home | Built with ChatGPT Astra, embedded in the React app |
+| Frontend | React + Vite + Tailwind, `lucide-react` icons |
+| Caregiver app | Same frontend, installable PWA via `vite-plugin-pwa` |
+| 3D home | Three.js with React Three Fiber and Drei, Microsoft Rocketbox avatars (MIT) for Madam Lee and Guard Ali |
 | Backend | Python, FastAPI, run with `uvicorn` as a **single worker** |
 | Realtime | FastAPI native WebSocket |
 | Timers | `asyncio` tasks |
@@ -553,8 +622,9 @@ All teams use the **same** fixtures. The single source is `shared/seed.json` (se
 | **A-105** | **Madam Lee Mei Ling** | **Sarah Lee (Mum)** | **Yes (3D home)** | **Routine** | **Gardening, cooking** |
 | A-106 | Encik Ismail bin Hassan | Hakim (Ayah) | No | Routine | Gardening |
 
+- These six units are Floor 1 of Block A. Floors 2–24 on the Township dashboard are frontend-only sample data (section 5.3, T1), not in `seed.json`.
 - Background units (all except A-105) keep their reset status for the whole demo and receive no readings.
-- At reset, A-105 has no readings, `last_water_activity_at` is set to the reset time, and the character starts in bed.
+- At reset, A-105 has no readings, `last_water_activity_at` is set to the reset time, and the character starts beside the bed.
 
 ### 9.2 Baselines (demo-scaled)
 
@@ -578,10 +648,15 @@ Production equivalents are in hours (for example a 30-second demo quiet gap stan
 
 ### 9.4 Simulated Sensor Values (A-105)
 
-| Object | Reading when on | Reading when off |
+Each object adds its load to one household reading; switching an object off removes only its own load.
+
+| Object | Load when on | Household reading when everything is off |
 | --- | --- | --- |
-| Tap | water `6.0` L/min | water `0` |
-| Kettle (or light) | electricity `1.8` kW | electricity `0.15` kW (standby) |
+| Bathroom tap | water +`6` L/min | water `0` |
+| Shower | water +`9` L/min | water `0` |
+| Kettle | electricity +`1.65` kW | electricity `0.15` kW (standby) |
+| TV | electricity +`0.12` kW | electricity `0.15` kW (standby) |
+| Bedroom lamp | electricity +`0.06` kW | electricity `0.15` kW (standby) |
 | Door | door `"open"` | door `"closed"` |
 
 ### 9.5 Responder Names
@@ -593,7 +668,18 @@ Production equivalents are in hours (for example a 30-second demo quiet gap stan
 
 ### 9.6 Companion Data
 
-**Message presets**
+**Resident rhythms and neighbour consent** (stand in for four weeks of history; in production derived from first water use and door open/close pairs)
+
+| Unit | Wake | Outing | Open to neighbours | Role in the demo |
+| --- | --- | --- | --- | --- |
+| A-101 | 07:30 | 09:30–11:00 | Yes | No overlap with A-105 |
+| A-102 | 06:30 | 07:30–09:00 | Yes | Second-best match |
+| A-103 | 06:15 | 07:15–08:30 | No | Would match, excluded by consent |
+| A-104 | 05:45 | 06:50–08:00 | Yes | **Best match for A-105** (Madam Wong) |
+| **A-105** | **06:00** | **07:00–08:15** | **No** | Caregiver opts in live |
+| A-106 | 05:30 | 16:30–18:00 | Yes | Evening walker, no overlap |
+
+**Message presets** (API only, no longer in the UI)
 
 | `preset_id` | Text |
 | --- | --- |
@@ -639,12 +725,15 @@ One repository (monorepo):
 
 ```
 temanmu/
-├── frontend/              React + Vite + Tailwind (dashboard and app shell)
+├── frontend/              React + Vite + Tailwind (all pages)
 │   ├── src/
-│   │   ├── dashboard/     Township and Caregiver views
-│   │   ├── simulator/     Integration point for the 3D home (see 10.4)
-│   │   ├── api/           REST client and WebSocket client
-│   │   └── mocks/         Mock API layer (see 10.3)
+│   │   ├── landing/       Landing page
+│   │   ├── dashboard/     Township dashboard and incident response
+│   │   ├── caregiver/     Caregiver mobile app (PWA)
+│   │   ├── home/          3D home, characters, scenarios, sensor gateway (see 10.4)
+│   │   ├── slides/        Pitch slides
+│   │   ├── api/           REST client, WebSocket client, shared store
+│   │   └── mocks/         Mock API layer in a SharedWorker (see 10.3)
 │   └── .env.example
 ├── backend/               Python FastAPI
 │   ├── app/
@@ -653,6 +742,7 @@ temanmu/
 │   │   ├── rules/         Pure status rules engine (no I/O)
 │   │   ├── timers/        Grace and reminder timers (asyncio)
 │   │   ├── realtime/      WebSocket connection manager and broadcast
+│   │   ├── services/      Monitoring, companion, neighbours, notifications, reset
 │   │   ├── db/            Models, queries, SQL migrations
 │   │   └── settings.py    pydantic-settings
 │   ├── requirements.txt
@@ -679,32 +769,39 @@ temanmu/
 DATABASE_URL=postgresql://...      # Supabase Postgres connection string
 GRACE_PERIOD_SECONDS=15
 REMINDER_INTERVAL_SECONDS=15
+VOICE_CALL_RING_SECONDS=2
 CONTROLLABLE_UNIT_ID=A-105
 SEED_FILE=../shared/seed.json
 CORS_ORIGINS=http://localhost:5173
 DEMO_TIMEZONE=Asia/Kuala_Lumpur    # local time for activity schedules and reason-line clock times
+NEIGHBOUR_MIN_OVERLAP_MINUTES=30
+NEIGHBOUR_EARLY_RISER_BEFORE=06:30
 ```
 
 **`frontend/.env.example`**
 
 ```
-VITE_API_BASE_URL=http://localhost:8000
-VITE_WS_URL=ws://localhost:8000/ws
-VITE_USE_MOCK=false                # true = run without the backend (section 10.3)
+VITE_USE_MOCK=false                # true (or unset) = run without the backend (section 10.3)
+# Only for a separately hosted frontend; in dev, Vite proxies /api and /ws to localhost:8000
+# VITE_API_BASE_URL=https://your-backend-host
+# VITE_WS_URL=wss://your-backend-host/ws
 ```
+
+The Vite proxy also lets a phone on the same Wi-Fi open the caregiver app from the laptop.
 
 **Run commands**
 
 ```
 # backend (single worker, required for timers and WebSocket)
 cd backend && pip install -r requirements.txt
+python -m app.db.migrate             # applies SQL migrations, safe to re-run
 uvicorn app.main:app --port 8000
 
 # frontend
 cd frontend && npm install && npm run dev
 ```
 
-**Database:** SQL migration files live in `backend/app/db/migrations/` and are applied to the Supabase project. After migrating, call `POST /api/demo/reset` once to load seed data.
+**Database:** SQL migration files live in `backend/app/db/migrations/` (`001`–`006`) and are applied to the Supabase project with `python -m app.db.migrate`. After migrating, call `POST /api/demo/reset` once to load seed data.
 
 **Secrets:** never commit real `.env` files. Only `.env.example` is committed.
 
@@ -714,38 +811,41 @@ So the frontend can start on day one, it ships a mock layer that follows the API
 
 | Item | Requirement |
 | --- | --- |
-| Switch | `VITE_USE_MOCK=true` routes all REST and WebSocket traffic to the mock layer. No component code changes. |
-| REST mocks | Every endpoint in section 8 returns contract-shaped data built from `shared/seed.json`. Mock Service Worker (MSW) is recommended. |
-| WebSocket mock | A mock socket emits `snapshot` on connect, plus the other event types in section 8.6. |
-| Mock scenarios | A small developer-only panel (hidden in the demo) can fire scripted event sequences, such as an incident going through grace, notified, reminder and acknowledged, so the dashboard can be built and tested before the rules engine exists. |
+| Switch | Mock mode is the default; `VITE_USE_MOCK=false` uses the real backend. No component code changes. |
+| Shared mock | The mock backend runs in a browser **SharedWorker**, so the dashboard, caregiver app and 3D view tabs share one mock session, just as they share the real backend. |
+| REST mocks | Every endpoint in section 8 returns contract-shaped data built from `shared/seed.json`, including the status rules, timers and companion features. |
+| WebSocket mock | The mock emits `snapshot` on connect, plus the other event types in section 8.6. |
+| Compressed time | In mock mode the inactivity scenarios jump the demo clock (labelled "Demo time jump") instead of waiting for the real quiet gap. |
 | Contract changes | Any change to section 8 must update both the backend and the mocks in the same change. |
 
 The backend team can also return the same seed-shaped stub responses from real FastAPI routes early on, so the frontend can switch to the real backend endpoint by endpoint.
 
 ### 10.4 3D Home Integration Contract
 
-The 3D builder chooses freely how the home is built and embedded. Whatever the approach, it must:
+The 3D home runs as its own page (`/#simulator`). It must:
 
-1. Send `POST /api/readings` with the values in section 9.4 when the tap, kettle/light or door is clicked or used in a scenario.
-2. Listen to the WebSocket for `companion.message_delivered` (phone call animation) and `snapshot` after reset (return the scene to its starting state).
-3. Provide the scenario buttons, the meter readout panel and the audience-only label (section 5.2).
-4. Use `unit_id` `A-105` for all readings.
+1. Send `POST /api/readings` with the values in section 9.4 when a sensor object is clicked or used in a scenario.
+2. Listen to the WebSocket for `incident.updated` (phone ringing, responder arrival), `companion.message_delivered` (phone call animation) and `snapshot` after reset (return the scene to its starting state).
+3. Call `POST /api/demo/monitoring` with `active: true` when a scenario starts and `false` when it stops.
+4. Provide the scenario player, the meter readout panel and the sensor view (section 5.2).
+5. Use `unit_id` `A-105` for all readings.
 
 ---
 
 ## 11. Unique Value Proposition
 
-**TemanMu turns everyday household utility data into a privacy-first safety net for elderly residents living alone: it notices when their routine breaks, gets a human to check on them, and gives families daily reassurance, without cameras, wearables or apps for the resident.**
+**TemanMu turns everyday household utility data into a privacy-first safety net for elderly residents living alone: it notices when their routine breaks, gets a human to check on them, gives families daily reassurance and helps residents connect with the neighbours around them, without cameras, wearables or apps for the resident.**
 
 What the demo proves:
 
-1. **No surveillance.** The system sees only water, electricity and door data. The 3D home is for the audience only.
+1. **No surveillance.** The system sees only water, electricity and door data. The 3D home is for the audience only, and its sensor view shows exactly what TemanMu receives.
 2. **Personal, not one-size-fits-all.** Alerts compare against each resident's own usual quiet gap, shown live in the progress bar.
-3. **Fewer false alarms through cross-checking.** Water triggers, the door and electricity together recognise outings so they stay silent, and water or electricity activity during the grace period cancels an alert before anyone is bothered. The reason line shows which signals decided.
+3. **Fewer false alarms through cross-checking.** Water triggers, the door and electricity together recognise outings so they stay silent, and water or electricity activity during the grace period cancels an alert before anyone is bothered. A simulated call to the resident comes first, so families are only alerted if she doesn't answer.
 4. **Zero tech burden on the elderly.** Confirmation is passive, plus a simulated voice call. The resident never touches an app.
-5. **A clear human response.** Caregiver and township are notified together, reminded until someone responds, and every step is recorded.
-6. **More than an alarm.** On normal days, families get morning reassurance, can send Mum a "thinking of you" message that reaches her as a simple phone call, and can match her with a Community Buddy who shares her interests.
-7. **Built for the township.** One dashboard covers every enrolled unit, and the architecture treats the simulator as hardware, so real meters can replace it without changing the backend.
+5. **A clear human response, end to end.** Caregiver and township are notified together and reminded until someone responds. The caregiver can check in remotely or ask for a visit; the guard takes the visit, records an outcome and, if needed, a 999 handoff. A case where safety couldn't be verified can't be closed by accident.
+6. **More than an alarm.** On normal days, families get morning reassurance and a view of Mum's day on their phone, can invite her to nearby activities, and can match her with a Community Buddy who shares her interests.
+7. **Friendships from shared routines.** TemanMu already knows roughly when residents go out, so with consent it introduces neighbours whose days naturally cross, through a human coordinator, without ever revealing anyone's times.
+8. **Built for the township.** One dashboard covers a whole block (144 units) and surfaces only the homes that need attention, and the architecture treats the simulator as hardware, so real meters can replace it without changing the backend.
 
 ---
 
@@ -753,7 +853,7 @@ What the demo proves:
 
 | # | Item | Current assumption | Owner to confirm |
 | --- | --- | --- | --- |
-| 1 | 3D home build | The 3D builder freely chooses how to build and embed it, as long as it meets the integration contract in section 10.4 | 3D builder |
+| 1 | 3D home build | Built with React Three Fiber as its own page, meeting the integration contract in section 10.4 | Done |
 | 2 | "Day start" for morning reassurance | Demo reset marks the start of the day | Team |
 | 3 | Electricity reading | Sends power in kW, with activity defined as above `standby_power_kw` | Backend |
 | 4 | Background units | Fixed scripted states set at reset (mostly Routine, one Possible Away). They do not change during the demo | Team |
@@ -762,11 +862,11 @@ What the demo proves:
 | 7 | "Call Mum" button | Simulated, no real call | Team |
 | 8 | Community actions | Stored only, with no follow-up flow in the prototype | Team |
 | 9 | Buddy data | A few volunteer buddies and the resident's interests are pre-seeded. Demo reset clears the match | Backend |
-| 10 | "Thinking of you" delivery | Simulated one-way voice call, with no audio played. Demo reset clears sent messages | Team |
-| 11 | Companion call while resident is away or in an incident | Not decided. Default: the call is always shown as answered | Team |
-| 12 | Exact scenario timelines | To be decided later. Must match the seed baselines and `.env` timings | Team |
-| 13 | AI agent | Not decided. Recommended option: an AI alert explainer for caregivers, with the rule-based reason line as fallback | Team |
-| 14 | 3D home owner | Not yet assigned (see section 13) | Team |
+| 10 | "Thinking of you" messages | Cut from the UI. The API remains | Done |
+| 11 | Neighbour rhythms | Seeded per resident (section 9.6), standing in for four weeks of history. Introductions are recorded only; nobody is contacted | Team |
+| 12 | Exact scenario timelines | Set in `frontend/src/home/scenarios/definitions.ts`. Must match the seed baselines and `.env` timings | Team |
+| 13 | AI agent | Not in the prototype. Possible future work: an AI alert explainer for caregivers, with the rule-based reason line as fallback | Team |
+| 14 | Township block size | Floor 1 is live; floors 2–24 are frontend sample data to show scale | Team |
 
 ---
 
@@ -799,7 +899,7 @@ Owns the database, seed data and every endpoint outside the incident lifecycle.
 | Seed and reset | `shared/seed.json`, seed loading, `POST /api/demo/reset` (B6, B7) |
 | Read APIs | All `GET` endpoints in section 8.3, including `GET /api/config` |
 | Notifications | Notification records, `POST /api/notifications/read` |
-| Companion and community | Message presets, `POST /api/companion/messages` (including the `companion.message_delivered` broadcast via Backend 1's broadcaster), buddy matching (B10), community activities and responses |
+| Companion and community | Message presets, `POST /api/companion/messages` (including the `companion.message_delivered` broadcast via Backend 1's broadcaster), buddy matching (B10), same-hour neighbours (B11), community activities and responses |
 | Setup | Settings and `.env` (B8), CORS, `requirements.txt`, backend part of the README |
 
 **First deliverable (unblocks others):** `shared/seed.json`, database schema, and seed-shaped `GET /api/units` and `GET /api/config`.
@@ -812,13 +912,13 @@ Owns the app frame, all communication with the backend, and the Caregiver view.
 
 | Area | Scope |
 | --- | --- |
-| App shell | Split screen, draggable divider, role switcher, inactive-role badge, theme toggle, sound and mute (G1–G6) |
+| App shell | Page routing, landing page, PWA setup, theme toggle, sound and mute (G1–G6) |
 | Data layer | REST client, WebSocket client with auto-reconnect, shared state store fed by `snapshot` and events, countdowns computed from deadlines (G8) |
-| Mock layer | `VITE_USE_MOCK` switch, REST and WebSocket mocks from `seed.json`, developer mock-scenario panel (section 10.3) |
-| Caregiver view | Status header, call button, notification feed, community card, "thinking of you" presets, buddy request (C1–C7) |
-| 3D home slot | The left-panel container where the 3D home is embedded, following section 10.4 |
+| Mock layer | `VITE_USE_MOCK` switch, SharedWorker mock from `seed.json` (section 10.3) |
+| Caregiver app | Status card, call button, Mum's day, updates feed, responses, community activity, buddy, same-hour neighbour, settings (C1–C9) |
+| 3D home page | The page that hosts the 3D home, following section 10.4 |
 
-**First deliverable (unblocks others):** app shell with the role switcher, plus the data layer running on mocks, so Frontend 2 can build views against live-looking data.
+**First deliverable (unblocks others):** app shell and page routing, plus the data layer running on mocks, so Frontend 2 can build views against live-looking data.
 
 ### Frontend 2: Township View and Incident Components
 
@@ -826,16 +926,16 @@ Owns the Township view and the incident components shared by both roles.
 
 | Area | Scope |
 | --- | --- |
-| Unit grid | Six units, highlighted controllable unit, status distinction, sorting (T1, T2) |
-| Unit detail | Water, electricity and door timelines, reason line, quiet-gap progress bar, baseline note (T3–T5) |
-| Incident panel | Incident timeline, grace countdown, reminder count, incident history (T6, T7) |
-| Shared incident components | "I'll Check Now" button and outcome logging, built once and used in both the Township and Caregiver views (C4) |
+| Block view | 24-floor map, three-floor lens, unit tiles with quiet-gap bars, status distinction, go-to-unit search (T1–T5) |
+| Needs attention | Alert list, filter chips (T6) |
+| Incident response | Auto-opening dialog with I'll Check Now, outcome and note, 999 handoff (T7) |
+| Shared incident components | Outcome logging and escalation, reused by the caregiver app's incident screen (C5) |
 
 **First deliverable (unblocks others):** shared incident components, so Frontend 1 can drop them into the Caregiver view.
 
 ### 3D Home
 
-Not yet assigned. The owner builds the simulated home to the integration contract in section 10.4, covering features S1–S8. Frontend 1 provides the slot it embeds into.
+Builds the simulated home to the integration contract in section 10.4, covering features S1–S11. Frontend 1 provides the page it runs in.
 
 ### Integration Order
 
