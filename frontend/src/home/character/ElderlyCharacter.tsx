@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Html } from '@react-three/drei'
-import { AnimationClip, AnimationMixer, Group, LoadingManager, MathUtils, type AnimationAction, type Bone, type SkinnedMesh, type Texture } from 'three'
-import { FBXLoader } from 'three/addons/loaders/FBXLoader.js'
+import { AnimationMixer, Group, MathUtils, type AnimationAction, type Bone } from 'three'
 import { ROOM_LABELS, WAYPOINTS, routeBetween, type RoomId, type Waypoint } from './navigation'
 import { INTERACTIONS, type InteractionId } from '../interactions/registry'
+import { ROCKETBOX_SCALE, disposeAvatar, inPlace, prepareAvatar, rocketboxLoader } from './rocketbox'
 
 export type CharacterAnimation = 'rest' | 'wake' | 'collapse' | 'recover'
 export type CharacterCommand = { destination: Waypoint | InteractionId | CharacterAnimation | 'reset' | 'stop'; id: number; kind?: 'move' | 'interact' | 'animate'; approach?: Waypoint }
@@ -16,37 +16,10 @@ const WALK_SPEED = 1 // metres per second: brisk enough for a short presentation
 const WALK_ANIMATION_SPEED = 1.4 // match the quicker translation to the avatar's gait
 const URGENT_WALK_MULTIPLIER = 1.6
 const TURN_SPEED = 3.1 // radians per second
-
-function inPlace(clip: AnimationClip) {
-  const copy = clip.clone()
-  // Rocketbox clips animate the Biped root in world space. Keep the vertical
-  // gait, but let our waypoint controller own horizontal movement.
-  const root = copy.tracks.find(track => track.name === 'Bip01.position')
-  if (root) {
-    const values = root.values
-    for (let index = 0; index < values.length; index += 3) {
-      values[index] = values[0]
-      values[index + 2] = values[2]
-    }
-  }
-  return copy
-}
-
-function disposeAvatar(group: Group) {
-  group.traverse(object => {
-    if ('isMesh' in object && object.isMesh) {
-      const mesh = object as SkinnedMesh
-      mesh.geometry.dispose()
-      for (const material of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
-        const maps = material as typeof material & Partial<Record<'map' | 'normalMap' | 'specularMap' | 'alphaMap', Texture>>
-        for (const key of ['map', 'normalMap', 'specularMap', 'alphaMap'] as const) {
-          maps[key]?.dispose()
-        }
-        material.dispose()
-      }
-    }
-  })
-}
+// About 1.52 m: shorter than the source avatar, as befits a resident in her late seventies.
+const MUM_SCALE = .00875
+// Lying in bed, the avatar pivots at her feet; slide her so her head stays on the pillow.
+const BED_HEAD_OFFSET = .28 - (ROCKETBOX_SCALE - MUM_SCALE) * 174
 
 /** Self-contained actor: loaded once, animated in the render loop, navigated on authored clear paths. */
 export function ElderlyCharacter({ command, pose, speech, visible, paused, urgent, onStatus, onReached, onArrived, onAnimationComplete }: {
@@ -80,14 +53,7 @@ export function ElderlyCharacter({ command, pose, speech, visible, paused, urgen
     let active = true
     let loaded: Group | null = null
     let animationMixer: AnimationMixer | null = null
-    const manager = new LoadingManager()
-    manager.setURLModifier(url => {
-      const file = decodeURIComponent(url).split(/[\\/]/).pop() || ''
-      const aged = file === 'f003_head_color.tga' || file === 'f003_opacity_color.tga'
-      return file.toLowerCase().endsWith('.tga')
-        ? `${ASSET_ROOT}textures/${file.slice(0, -4)}${aged ? '_aged' : ''}.webp` : url
-    })
-    const loader = new FBXLoader(manager)
+    const loader = rocketboxLoader(ASSET_ROOT, stem => stem === 'f003_head_color' || stem === 'f003_opacity_color' ? `${stem}_aged` : stem)
     Promise.all([
       loader.loadAsync(`${ASSET_ROOT}model.fbx`),
       loader.loadAsync(`${ASSET_ROOT}idle.fbx`),
@@ -95,20 +61,7 @@ export function ElderlyCharacter({ command, pose, speech, visible, paused, urgen
     ]).then(([avatar, idleFile, walkFile]) => {
       loaded = avatar
       if (!active) { disposeAvatar(avatar); return }
-      avatar.scale.setScalar(.0095) // Rocketbox centimetres -> house metres; about 1.65 m tall
-      avatar.traverse(object => {
-        if ('isSkinnedMesh' in object && object.isSkinnedMesh) {
-          const mesh = object as SkinnedMesh
-          mesh.castShadow = true
-          mesh.receiveShadow = true
-          mesh.frustumCulled = false
-          // FBXLoader reads zero diffuse values from this source FBX. White
-          // allows its supplied colour textures to show under house lighting.
-          for (const material of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
-            if ('color' in material) (material.color as { set: (value: string) => void }).set('#ffffff')
-          }
-        }
-      })
+      prepareAvatar(avatar, MUM_SCALE)
       const upper = avatar.getObjectByName('Bip01 R UpperArm')
       const lower = avatar.getObjectByName('Bip01 R Forearm')
       if (upper && lower) arm.current = { upper: upper as Bone, lower: lower as Bone }
@@ -287,7 +240,7 @@ export function ElderlyCharacter({ command, pose, speech, visible, paused, urgen
     }
     if (poseGroup.current) {
       const rest = restPose.current, fall = fallPose.current
-      poseGroup.current.position.set(-1.4 * rest, .82 * rest + .23 * fall, .28 * rest)
+      poseGroup.current.position.set(-1.4 * rest, .82 * rest + .23 * fall, BED_HEAD_OFFSET * rest)
       poseGroup.current.rotation.set(-Math.PI / 2 * rest, 0, -Math.PI / 2 * fall)
       if (motion.current?.kind === 'collapse' && motion.current.elapsed < .7)
         poseGroup.current.rotation.z += Math.sin(motion.current.elapsed * 16) * .07 * (1 - motion.current.elapsed / .7)
@@ -307,6 +260,6 @@ export function ElderlyCharacter({ command, pose, speech, visible, paused, urgen
 
   return <group ref={shell} name="madam-lee-mei-ling" visible={visible} position={[WAYPOINTS.bedroom[0], .045, WAYPOINTS.bedroom[1]]}>
     <group ref={poseGroup}>{model && <primitive object={model} />}</group>
-    {speech && <Html position={[0, 1.9, 0]} center style={{ pointerEvents: 'none' }}><span className="home-character-speech">“{speech}”</span></Html>}
+    {speech && <Html position={[0, 1.78, 0]} center style={{ pointerEvents: 'none' }}><span className="home-character-speech">“{speech}”</span></Html>}
   </group>
 }

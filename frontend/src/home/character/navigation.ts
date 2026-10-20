@@ -21,7 +21,7 @@ export const WAYPOINTS = {
   porch: [1.48, 5.68],
   outside: [1.48, 6.08],
   collapseSpot: [-1.35, 3.4],
-  responderCheck: [-.45, 3.55],
+  responderCheck: [-.35, 2.85],
   tapApproach: [.35, -3.18],
   showerApproach: [2.15, -1.85],
   kettleApproach: [4.32, 2.08],
