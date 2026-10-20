@@ -2,7 +2,7 @@
 
 /** A sun rising over three sprouts: something happening outdoors this week. */
 export function OutingArt() {
-  return <svg className="cg-art" viewBox="0 0 320 128" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+  return <svg className="cg-art" viewBox="96 28 100 100" aria-hidden="true">
     <circle className="cg-art-ring" cx="226" cy="128" r="104" />
     <circle className="cg-art-ring" cx="226" cy="128" r="78" />
     <circle className="cg-art-sun" cx="226" cy="128" r="52" />
@@ -16,7 +16,7 @@ export function OutingArt() {
 
 /** Two figures side by side, leaning in: a buddy who shares an interest. */
 export function BuddyArt() {
-  return <svg className="cg-art" viewBox="0 0 320 128" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+  return <svg className="cg-art" viewBox="104 28 112 112" aria-hidden="true">
     <circle className="cg-art-ring" cx="160" cy="128" r="96" />
     <g className="cg-art-person is-a">
       <circle cx="134" cy="62" r="20" />
@@ -33,7 +33,7 @@ export function BuddyArt() {
 /** An apartment block where two homes on different floors light up at the same hour. */
 export function NeighbourArt() {
   const lit = new Set(['0-1', '2-3'])
-  return <svg className="cg-art" viewBox="0 0 320 128" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+  return <svg className="cg-art" viewBox="96 18 110 110" aria-hidden="true">
     <circle className="cg-art-dawn" cx="276" cy="34" r="13" />
     <rect className="cg-art-block" x="70" y="18" width="180" height="110" rx="8" />
     {[0, 1, 2].map(row => [0, 1, 2, 3, 4].map(col => {
