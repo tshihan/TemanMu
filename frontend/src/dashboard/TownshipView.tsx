@@ -62,8 +62,10 @@ function sampleRows(start: number, now: number): Row[] {
 
 function liveRow(unit: Unit, now: number): Row {
   const lastWater = unit.quiet_gap.last_water_activity_at
+  const confirmed = unit.quiet_gap.last_caregiver_confirmation_at
+  const anchor = confirmed && (!lastWater || confirmed > lastWater) ? confirmed : lastWater
   const usual = unit.quiet_gap.usual_max_seconds
-  const raw = lastWater ? Math.max(0, (now - new Date(lastWater).getTime()) / 1000) : 0
+  const raw = anchor ? Math.max(0, (now - new Date(anchor).getTime()) / 1000) : 0
   const alert = isAlert(unit.status)
   return {
     id: unit.unit_id, floor: 1, short: shortName(unit.resident_name),

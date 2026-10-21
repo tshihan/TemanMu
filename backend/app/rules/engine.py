@@ -27,6 +27,7 @@ class UnitFacts:
     power_kw: float
     door: DoorState
     last_water_activity_at: datetime | None
+    last_caregiver_confirmation_at: datetime | None
     last_door_event_at: datetime | None
     baseline: Baseline
     incident_state: IncidentState | None  # active incident only; None if none
@@ -156,7 +157,10 @@ def _to_routine(facts: UnitFacts, at: datetime) -> dict:
 
 
 def _quiet_anchor(facts: UnitFacts) -> datetime:
-    return facts.last_water_activity_at or facts.status_since
+    return max(
+        (at for at in (facts.last_water_activity_at, facts.last_caregiver_confirmation_at) if at is not None),
+        default=facts.status_since,
+    )
 
 
 def next_check_at(facts: UnitFacts) -> datetime | None:
@@ -181,14 +185,22 @@ def on_tick(facts: UnitFacts, now: datetime, clock_text: ClockText = utc_hhmm) -
         door_clock = clock_text(door) if door is not None and door > anchor else None
         return TickDecision(
             kind="quiet_gap",
-            reason=reasons.quiet_gap_reason(
-                (now - anchor).total_seconds(),
-                facts.baseline.usual_quiet_gap_seconds,
-                door_clock,
-                facts.power_kw,
-                facts.baseline.standby_power_kw,
+            reason=(
+                f"No water use since the caregiver spoke with {facts.caregiver_relationship}; "
+                "another check is needed."
+                if facts.last_caregiver_confirmation_at == anchor else
+                reasons.quiet_gap_reason(
+                    (now - anchor).total_seconds(),
+                    facts.baseline.usual_quiet_gap_seconds,
+                    door_clock,
+                    facts.power_kw,
+                    facts.baseline.standby_power_kw,
+                )
             ),
-            detected_detail=reasons.DETECTED_QUIET_GAP,
+            detected_detail=(
+                "No water activity since caregiver confirmation"
+                if facts.last_caregiver_confirmation_at == anchor else reasons.DETECTED_QUIET_GAP
+            ),
         )
 
     # T2: possible_away for longer than the usual outing.
@@ -216,6 +228,7 @@ def facts_from(unit: Unit, incident_state: IncidentState | None) -> UnitFacts:
         power_kw=unit.latest.power_kw,
         door=unit.latest.door,
         last_water_activity_at=unit.quiet_gap.last_water_activity_at,
+        last_caregiver_confirmation_at=unit.quiet_gap.last_caregiver_confirmation_at,
         last_door_event_at=unit.latest.last_door_event_at,
         baseline=unit.baseline,
         incident_state=incident_state if incident_state in ACTIVE_INCIDENT_STATES else None,

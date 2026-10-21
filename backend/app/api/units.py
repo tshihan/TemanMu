@@ -4,7 +4,8 @@ from app.api.deps import require_unit
 from app.db import incidents as db_incidents
 from app.db import readings as db_readings
 from app.db import units as db_units
-from app.models import Incident, IncidentState, Reading, Unit, UtcDatetime
+from app.models import ConfirmHomeRequest, Incident, IncidentState, Reading, Unit, UtcDatetime
+from app.services import monitoring
 
 router = APIRouter(tags=["units"])
 
@@ -21,6 +22,17 @@ async def get_unit(unit_id: str) -> Unit:
     if unit is None:
         raise HTTPException(status_code=404, detail="Unit not found")
     return unit
+
+
+@router.post("/units/{unit_id}/confirm-home", response_model=Unit)
+async def confirm_home(unit_id: str, body: ConfirmHomeRequest) -> Unit:
+    """Caregiver reports a direct call confirming the resident is home and okay."""
+    try:
+        return await monitoring.confirm_home_after_call(unit_id, body.name.strip())
+    except monitoring.UnitNotFound:
+        raise HTTPException(status_code=404, detail="Unit not found") from None
+    except monitoring.IncidentConflict as error:
+        raise HTTPException(status_code=409, detail=str(error)) from None
 
 
 @router.get("/units/{unit_id}/readings", response_model=list[Reading])

@@ -44,6 +44,7 @@ def _row_to_unit(row: asyncpg.Record) -> Unit:
         ),
         quiet_gap=QuietGap(
             last_water_activity_at=row["last_water_activity_at"],
+            last_caregiver_confirmation_at=row["last_caregiver_confirmation_at"],
             usual_max_seconds=baseline.usual_quiet_gap_seconds,
         ),
         baseline=baseline,
@@ -82,6 +83,7 @@ async def update_unit_state(
     status_reason: str | None = None,
     status_since: datetime | None = None,
     last_water_activity_at: datetime | None = None,
+    last_caregiver_confirmation_at: datetime | None = None,
     last_door_event_at: datetime | None = None,
     latest_water_lpm: float | None = None,
     latest_power_kw: float | None = None,
@@ -98,6 +100,7 @@ async def update_unit_state(
         "status_reason": status_reason,
         "status_since": status_since,
         "last_water_activity_at": last_water_activity_at,
+        "last_caregiver_confirmation_at": last_caregiver_confirmation_at,
         "last_door_event_at": last_door_event_at,
         "latest_water_lpm": latest_water_lpm,
         "latest_power_kw": latest_power_kw,

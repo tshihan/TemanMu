@@ -122,6 +122,7 @@ function initialSnapshot(): Snapshot {
       },
       quiet_gap: {
         last_water_activity_at: new Date(resetAt.getTime() + item.last_water_activity_offset_seconds * 1000).toISOString(),
+        last_caregiver_confirmation_at: null,
         usual_max_seconds: item.baseline.usual_quiet_gap_seconds,
       },
       baseline: { ...item.baseline, source: 'simulated_history' as const },
@@ -142,6 +143,8 @@ let neighbourConsents = initialConsents()
 let introductions: { unit_id: string; neighbour_unit_id: string; requested_at: string }[] = []
 let morningSentOn: string | null = null
 let scenarioTimers = new Set<ReturnType<typeof setTimeout>>()
+let monitoringActive = false
+let watchTimer: ReturnType<typeof setTimeout> | null = null
 
 export const mockSnapshot = (): Snapshot => clone(state)
 
@@ -200,11 +203,33 @@ function updateUnit(unit: Unit, status: Unit['status'], reason: string): void {
   unit.status = status
   unit.status_reason = reason
   unit.status_since = now()
+  scheduleMockWatch(unit)
   publish('unit.updated', clone(unit))
 }
 
 function latestIncident(unitId: string): Incident | undefined {
   return state.incidents.find(item => item.unit_id === unitId && ['grace', 'notified', 'acknowledged'].includes(item.state))
+}
+
+function scheduleMockWatch(unit: Unit): void {
+  if (watchTimer) clearTimeout(watchTimer)
+  watchTimer = null
+  if (!monitoringActive || !unit.controllable || latestIncident(unit.unit_id)) return
+  const confirmed = unit.quiet_gap.last_caregiver_confirmation_at
+  const water = unit.quiet_gap.last_water_activity_at
+  const possibleAway = unit.status === 'possible_away'
+  const confirmedHome = unit.status === 'routine' && !!confirmed && (!water || confirmed > water)
+  if (!possibleAway && !confirmedHome) return
+  const anchor = possibleAway ? unit.status_since : confirmed!
+  const seconds = possibleAway ? unit.baseline.usual_outing_seconds : unit.baseline.usual_quiet_gap_seconds
+  watchTimer = setTimeout(() => {
+    watchTimer = null
+    if (!monitoringActive || latestIncident(unit.unit_id) || unit.status !== (possibleAway ? 'possible_away' : 'routine')) return
+    if (possibleAway && unit.status_since === anchor) startGrace(unit, 'outing_timeout')
+    if (confirmedHome && unit.quiet_gap.last_caregiver_confirmation_at === anchor
+      && (!unit.quiet_gap.last_water_activity_at || unit.quiet_gap.last_water_activity_at <= anchor))
+      startGrace(unit, 'caregiver_confirmation')
+  }, Math.max(0, new Date(anchor).getTime() + seconds * 1000 - Date.now()))
 }
 
 function autoResolve(unit: Unit, incident: Incident): void {
@@ -243,7 +268,13 @@ function notifyConcern(unit: Unit, incident: Incident): void {
   incident.grace_ends_at = null
   incident.next_reminder_at = new Date(Date.now() + state.config.reminder_interval_seconds * 1000).toISOString()
   incident.events.push({ type: 'notified', at: now(), detail: 'Caregiver and township notified together' })
-  updateUnit(unit, 'unresolved_concern', `No water use beyond the usual ${unit.baseline.usual_quiet_gap_seconds}-second gap; no door outing and electricity at standby. Mum did not answer the simulated call.`)
+  const detected = incident.events.find(event => event.type === 'detected')?.detail
+  const reason = detected === 'Outing longer than usual'
+    ? 'Possible outing lasted longer than usual. Mum did not answer the simulated call.'
+    : detected === 'No water activity since caregiver confirmation'
+      ? 'No water use since the caregiver confirmed Mum was home. Mum did not answer the simulated call.'
+      : `No water use beyond the usual ${unit.baseline.usual_quiet_gap_seconds}-second gap; no door outing and electricity at standby. Mum did not answer the simulated call.`
+  updateUnit(unit, 'unresolved_concern', reason)
   publish('incident.updated', clone(incident))
   for (const role of ['caregiver', 'township'] as Role[]) {
     notify({ role, unit_id: unit.unit_id, kind: 'alert', message: `Unresolved concern at ${unit.unit_id}: ${unit.resident_name} could not be reached.`, incident_id: incident.incident_id })
@@ -251,20 +282,25 @@ function notifyConcern(unit: Unit, incident: Incident): void {
   later(() => sendReminder(incident), state.config.reminder_interval_seconds * 1000)
 }
 
-function startGrace(unit: Unit): Incident {
+function startGrace(unit: Unit, trigger: 'quiet_gap' | 'outing_timeout' | 'caregiver_confirmation' = 'quiet_gap'): Incident {
   const openedAt = now()
+  const detectedDetail = trigger === 'outing_timeout' ? 'Outing longer than usual'
+    : trigger === 'caregiver_confirmation' ? 'No water activity since caregiver confirmation' : 'Water quiet gap exceeded'
   const incident: Incident = {
     incident_id: crypto.randomUUID(), unit_id: unit.unit_id, state: 'grace', opened_at: openedAt,
     grace_ends_at: new Date(Date.now() + state.config.grace_period_seconds * 1000).toISOString(),
     next_reminder_at: null, reminder_count: 0, acknowledged_by: null, outcome: null, closed_at: null,
     events: [
-      { type: 'detected', at: openedAt, detail: 'Water quiet gap exceeded' },
+      { type: 'detected', at: openedAt, detail: detectedDetail },
       { type: 'voice_call_started', at: openedAt, detail: 'Calling Mum (simulated)' },
     ],
   }
   state.incidents.unshift(incident)
   unit.active_incident_id = incident.incident_id
-  updateUnit(unit, 'unusual_inactivity', `No water use longer than the usual ${unit.baseline.usual_quiet_gap_seconds}-second gap. No door outing; electricity remains at standby.`)
+  const statusReason = trigger === 'outing_timeout' ? 'Possible outing has lasted longer than usual; checking whether Mum is okay.'
+    : trigger === 'caregiver_confirmation' ? 'No water use since the caregiver confirmed Mum was home; checking again.'
+      : `No water use longer than the usual ${unit.baseline.usual_quiet_gap_seconds}-second gap. No door outing; electricity remains at standby.`
+  updateUnit(unit, 'unusual_inactivity', statusReason)
   publish('incident.updated', clone(incident))
   later(() => {
     if (incident.state !== 'grace') return
@@ -317,6 +353,12 @@ export const mockApi: Api = {
     const incident = latestIncident(unit.unit_id)
     if (activity && incident && !incident.events.some(event => event.type === 'emergency_called' || event.type === 'unable_to_verify')) autoResolve(unit, incident)
     else if (incident?.events.some(event => event.type === 'emergency_called' || event.type === 'unable_to_verify')) publish('unit.updated', clone(unit))
+    else if (activity && reading.sensor === 'door' && !incident) {
+      if (unit.status === 'possible_away') updateUnit(unit, 'routine', 'Front door opened again; the resident may have returned home')
+      else if (unit.status === 'routine' && unit.latest.water_lpm === 0 && unit.latest.power_kw <= unit.baseline.standby_power_kw)
+        updateUnit(unit, 'possible_away', 'Front door opened, then the home went quiet: possible outing')
+      else publish('unit.updated', clone(unit))
+    }
     else if (activity && reading.sensor !== 'door' && ['routine', 'possible_away'].includes(unit.status)) {
       updateUnit(unit, 'routine', reading.sensor === 'electricity' ? 'Water and electricity activity within usual routine' : 'Water activity detected within usual routine')
     } else publish('unit.updated', clone(unit))
@@ -370,6 +412,16 @@ export const mockApi: Api = {
     publish('incident.updated', clone(incident))
     for (const role of ['township', 'caregiver'] as Role[]) notify({ role, unit_id: incident.unit_id, kind: actor.action, message, incident_id: id })
     return clone(incident)
+  },
+  async confirmHome(id, actor) {
+    const unit = unitOrThrow(id)
+    if (actor.role !== 'caregiver' || actor.name !== unit.caregiver_name)
+      throw new ApiError(409, 'Only the designated caregiver can record this confirmation')
+    if (unit.status !== 'possible_away' || latestIncident(id))
+      throw new ApiError(409, 'Home confirmation is available only while the resident is possibly away')
+    unit.quiet_gap.last_caregiver_confirmation_at = now()
+    updateUnit(unit, 'routine', `${actor.name} reports speaking directly with ${unit.caregiver_relationship}: home and okay; sensor activity has not been confirmed.`)
+    return clone(unit)
   },
   async escalateIncident(id, actor) {
     const incident = incidentOrThrow(id)
@@ -481,6 +533,9 @@ export const mockApi: Api = {
   },
   async resetDemo() {
     clearScenarioTimers()
+    if (watchTimer) clearTimeout(watchTimer)
+    watchTimer = null
+    monitoringActive = false
     state = initialSnapshot()
     readings = []
     messages = []
@@ -492,8 +547,10 @@ export const mockApi: Api = {
     publish('snapshot', clone(state))
     return { units: clone(state.units) }
   },
-  // The mock has no background quiet-gap watch; scenarios prime its inactivity explicitly.
+  // Watches only the two relevant demo transitions; the other quiet-gap scenario is primed explicitly.
   async setMonitoring(active) {
+    monitoringActive = active
+    scheduleMockWatch(unitOrThrow('A-105'))
     return { unit_id: 'A-105', active }
   },
   connect(onEvent, onStatus) {

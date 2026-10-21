@@ -28,6 +28,7 @@ def facts(**overrides) -> UnitFacts:
         power_kw=0.15,
         door="closed",
         last_water_activity_at=T0,
+        last_caregiver_confirmation_at=None,
         last_door_event_at=None,
         baseline=BASELINE,
         incident_state=None,
@@ -216,6 +217,24 @@ def test_t1_quiet_gap_one_second_before_and_at_deadline():
     assert d.reason == (
         "No water use for 0:30, longer than usual maximum of 0:30. No door event. Electricity at standby"
     )
+
+
+def test_caregiver_confirmation_restarts_watch_without_faking_water_use():
+    confirmed = T0 + timedelta(seconds=20)
+    f = facts(status_since=confirmed, last_caregiver_confirmation_at=confirmed)
+    assert f.last_water_activity_at == T0
+    assert next_check_at(f) == confirmed + timedelta(seconds=30)
+    assert on_tick(f, confirmed + timedelta(seconds=29), clock) is None
+    decision = on_tick(f, confirmed + timedelta(seconds=30), clock)
+    assert decision is not None
+    assert decision.detected_detail == "No water activity since caregiver confirmation"
+    assert "caregiver spoke" in decision.reason
+
+
+def test_water_after_caregiver_confirmation_becomes_quiet_gap_anchor():
+    f = facts(last_caregiver_confirmation_at=T0 + timedelta(seconds=10),
+              last_water_activity_at=T0 + timedelta(seconds=25))
+    assert next_check_at(f) == T0 + timedelta(seconds=55)
 
 
 def test_t1_reason_names_door_and_power():

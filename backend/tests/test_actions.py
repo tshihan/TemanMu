@@ -75,6 +75,24 @@ async def close(client, iid, actor=ALI, outcome="resident_ok", report="Resident 
     return await client.post(f"/api/incidents/{iid}/close", json={**actor, "outcome": outcome, **({"report": report} if report is not None else {})})
 
 
+async def test_caregiver_can_confirm_home_only_during_possible_away(client):
+    before = await units.get_unit(UNIT)
+    assert before is not None
+    path = f"/api/units/{UNIT}/confirm-home"
+    body = {"role": "caregiver", "name": before.caregiver_name}
+    assert (await client.post(path, json=body)).status_code == 409
+    await units.update_unit_state(UNIT, status="possible_away", status_since=utc_now())
+    assert (await client.post(path, json={"role": "caregiver", "name": "Someone else"})).status_code == 409
+    response = await client.post(path, json=body)
+    assert response.status_code == 200
+    confirmed = response.json()
+    assert confirmed["status"] == "routine"
+    assert (await units.get_unit(UNIT)).quiet_gap.last_water_activity_at == before.quiet_gap.last_water_activity_at
+    assert confirmed["quiet_gap"]["last_caregiver_confirmation_at"] is not None
+    assert "sensor activity has not been confirmed" in confirmed["status_reason"]
+    assert (await client.post(path, json=body)).status_code == 409
+
+
 async def test_caregiver_coordination_does_not_claim_visit(client):
     iid = await notified_incident()
     assert (await ack(client, iid, {"role": "caregiver", "name": "Sarah Lee"})).status_code == 409

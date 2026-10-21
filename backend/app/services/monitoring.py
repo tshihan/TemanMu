@@ -330,6 +330,32 @@ async def _incident_unit_id(incident_id: str) -> str:
     return incident.unit_id
 
 
+async def confirm_home_after_call(unit_id: str, name: str) -> Unit:
+    """Record a caregiver's direct verbal confirmation while an outing is only possible."""
+    async with _unit_lock(unit_id):
+        async with get_pool().acquire() as conn, conn.transaction():
+            await conn.fetchrow("select unit_id from units where unit_id = $1 for update", unit_id)
+            unit = await db_units.get_unit(unit_id, conn=conn)
+            if unit is None:
+                raise UnitNotFound(unit_id)
+            if name != unit.caregiver_name:
+                raise IncidentConflict("Only the designated caregiver can record this confirmation")
+            if unit.status != "possible_away" or unit.active_incident_id is not None:
+                raise IncidentConflict("Home confirmation is available only while the resident is possibly away")
+            confirmed_at = utc_now()
+            unit = await db_units.update_unit_state(
+                unit_id,
+                status="routine",
+                status_reason=f"{name} reports speaking directly with {unit.caregiver_relationship}: home and okay; sensor activity has not been confirmed.",
+                status_since=confirmed_at,
+                last_caregiver_confirmation_at=confirmed_at,
+                conn=conn,
+            )
+        await _arm_watch_locked(unit_id)
+        await realtime.broadcast("unit.updated", unit)
+        return unit
+
+
 async def caregiver_response(incident_id: str, name: str, action: str) -> Incident:
     """Log remote caregiver coordination without claiming the in-person welfare check."""
     unit_id = await _incident_unit_id(incident_id)

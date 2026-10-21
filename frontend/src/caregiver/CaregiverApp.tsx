@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { Bell, Check, ChevronRight, HeartHandshake, House, PhoneOff, Settings, ShieldCheck, TriangleAlert, Volume2, VolumeX, WifiOff } from 'lucide-react'
 import { api } from '../api'
-import { applyIncident, getAppState, loadUnitReadings, markNotificationViewed, markRoleViewed, subscribeAppEvents, useAppState } from '../api/store'
+import { applyEvent, applyIncident, getAppState, loadUnitReadings, markNotificationViewed, markRoleViewed, subscribeAppEvents, useAppState } from '../api/store'
 import type { Notification } from '../api/types'
 import { actorName, ctxFor, NOTIFICATION_TARGET, notificationCopy } from './copy'
 import { clock, initials } from './format'
@@ -48,6 +48,8 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
   const [call, setCall] = useState<'calling' | 'ended' | null>(null)
   const [ackBusy, setAckBusy] = useState(false)
   const [ackError, setAckError] = useState<AckError>(null)
+  const [confirmBusy, setConfirmBusy] = useState(false)
+  const [confirmError, setConfirmError] = useState(false)
   const [liveNote, setLiveNote] = useState(false)
   const [lastSync, setLastSync] = useState(() => Date.now())
   const [connectionTimedOut, setConnectionTimedOut] = useState(false)
@@ -183,6 +185,21 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
       setAckError({ kind: 'failed' })
     } finally { setAckBusy(false) }
   }
+  async function confirmHome() {
+    if (!unit || unit.status !== 'possible_away' || confirmBusy) return
+    if (!window.confirm(`Have you spoken directly with ${unit.caregiver_relationship} and confirmed they are home and okay?`)) return
+    setConfirmBusy(true)
+    setConfirmError(false)
+    try {
+      const confirmed = await api.confirmHome(unit.unit_id, { role: 'caregiver', name: unit.caregiver_name })
+      applyEvent({ type: 'unit.updated', at: confirmed.status_since, data: confirmed })
+      setCall(null)
+    } catch {
+      const latest = await api.getUnit(unit.unit_id).catch(() => null)
+      if (latest) applyEvent({ type: 'unit.updated', at: latest.status_since, data: latest })
+      setConfirmError(true)
+    } finally { setConfirmBusy(false) }
+  }
   function startCall() {
     setCall('calling')
     window.clearTimeout(timers.current.call)
@@ -230,8 +247,9 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
           <p>{connectionTimedOut ? 'Cannot reach TemanMu. Check the backend connection and retry.' : 'Connecting to TemanMu…'}</p>
         </div> : !unit || !ctx ? <p className="cg-card-lead cg-pad">The resident’s home is unavailable.</p>
           : tab === 'home' ? <HomeTab unit={unit} ctx={ctx} incident={incident} readings={readingsByUnit[unit.unit_id] || []} now={now}
-            ackBusy={ackBusy} responseError={ackError?.kind === 'failed'} onCheckIn={() => void respond('caregiver_checking_in')}
-            onRequestVisit={() => void respond('township_requested')} onOpenIncident={openIncident} onCall={startCall} />
+            ackBusy={ackBusy} responseError={ackError?.kind === 'failed'} confirmBusy={confirmBusy} confirmError={confirmError}
+            onCheckIn={() => void respond('caregiver_checking_in')}
+            onRequestVisit={() => void respond('township_requested')} onOpenIncident={openIncident} onCall={startCall} onConfirmHome={() => void confirmHome()} />
           : tab === 'updates' ? <UpdatesTab feed={feed} ctx={ctx} now={now} incidentFor={incidentFor} isUnread={isUnread} ackTargetId={ackTargetId}
             ackBusy={ackBusy} onOpen={open} onMarkAllRead={markAllRead} onAck={openIncident} />
           : tab === 'together' ? <TogetherTab unit={unit} ctx={ctx} companion={companion} onToast={showToast} />

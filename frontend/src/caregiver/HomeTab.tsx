@@ -35,8 +35,12 @@ function statusCard(unit: Unit, incident: Incident | null, ctx: Ctx, now: number
     return { variant: 'quiet', Icon: PhoneOutgoing, badge: STATUS_LABELS.unusual_inactivity, headline: `Checking on ${R} quietly`,
       reason: `${cause} TemanMu is calling ${R} now (simulated).`, grace: incident?.state === 'grace' ? until(incident.grace_ends_at, now) : undefined }
   }
-  if (unit.status === 'possible_away') return { variant: 'away', Icon: DoorOpen, badge: STATUS_LABELS.possible_away, headline: `${R} is probably out`,
-    reason: `${doorAt ? `Door opened at ${clock(doorAt)}` : 'The door opened'}, then the home went quiet. This is normal, and nobody has been notified.` }
+  if (unit.status === 'possible_away') return { variant: 'away', Icon: DoorOpen, badge: STATUS_LABELS.possible_away, headline: `${R} may be out`,
+    reason: `${doorAt ? `Door opened at ${clock(doorAt)}` : 'The door opened'}, then the home went quiet. An outing is possible, but not confirmed. You can call ${R} to check.` }
+
+  if (unit.status === 'routine' && unit.status_reason.startsWith(`${unit.caregiver_name} reports speaking directly`))
+    return { variant: 'calm', Icon: CircleCheck, badge: 'Caregiver confirmed', headline: `${R} is home and okay`,
+      reason: `You reported speaking directly with ${R}. This is your confirmation, not a sensor reading. Monitoring has restarted.` }
 
   // A just-finished incident stays visible until the status changes again.
   const recent = incident?.closed_at && ['closed', 'auto_resolved'].includes(incident.state)
@@ -54,10 +58,11 @@ function statusCard(unit: Unit, incident: Incident | null, ctx: Ctx, now: number
 
 interface Props {
   unit: Unit; ctx: Ctx; incident: Incident | null; readings: Reading[]; now: number
-  ackBusy: boolean; responseError: boolean; onCheckIn: () => void; onRequestVisit: () => void; onOpenIncident: () => void; onCall: () => void
+  ackBusy: boolean; responseError: boolean; confirmBusy: boolean; confirmError: boolean
+  onCheckIn: () => void; onRequestVisit: () => void; onOpenIncident: () => void; onCall: () => void; onConfirmHome: () => void
 }
 
-export function HomeTab({ unit, ctx, incident, readings, now, ackBusy, responseError, onCheckIn, onRequestVisit, onOpenIncident, onCall }: Props) {
+export function HomeTab({ unit, ctx, incident, readings, now, ackBusy, responseError, confirmBusy, confirmError, onCheckIn, onRequestVisit, onOpenIncident, onCall, onConfirmHome }: Props) {
   const { R } = ctx
   const today = readings.filter(reading => isToday(reading.recorded_at, now))
   const last = (match: (reading: Reading) => boolean) => [...today].reverse().find(match)
@@ -108,6 +113,13 @@ export function HomeTab({ unit, ctx, incident, readings, now, ackBusy, responseE
       </div>
       <h2 className="cg-status-headline">{card.headline}</h2>
       <p className="cg-status-reason">{card.reason}</p>
+      {unit.status === 'possible_away' && <div className="cg-status-actions">
+        <button type="button" className="cg-btn cg-btn-accent" onClick={onCall}><Phone size={18} aria-hidden="true" />Call {R}</button>
+        <button type="button" className="cg-btn cg-btn-outline" onClick={onConfirmHome} disabled={confirmBusy}>
+          {confirmBusy ? 'Recording confirmation…' : `I spoke to ${R} — home and okay`}
+        </button>
+        {confirmError && <p role="alert">Couldn’t record your confirmation. Please try again.</p>}
+      </div>}
       {card.grace && <p className="cg-status-meta"><span className="cg-status-timer cg-num">{card.grace}</span>
         <span>left in the simulated call window. You’ll only be alerted if {R} doesn’t answer.</span></p>}
       {card.ack && <div className="cg-status-actions">

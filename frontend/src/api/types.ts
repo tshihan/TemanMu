@@ -38,6 +38,7 @@ export interface Unit {
   }
   quiet_gap: {
     last_water_activity_at: string | null
+    last_caregiver_confirmation_at: string | null
     usual_max_seconds: number
   }
   baseline: Baseline
@@ -172,6 +173,7 @@ export interface Api {
   postReading(reading: Omit<Reading, 'recorded_at'> & { recorded_at?: string }): Promise<{ accepted: true; unit: Unit }>
   acknowledgeIncident(id: string, actor: { role: Role; name: string }): Promise<Incident>
   caregiverResponse(id: string, actor: { role: 'caregiver'; name: string; action: 'caregiver_checking_in' | 'township_requested' | 'resident_confirmed_safe' }): Promise<Incident>
+  confirmHome(id: UnitId, actor: { role: 'caregiver'; name: string }): Promise<Unit>
   escalateIncident(id: string, actor: { role: Role; name: string; action: 'unable_to_verify' | 'emergency_called' }): Promise<Incident>
   closeIncident(id: string, actor: { role: Role; name: string; outcome: Exclude<Outcome, 'resident_activity_detected'>; report?: string }): Promise<Incident>
   markNotificationsRead(role: Role): Promise<void>

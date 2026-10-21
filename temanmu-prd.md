@@ -186,7 +186,7 @@ A phone app with four tabs: **Home**, **Updates**, **Together** and **Settings**
 
 | ID | Feature | Requirement | Priority |
 | --- | --- | --- | --- |
-| C1 | Status card (Home) | One card showing the resident's state in plain language: routine looks normal, routine not confirmed yet, probably out, checking quietly (with the simulated-call countdown), unusual inactivity (with response actions), someone is checking, emergency handoff, or alert closed. Shows resident name, unit and last-updated time. | P0 |
+| C1 | Status card (Home) | One card showing the resident's state in plain language: routine looks normal, routine not confirmed yet, possibly away, caregiver-confirmed home, checking quietly (with the simulated-call countdown), unusual inactivity (with response actions), someone is checking, emergency handoff, or alert closed. Shows resident name, unit and last-updated time. While Possibly Away, the caregiver may call and, only after speaking directly with the resident, record that they are home and okay. | P0 |
 | C2 | Call button | "Call Mum" button (simulated call screen, no real call). | P1 |
 | C3 | Mum's day (Home) | A 24-hour timeline with one lane each for water, electricity and front door, marking today's activity and the current state of each. Labelled "Water, power & door only". | P1 |
 | C4 | Updates feed | Morning reassurance, alerts, reminders and incident updates, grouped by day, with unread markers and "Mark all read". A new update shows an in-app push banner. Tapping an update opens the matching screen. | P0 |
@@ -310,12 +310,14 @@ All thresholds come from configuration or the resident's baseline profile, never
 
 | Status | Enters when | Leaves when | Action |
 | --- | --- | --- | --- |
-| **Routine** | Default state. Also entered on any activity while in Possible Away, or when an incident is resolved or closed. | Rules below fire. | On the day's first activity, create a morning reassurance notification for the caregiver. |
-| **Possible Away** | A door event is followed by no water or electricity activity. | Another door event or any activity returns to Routine. Time since the door event exceeding `usual_outing_seconds` moves to Unusual Inactivity. | None (silent). |
+| **Routine** | Default state. Also entered on any activity while in Possible Away, after direct caregiver confirmation that the resident is home and okay, or when an incident is resolved or closed. | Rules below fire. | On the day's first sensor activity, create a morning reassurance notification for the caregiver. Caregiver confirmation is labelled as reported, never as sensor activity. |
+| **Possible Away** | A door event is followed by no water or electricity activity. | Another door event or any activity returns to Routine. A caregiver who spoke directly with the resident may confirm they are home and okay, returning to Routine and restarting the quiet-gap watch from that time. If nobody confirms and time since the door event exceeds `usual_outing_seconds`, move to Unusual Inactivity. | Silent; caregiver chooses whether to call before the usual outing time is exceeded. |
 | **Unusual Inactivity** | Not in Possible Away, and time since the last water activity exceeds `usual_quiet_gap_seconds`. Or Possible Away timed out. | Any activity resolves it ("Resident activity detected"). The grace period ending with no activity notifies both roles and moves to Unresolved Concern. | Create an incident. Start the grace timer (`GRACE_PERIOD_SECONDS`). Log the simulated voice call. |
 | **Unresolved Concern** | The grace period ended without activity. | Acknowledged and closed by either role, or any activity resolves it. | Notify caregiver and township. Repeat reminders every `REMINDER_INTERVAL_SECONDS` until acknowledged. |
 
 Water silence alone can trigger Unusual Inactivity. Electricity activity counts as confirmation (resolves the incident) but does not reset the water quiet-gap timer before an incident starts.
+
+After a caregiver confirms the resident is home and okay, the watch uses the later of the last water reading and the caregiver confirmation. The actual last water timestamp remains unchanged. A later concern says that no new water use was recorded since the call. If the caregiver does not call, the existing outing timeout remains active.
 
 **Role of each signal** (state this clearly in the pitch):
 
@@ -326,6 +328,8 @@ Water silence alone can trigger Unusual Inactivity. Electricity activity counts 
 | **Door** | Marks a possible outing, so absence is not mistaken for inactivity. |
 
 **Future work (not in prototype):** an "appliance left on" rule, where a stove, iron or heater left on far longer than usual with no water activity also triggers Unusual Inactivity (for example, a fall while cooking).
+
+**Future initiative (not in this demo):** with township integration and resident consent, access-card events at controlled gates could provide stronger evidence of a perimeter outing. Facility taps and absence of a tap do not establish that the resident is inside their home.
 
 ---
 
@@ -376,7 +380,8 @@ interface Unit {
   };
   quiet_gap: {
     last_water_activity_at: string | null;
-    usual_max_seconds: number;         // client computes elapsed from last_water_activity_at
+    last_caregiver_confirmation_at: string | null;
+    usual_max_seconds: number;         // client computes elapsed from the later of these timestamps
   };
   baseline: Baseline;
   active_incident_id: string | null;
@@ -512,6 +517,7 @@ The backend sends **deadlines** (`grace_ends_at`, `next_reminder_at`, `last_wate
 | --- | --- | --- | --- | --- |
 | POST | `/api/incidents/{id}/acknowledge` | `{ "role": "township", "name": string }` | `200` `Incident` | `409` if already acknowledged, closed, or called by another role |
 | POST | `/api/incidents/{id}/caregiver-response` | `{ "role": "caregiver", "name": string, "action": "caregiver_checking_in" \| "township_requested" \| "resident_confirmed_safe" }` | `200` `Incident` | `409` if closed, duplicate action, or direct safety confirmation without a prior check-in |
+| POST | `/api/units/{unit_id}/confirm-home` | `{ "role": "caregiver", "name": string }` | `200` `Unit` | `404` if unit absent; `409` unless currently Possible Away with no active incident |
 | POST | `/api/incidents/{id}/close` | `{ "role": Role, "name": string, "outcome": "resident_ok" \| "assistance_provided" \| "sent_to_hospital" \| "resident_away", "report"?: string }` | `200` `Incident` | `409` if not acknowledged or already closed. `403` if caller is not the acknowledger |
 | POST | `/api/incidents/{id}/escalate` | `{ "role": Role, "name": string, "action": "unable_to_verify" \| "emergency_called" }` | `200` `Incident` | `409` if not acknowledged, closed or duplicate. `403` if caller is not the acknowledger |
 | POST | `/api/notifications/read` | `{ "role": Role }` | `204` | |

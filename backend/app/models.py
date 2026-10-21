@@ -100,6 +100,7 @@ class UnitLatest(ContractModel):
 
 class QuietGap(ContractModel):
     last_water_activity_at: UtcDatetime | None
+    last_caregiver_confirmation_at: UtcDatetime | None = None
     usual_max_seconds: int
 
 
@@ -266,6 +267,11 @@ class CaregiverResponseRequest(ContractModel):
     role: Literal["caregiver"]
     name: str = Field(min_length=1)
     action: Literal["caregiver_checking_in", "township_requested", "resident_confirmed_safe"]
+
+
+class ConfirmHomeRequest(ContractModel):
+    role: Literal["caregiver"]
+    name: str = Field(min_length=1, pattern=r".*\S.*")
 
 
 class EscalateRequest(ContractModel):
