@@ -1,5 +1,5 @@
-import { useEffect, useRef, type ReactNode } from 'react'
-import { Camera, Watch } from 'lucide-react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { Brain, Camera, Home, Layers, Users, Watch } from 'lucide-react'
 import { startScene } from '../landing/scene'
 import './slides.css'
 
@@ -48,6 +48,23 @@ function PageFrame({ number, className = '', children }: { number: number; class
 export function Slides() {
   const sceneRef = useRef<HTMLDivElement>(null)
   const rootRef = useRef<HTMLElement>(null)
+  const [pptxStatus, setPptxStatus] = useState('')
+  const [pptxExporting, setPptxExporting] = useState(false)
+  const onExportPptx = async () => {
+    if (!rootRef.current || pptxExporting) return
+    setPptxExporting(true)
+    setPptxStatus('Preparing slides…')
+    try {
+      const { exportSlidesToPptx } = await import('./exportPptx')
+      await exportSlidesToPptx(rootRef.current, (current, total) => setPptxStatus(`Preparing slide ${current} of ${total}…`))
+      setPptxStatus('PowerPoint downloaded.')
+    } catch (error) {
+      console.error('PowerPoint export failed', error)
+      setPptxStatus('PowerPoint export failed. Please try again.')
+    } finally {
+      setPptxExporting(false)
+    }
+  }
   useEffect(() => startScene(sceneRef.current!, 'presentation'), [])
   useEffect(() => {
     const root = rootRef.current
@@ -68,8 +85,12 @@ export function Slides() {
   return <main ref={rootRef} className="slides-root">
     <div className="slides-toolbar">
       <a href="#">← TemanMu</a>
-      <span>Albert & Einstein · 4 of {PAGE_COUNT} sections drafted</span>
-      <button type="button" onClick={() => window.print()}>Save as PDF</button>
+      <span>Albert & Einstein · 6 of {PAGE_COUNT} sections drafted</span>
+      <div className="slides-toolbar-actions">
+        <span className="slides-export-status" role="status">{pptxStatus}</span>
+        <button type="button" onClick={() => window.print()}>Save as PDF</button>
+        <button type="button" onClick={onExportPptx} disabled={pptxExporting}>{pptxExporting ? 'Exporting…' : 'Export PPTX'}</button>
+      </div>
     </div>
     <div className="slides-deck" aria-label="TemanMu presentation">
       <PageFrame number={1} className="slides-cover">
@@ -156,9 +177,66 @@ export function Slides() {
         </div>
       </PageFrame>
 
-      {Array.from({ length: PAGE_COUNT - 4 }, (_, index) => <PageFrame number={index + 5} className="slides-pending" key={index}>
-        <div className="slides-section-top"><TemanMuWordmark /><span>{String(index + 5).padStart(2, '0')} · Coming next</span></div>
-        <div className="slides-pending-content" data-slide-reveal><span className="slides-eyebrow">Section {String(index + 5).padStart(2, '0')}</span><h2>Next chapter.</h2><p>Waiting for your content and direction.</p></div>
+      <PageFrame number={5} className="slides-solution">
+        <div className="slides-section-top"><TemanMuWordmark /><span>05 · The solution</span></div>
+        <div className="slides-solution-heading" data-slide-reveal>
+          <p className="slides-eyebrow">The solution</p>
+          <h2>Safety at home. <em>Companionship nearby.</em></h2>
+        </div>
+        <div className="slides-solution-columns">
+          <section className="slides-solution-safety" aria-labelledby="slides-safety-title" data-slide-reveal>
+            <h3 id="slides-safety-title">Safety</h3>
+            <p className="slides-solution-lead">Three quiet signals help spot a change in the resident’s usual routine.</p>
+            <img className="slides-sensor-art" src="/images/solution-sensors.png" alt="Illustrations of a smart water meter, smart electricity meter and front-door contact sensor" />
+            <div className="slides-sensor-details">
+              <div><strong>Smart water meter</strong><p>Water use offers clues to daily routines, such as washing or meal preparation.</p></div>
+              <div><strong>Smart electricity meter</strong><p>Changes in power use add context about appliances and lighting.</p></div>
+              <div><strong>Door contact sensor</strong><p>Open and close events help distinguish an outing from a long quiet period.</p></div>
+            </div>
+            <div className="slides-learning-note">
+              <strong>Planned learning layer · Machine learning + PPO engine</strong>
+              <p>Learn each resident’s patterns to make alerts more accurate and reduce false alarms. This will need validation with real-world data.</p>
+            </div>
+          </section>
+          <section className="slides-solution-companion" aria-labelledby="slides-companion-title" data-slide-reveal>
+            <h3 id="slides-companion-title">Companion</h3>
+            <img className="slides-buddy-art" src="/images/community-buddy.png" alt="An older resident walking and chatting with a Community Buddy" />
+            <p>A caregiver can request a <strong>Community Buddy</strong> matched by shared interests, so the resident has someone to join at a nearby activity.</p>
+            <span className="slides-buddy-note">Voluntary participation · Human connection on ordinary days</span>
+          </section>
+        </div>
+      </PageFrame>
+
+      <PageFrame number={6} className="slides-innovation">
+        <div className="slides-section-top"><TemanMuWordmark /><span>06 · Innovation</span></div>
+        <div className="slides-innovation-heading" data-slide-reveal>
+          <p className="slides-eyebrow">Innovation</p>
+          <h2>How TemanMu works differently</h2>
+        </div>
+        <div className="slides-innovation-grid">
+          <article className="slides-innovation-card" data-slide-reveal>
+            <Home aria-hidden="true" />
+            <div><span>01 · Effortless for residents</span><h3>Fits passively into daily life</h3><p>Water, electricity and door activity provide routine clues. Residents do not need to wear, charge or operate anything.</p></div>
+          </article>
+          <article className="slides-innovation-card" data-slide-reveal>
+            <Layers aria-hidden="true" />
+            <div><span>02 · More context</span><h3>Three signals cross-check</h3><p>Combining signals helps distinguish an outing from a concerning quiet period, with the goal of more accurate alerts and fewer false alarms.</p></div>
+          </article>
+          <article className="slides-innovation-card" data-slide-reveal>
+            <Users aria-hidden="true" />
+            <div><span>03 · Faster human follow-up</span><h3>Caregiver + township response</h3><p>Both are notified when a concern remains. Family can check in remotely while a nearby township responder can visit promptly.</p></div>
+          </article>
+          <article className="slides-innovation-card" data-slide-reveal>
+            <Brain aria-hidden="true" />
+            <div><span>04 · Planned learning layer</span><h3>Adapts to each resident</h3><p>Machine learning and the PPO engine aim to learn individual routines and refine alerts over time, subject to real-world validation.</p></div>
+          </article>
+        </div>
+        <p className="slides-innovation-companion-note" data-slide-reveal><strong>Beyond safety</strong> · Community Buddy brings companionship and local activities into ordinary days.</p>
+      </PageFrame>
+
+      {Array.from({ length: PAGE_COUNT - 6 }, (_, index) => <PageFrame number={index + 7} className="slides-pending" key={index}>
+        <div className="slides-section-top"><TemanMuWordmark /><span>{String(index + 7).padStart(2, '0')} · Coming next</span></div>
+        <div className="slides-pending-content" data-slide-reveal><span className="slides-eyebrow">Section {String(index + 7).padStart(2, '0')}</span><h2>Next chapter.</h2><p>Waiting for your content and direction.</p></div>
       </PageFrame>)}
     </div>
   </main>

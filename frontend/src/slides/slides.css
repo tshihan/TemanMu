@@ -2,6 +2,9 @@
 .slides-toolbar { position: sticky; top: 0; z-index: 10; min-height: 68px; padding: 12px clamp(20px, 5vw, 72px); display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid #d1c9bf; background: #fef9eff2; backdrop-filter: blur(12px); font-size: 14px; }
 .slides-toolbar a { color: #8b4429; font-weight: 700; text-decoration: none; }
 .slides-toolbar button { border: 0; border-radius: 999px; padding: 12px 20px; background: #a95130; color: #fffaf2; font: inherit; font-weight: 700; cursor: pointer; }
+.slides-toolbar-actions { display: flex; align-items: center; gap: 10px; }
+.slides-toolbar-actions button:disabled { opacity: .6; cursor: wait; }
+.slides-export-status { color: #8b4429; font-size: 12px; }
 .slides-deck { max-width: 1440px; margin: 0 auto; }
 .slides-page { box-sizing: border-box; position: relative; min-height: min(820px, 88svh); padding: clamp(28px, 4.5vw, 64px); display: flex; flex-direction: column; overflow: hidden; background: linear-gradient(180deg, #fef9ef 0%, #f5eee1 58%, #fef9ef 100%); }
 .slides-page-bottom { position: relative; z-index: 2; margin-top: auto; display: flex; justify-content: space-between; gap: 20px; color: #756d64; font-size: 12px; }
@@ -83,6 +86,40 @@
 .slides-user-challenges span { color: #4e4a45; }
 .slides-user-need { margin: auto 0 0; padding-top: 20px; color: #2a2b2f; font-size: clamp(15px, 1.18vw, 17px); font-weight: 600; line-height: 1.45; }
 .slides-user-need span { display: block; margin-bottom: 5px; color: #8b4429; font-size: 11px; font-weight: 750; letter-spacing: .09em; text-transform: uppercase; }
+.slides-solution { background: #fef9ef; }
+.slides-solution-heading { margin: clamp(25px, 3.2vw, 45px) 0 clamp(20px, 2.4vw, 34px); }
+.slides-solution-heading .slides-eyebrow { margin: 0 0 10px; }
+.slides-solution-heading h2 { margin: 0; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: clamp(45px, 4.65vw, 66px); font-weight: 400; line-height: 1.04; letter-spacing: -.04em; }
+.slides-solution-heading h2 em { color: #a95130; font-weight: 400; }
+.slides-solution-columns { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: clamp(30px, 4vw, 58px); padding-bottom: 24px; }
+.slides-solution-columns section { min-width: 0; }
+.slides-solution-columns h3 { margin: 0 0 10px; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: clamp(34px, 3.1vw, 44px); font-weight: 400; line-height: 1.05; }
+.slides-solution-lead { max-width: 650px; margin: 0; color: #4e4a45; font-size: clamp(17px, 1.45vw, 20px); line-height: 1.45; }
+.slides-sensor-art { display: block; width: 100%; height: clamp(155px, 17vw, 230px); margin: 8px 0 0; object-fit: contain; }
+.slides-sensor-details { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: -4px 0 20px; text-align: center; }
+.slides-sensor-details strong { display: block; color: #8b4429; font-size: clamp(13px, 1.12vw, 16px); line-height: 1.25; }
+.slides-sensor-details p { margin: 7px 0 0; color: #4e4a45; font-size: clamp(12px, 1vw, 14px); line-height: 1.35; }
+.slides-learning-note { border-top: 1px solid #d1c9bf; padding-top: 18px; }
+.slides-learning-note strong { color: #8b4429; font-size: clamp(15px, 1.3vw, 18px); }
+.slides-learning-note p { max-width: 660px; margin: 8px 0 0; color: #4e4a45; font-size: clamp(15px, 1.2vw, 17px); line-height: 1.45; }
+.slides-solution-companion { display: flex; flex-direction: column; border-left: 1px solid #d1c9bf; padding-left: clamp(30px, 4vw, 58px); }
+.slides-buddy-art { display: block; align-self: center; width: 100%; height: clamp(235px, 23vw, 330px); margin: 2px 0 12px; object-fit: cover; }
+.slides-solution-companion > p { margin: 0; color: #4e4a45; font-size: clamp(17px, 1.45vw, 20px); line-height: 1.48; }
+.slides-solution-companion > p strong { color: #8b4429; }
+.slides-buddy-note { margin-top: 18px; color: #8b4429; font-size: clamp(12px, 1vw, 14px); font-weight: 700; }
+.slides-innovation { background: #fef9ef; }
+.slides-innovation-heading { margin: clamp(25px, 3vw, 42px) 0 clamp(20px, 2.4vw, 34px); }
+.slides-innovation-heading .slides-eyebrow { margin: 0 0 10px; }
+.slides-innovation-heading h2 { margin: 0; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: clamp(40px, 4vw, 56px); font-weight: 400; line-height: 1.08; letter-spacing: -.035em; }
+.slides-innovation-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: clamp(16px, 1.8vw, 24px); }
+.slides-innovation-card { display: flex; align-items: flex-start; gap: clamp(18px, 2vw, 28px); min-width: 0; padding: clamp(22px, 2.3vw, 34px); border: 1px solid #ddcfc0; border-radius: 24px; background: #f5eee1; }
+.slides-innovation-card:nth-child(2), .slides-innovation-card:nth-child(3) { background: #f4e4d7; }
+.slides-innovation-card > svg { width: clamp(34px, 3.2vw, 46px); height: clamp(34px, 3.2vw, 46px); flex: none; color: #a95130; stroke-width: 1.55; }
+.slides-innovation-card span { display: block; color: #a95130; font-size: clamp(11px, .95vw, 13px); font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+.slides-innovation-card h3 { margin: 10px 0 8px; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: clamp(27px, 2.65vw, 37px); font-weight: 400; line-height: 1.08; letter-spacing: -.025em; }
+.slides-innovation-card p { max-width: 490px; margin: 0; color: #4e4a45; font-size: clamp(15px, 1.18vw, 17px); line-height: 1.45; }
+.slides-innovation-companion-note { margin: 0; padding: clamp(17px, 1.8vw, 25px) 0 clamp(18px, 1.8vw, 25px); color: #4e4a45; font-size: clamp(15px, 1.2vw, 17px); line-height: 1.4; }
+.slides-innovation-companion-note strong { color: #a95130; }
 .slides-pending:nth-child(odd) { background: linear-gradient(180deg, #fef9ef, #f5eee1 55%, #fef9ef); }
 .slides-pending:nth-child(even) { background: linear-gradient(180deg, #fef9ef, #ede3d6 55%, #fef9ef); }
 .slides-pending-content { margin: auto 0; padding: 80px 0; }
@@ -90,6 +127,7 @@
 .slides-pending-content p { margin: 0; color: #756d64; font-size: clamp(16px, 1.5vw, 21px); line-height: 1.5; }
 .slides-motion-ready [data-slide-reveal] { opacity: 0; transform: translate3d(0, 22px, 0) scale(.985); transition: opacity 900ms ease, transform 900ms cubic-bezier(.2, .75, .2, 1); }
 .slides-motion-ready [data-slide-reveal].is-visible { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+.slides-exporting [data-slide-reveal] { opacity: 1 !important; transform: none !important; transition: none !important; }
 .slides-motion-ready .slides-problem-stat,
 .slides-motion-ready .slides-user-family { transition-delay: 120ms; }
 @media (prefers-reduced-motion: reduce) {
@@ -100,7 +138,12 @@
 @media (max-width: 850px) { .slides-problem-main { grid-template-columns: 1fr; } .slides-problem-stat { max-width: 520px; } }
 @media (max-width: 600px) { .slides-problem-gap-card { gap: 14px; padding: 16px; } .slides-problem-gap-icon { width: 56px; height: 56px; border-radius: 14px; } .slides-problem-gap-icon svg { width: 34px; height: 34px; } }
 @media (max-width: 750px) { .slides-users-grid { grid-template-columns: 1fr; } .slides-user-summary { min-height: 0; } }
+@media (max-width: 850px) { .slides-solution-columns { grid-template-columns: 1fr; } .slides-solution-companion { border-left: 0; border-top: 1px solid #d1c9bf; padding: 26px 0 0; } .slides-buddy-art { max-width: 520px; } }
+@media (max-width: 850px) { .slides-innovation-card { gap: 16px; } .slides-innovation-card h3 { font-size: clamp(25px, 3vw, 32px); } }
+@media (max-width: 600px) { .slides-solution-heading h2 { font-size: clamp(42px, 10vw, 58px); } .slides-sensor-art { height: 155px; } .slides-sensor-details { gap: 8px; } .slides-sensor-details strong { font-size: 12px; } .slides-sensor-details p { font-size: 11px; } .slides-buddy-art { height: 240px; } }
+@media (max-width: 600px) { .slides-innovation-heading h2 { font-size: clamp(38px, 9vw, 48px); } .slides-innovation-grid { grid-template-columns: 1fr; grid-template-rows: none; } .slides-innovation-card { padding: 22px; } .slides-innovation-card > svg { width: 32px; height: 32px; } }
 @media (max-width: 600px) { .slides-toolbar > span { display: none; } .slides-page { min-height: 80svh; } .slides-cover { min-height: 86svh; } .slides-cover-copy { width: 100%; } .slides-cover h1 { font-size: clamp(72px, 15vw, 100px); } .slides-cover-tagline { font-size: clamp(36px, 8vw, 52px); } .slides-cover-intro { max-width: 360px; } .slides-live-scene { opacity: .28; } .slides-problem-main { padding: 34px 0; } .slides-problem-copy h2 { font-size: clamp(45px, 11vw, 62px); } .slides-problem-gap-items { grid-template-columns: 1fr; } .slides-user-challenges li { grid-template-columns: 96px minmax(0, 1fr); } }
+@media (max-width: 600px) { .slides-toolbar-actions { gap: 6px; } .slides-toolbar-actions button { padding: 10px 12px; font-size: 12px; } .slides-export-status { display: none; } }
 @page { size: 13.333in 7.5in; margin: 0; }
 @media print {
   .slides-motion-ready [data-slide-reveal] { opacity: 1; transform: none; transition: none; }
@@ -139,6 +182,30 @@
   .slides-problem-gap-items b { font-size: 12pt; }
   .slides-problem-gap-items p { font-size: 10pt; }
   .slides-problem-sources { font-size: 8pt; margin-bottom: .07in; }
+  .slides-solution-heading { margin: .25in 0 .18in; }
+  .slides-solution-heading h2 { font-size: 39pt; }
+  .slides-solution-columns { grid-template-columns: 6.8in minmax(0, 1fr); gap: .35in; padding-bottom: .1in; }
+  .slides-solution-columns h3 { font-size: 28pt; }
+  .slides-solution-lead, .slides-solution-companion > p { font-size: 14pt; }
+  .slides-sensor-art { height: 1.8in; }
+  .slides-sensor-details { gap: .1in; margin: -.03in 0 .13in; }
+  .slides-sensor-details strong { font-size: 10pt; }
+  .slides-sensor-details p { font-size: 9pt; margin-top: .04in; }
+  .slides-learning-note { padding-top: .12in; }
+  .slides-learning-note strong { font-size: 12pt; }
+  .slides-learning-note p { font-size: 11pt; margin-top: .05in; }
+  .slides-solution-companion { padding-left: .35in; }
+  .slides-buddy-art { height: 2.6in; margin-bottom: .1in; }
+  .slides-buddy-note { font-size: 9pt; margin-top: .1in; }
+  .slides-innovation-heading { margin: .18in 0 .2in; }
+  .slides-innovation-heading h2 { font-size: 34pt; }
+  .slides-innovation-grid { gap: .14in; }
+  .slides-innovation-card { gap: .18in; padding: .2in; border-radius: .16in; }
+  .slides-innovation-card > svg { width: .34in; height: .34in; }
+  .slides-innovation-card span { font-size: 8pt; }
+  .slides-innovation-card h3 { margin: .06in 0 .05in; font-size: 21pt; }
+  .slides-innovation-card p { font-size: 11pt; }
+  .slides-innovation-companion-note { padding: .15in 0 .12in; font-size: 11pt; }
   .slides-users-heading { margin: .22in 0 .18in; }
   .slides-users-heading h2 { font-size: 43pt; margin-top: .06in; }
   .slides-users-grid { gap: .22in; margin-bottom: .15in; }

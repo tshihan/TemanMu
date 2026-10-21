@@ -23,7 +23,7 @@ export function startScene(root: HTMLElement, mode: 'landing' | 'presentation' =
   }
 
   let renderer: THREE.WebGLRenderer
-  try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true }) } catch {
+  try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: mode === 'presentation' }) } catch {
     showHeroOnly()
     return () => {}
   }
