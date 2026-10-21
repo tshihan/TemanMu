@@ -86,7 +86,7 @@ export function Slides() {
   return <main ref={rootRef} className="slides-root">
     <div className="slides-toolbar">
       <a href="/">← TemanMu</a>
-      <span>Albert & Einstein · 7 of {PAGE_COUNT} sections drafted</span>
+      <span>Albert & Einstein · {PAGE_COUNT} of {PAGE_COUNT} sections drafted</span>
       <div className="slides-toolbar-actions">
         <span className="slides-export-status" role="status">{pptxStatus}</span>
         <button type="button" onClick={() => window.print()}>Save as PDF</button>
@@ -104,7 +104,7 @@ export function Slides() {
             <p className="slides-eyebrow">Sime Darby Property · Township of Tomorrow 2026</p>
             <h1>TemanMu</h1>
             <p className="slides-cover-tagline">Reassurance at home.<br /><em>Connection in the community.</em></p>
-            <p className="slides-cover-intro">TemanMu helps families feel reassured about their loved ones’ safety at home and connects older residents with Community Buddies and local activities.</p>
+            <p className="slides-cover-intro">TemanMu helps families feel reassured about their loved ones’ safety at home and connects older residents living alone with neighbours and the wider community.</p>
             <span className="slides-scroll-cue">Scroll to meet the team <span aria-hidden="true">↓</span></span>
           </div>
         </div>
@@ -128,7 +128,7 @@ export function Slides() {
             <p className="slides-eyebrow">The problem</p>
             <h2>When someone lives alone, <em>silence is ambiguous.</em></h2>
             <div className="slides-problem-description">
-              <p className="slides-problem-lead">A caregiver cannot check every hour. A quiet home may mean everything is fine—or that help is needed. Some residents also lack regular social connection.</p>
+              <p className="slides-problem-lead">When an older resident falls or becomes unwell alone, no one may notice until hours later. Families need a way to know when something has changed.</p>
               <svg className="slides-problem-alone-art" viewBox="0 0 240 170" role="img" aria-label="A softly lit room where an older resident walks, pauses, then moves again">
                 <defs><radialGradient id="slides-room-glow"><stop offset="0" stopColor="#f6d974" stopOpacity=".75" /><stop offset="1" stopColor="#f6d974" stopOpacity="0" /></radialGradient></defs>
                 <rect x="9" y="11" width="222" height="148" rx="9" fill="#f5eee1" stroke="#b98468" strokeWidth="3" />
@@ -149,6 +149,11 @@ export function Slides() {
                 </g>
               </svg>
             </div>
+            <div className="slides-problem-risk" aria-label="NHMS 2018 findings for Malaysians aged 60 and above">
+              <span>NHMS 2018 · Aged 60+</span>
+              <div><p><strong>14.1%</strong> reported a fall in the previous 12 months</p><p><strong>17.0%</strong> had a limitation in basic daily activities</p></div>
+            </div>
+            <p className="slides-problem-thesis">Future townships need to support independent ageing <em>without sacrificing privacy or autonomy.</em></p>
           </div>
           <aside className="slides-problem-stat" aria-label="Older Malaysians living alone" data-slide-reveal>
             <span className="slides-problem-stat-kicker">Malaysia · aged 60+</span>
@@ -167,7 +172,7 @@ export function Slides() {
             <article className="slides-problem-gap-card"><span className="slides-problem-gap-icon" aria-hidden="true"><Watch size={42} strokeWidth={1.6} /></span><div><b>Wearables</b><p>Depend on being worn and charged; false alarms can occur.</p></div></article>
           </div>
         </div>
-        <p className="slides-problem-sources" data-slide-reveal>Sources: <a href="https://iku.nih.gov.my/images/nhms-2025/infographic-eng.pdf" target="_blank" rel="noreferrer">NHMS 2025 Key Findings</a> · <a href="https://iku.nih.gov.my/images/nhms-2025/nhms-2025-volume-2.pdf" target="_blank" rel="noreferrer">NHMS 2025 Vol. II</a> · <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC4087103/" target="_blank" rel="noreferrer">Fall Detection Devices systematic review</a></p>
+        <p className="slides-problem-sources" data-slide-reveal>Sources: <a href="https://iku.nih.gov.my/images/IKU/Document/REPORT/NHMS2018/FactsheetElderlyAged60yearsorMorefinal.pdf" target="_blank" rel="noreferrer">NHMS 2018 Elderly Health</a> · <a href="https://iku.nih.gov.my/images/nhms-2025/infographic-eng.pdf" target="_blank" rel="noreferrer">NHMS 2025 Key Findings</a> · <a href="https://iku.nih.gov.my/images/nhms-2025/nhms-2025-volume-2.pdf" target="_blank" rel="noreferrer">NHMS 2025 Vol. II</a> · <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC4087103/" target="_blank" rel="noreferrer">Fall Detection Devices systematic review</a></p>
       </PageFrame>
 
       <PageFrame number={4} className="slides-users">
@@ -202,6 +207,7 @@ export function Slides() {
 
       <PageFrame number={5} className="slides-solution">
         <div className="slides-section-top"><TemanMuWordmark /><span>05 · The solution</span></div>
+        <div className="slides-solution-heading" data-slide-reveal><h2>Solution</h2></div>
         <div className="slides-solution-columns">
           <section className="slides-solution-safety" aria-labelledby="slides-safety-title" data-slide-reveal>
             <h3 id="slides-safety-title">Safety</h3>
@@ -256,23 +262,23 @@ export function Slides() {
         <div className="slides-section-top"><TemanMuWordmark /><span>06 · Innovation</span></div>
         <div className="slides-innovation-heading" data-slide-reveal>
           <p className="slides-eyebrow">Innovation</p>
-          <h2>How TemanMu works differently</h2>
+          <h2>What makes TemanMu idea unique &amp; different?</h2>
         </div>
         <div className="slides-innovation-grid">
           <article className="slides-innovation-card" data-slide-reveal>
-            <Home aria-hidden="true" />
+            <Home className="slides-innovation-icon slides-innovation-icon-home" aria-hidden="true" />
             <div><span>01 · Effortless for residents</span><h3>Fits passively into daily life</h3><p>Water, electricity and door activity provide routine clues. Residents do not need to wear, charge or operate anything.</p></div>
           </article>
           <article className="slides-innovation-card" data-slide-reveal>
-            <Layers aria-hidden="true" />
+            <Layers className="slides-innovation-icon slides-innovation-icon-layers" aria-hidden="true" />
             <div><span>02 · More context</span><h3>Three signals cross-check</h3><p>Combining signals helps distinguish an outing from a concerning quiet period, with the goal of more accurate alerts and fewer false alarms.</p></div>
           </article>
           <article className="slides-innovation-card" data-slide-reveal>
-            <Users aria-hidden="true" />
+            <Users className="slides-innovation-icon slides-innovation-icon-users" aria-hidden="true" />
             <div><span>03 · Faster human follow-up</span><h3>Caregiver + township response</h3><p>Both are notified when a concern remains. Family can check in remotely while a nearby township responder can visit promptly.</p></div>
           </article>
           <article className="slides-innovation-card" data-slide-reveal>
-            <Brain aria-hidden="true" />
+            <Brain className="slides-innovation-icon slides-innovation-icon-brain" aria-hidden="true" />
             <div><span>04 · Planned learning layer</span><h3>Adapts to each resident</h3><p>Machine learning and the PPO engine aim to learn individual routines and refine alerts over time, subject to real-world validation.</p></div>
           </article>
         </div>
@@ -325,10 +331,83 @@ export function Slides() {
         </div>
       </PageFrame>
 
-      {Array.from({ length: PAGE_COUNT - 7 }, (_, index) => <PageFrame number={index + 8} className="slides-pending" key={index}>
-        <div className="slides-section-top"><TemanMuWordmark /><span>{String(index + 8).padStart(2, '0')} · Coming next</span></div>
-        <div className="slides-pending-content" data-slide-reveal><span className="slides-eyebrow">Section {String(index + 8).padStart(2, '0')}</span><h2>Next chapter.</h2><p>Waiting for your content and direction.</p></div>
-      </PageFrame>)}
+      <PageFrame number={8} className="slides-impact">
+        <div className="slides-section-top"><TemanMuWordmark /><span>08 · Impact</span></div>
+        <div className="slides-impact-heading" data-slide-reveal>
+          <p className="slides-eyebrow">Impact · Three wins</p>
+          <h2>More independence. <em>More peace of mind.</em><br />A stronger community.</h2>
+        </div>
+        <div className="slides-impact-grid" aria-label="Expected benefits for three groups">
+          <article className="slides-impact-card slides-impact-residents" data-slide-reveal>
+            <div className="slides-impact-art slides-impact-art-home" aria-hidden="true"><Home className="slides-impact-home" /><span className="slides-impact-person"><i /><i /></span><HeartHandshake className="slides-impact-heart" /></div>
+            <span className="slides-impact-who">Who benefits · 01</span>
+            <h3>Older residents</h3>
+            <ul className="slides-impact-benefits">
+              <li><strong>Greater independence</strong> in familiar surroundings</li>
+              <li><strong>Stronger privacy</strong> without cameras or wearables</li>
+              <li><strong>Closer connection</strong> through buddies and local activities</li>
+            </ul>
+            <div className="slides-impact-target"><strong>1+</strong><span>buddy or community activity each month for residents who opt in</span></div>
+          </article>
+          <article className="slides-impact-card slides-impact-caregivers" data-slide-reveal>
+            <div className="slides-impact-art slides-impact-art-family" aria-hidden="true"><Home /><span className="slides-impact-connection" /><PhoneCall /></div>
+            <span className="slides-impact-who">Who benefits · 02</span>
+            <h3>Caregivers</h3>
+            <ul className="slides-impact-benefits">
+              <li><strong>Clearer reassurance</strong> about daily routines</li>
+              <li><strong>Earlier awareness</strong> when something changes</li>
+              <li><strong>Better coordination</strong> with nearby responders</li>
+            </ul>
+            <div className="slides-impact-target"><strong>80%</strong><span>report greater reassurance about their loved one’s day</span></div>
+          </article>
+          <article className="slides-impact-card slides-impact-township" data-slide-reveal>
+            <div className="slides-impact-art slides-impact-art-township" aria-hidden="true"><Home /><span className="slides-impact-route" /><Users /><ShieldCheck className="slides-impact-shield" /></div>
+            <span className="slides-impact-who">Who benefits · 03</span>
+            <h3>Township</h3>
+            <ul className="slides-impact-benefits">
+              <li><strong>Clearer priorities</strong> for unresolved concerns</li>
+              <li><strong>Faster follow-up</strong> by a nearby responder</li>
+              <li><strong>Stronger accountability</strong> with recorded outcomes</li>
+            </ul>
+            <div className="slides-impact-target"><strong>90%</strong><span>of alerts acknowledged within 10 minutes</span></div>
+          </article>
+        </div>
+        <p className="slides-impact-caveat">Proposed pilot targets, not achieved results · Track opt-in participation, caregiver surveys, and alert timestamps.</p>
+      </PageFrame>
+
+      <PageFrame number={9} className="slides-feasibility">
+        <div className="slides-section-top"><TemanMuWordmark /><span>09 · Feasibility & implementation</span></div>
+        <div className="slides-feasibility-heading" data-slide-reveal>
+          <p className="slides-eyebrow">Feasibility & implementation</p>
+          <h2>Start with one township. <em>Scale what works.</em></h2>
+        </div>
+        <div className="slides-feasibility-requirements" aria-label="How the pilot can be implemented">
+          <article data-slide-reveal><Droplets aria-hidden="true" /><div><h3>Obtain meter signals</h3><p>Work with Sime Darby Property and meter providers on approved water and electricity data, or suitable pilot meters.</p></div></article>
+          <article data-slide-reveal><DoorOpen aria-hidden="true" /><div><h3>Add door sensing</h3><p>Install a door contact and gateway in consenting homes; send its events into the TemanMu backend.</p></div></article>
+          <article data-slide-reveal><Users aria-hidden="true" /><div><h3>Staff the care pathway</h3><p>Train caregivers and township responders; appoint a coordinator for Community Buddy activities.</p></div></article>
+        </div>
+        <div className="slides-feasibility-timeline-heading" data-slide-reveal><span className="slides-eyebrow">Implementation timeline</span><span>Proposed rollout · 2027–2028</span></div>
+        <div className="slides-feasibility-timeline" aria-label="Proposed implementation timeline starting in Q1 2027">
+          <article data-slide-reveal><span className="slides-feasibility-time">Q1 2027</span><span className="slides-feasibility-dot" aria-hidden="true" /><h3>Pilot launch</h3><p>Select one Sime Darby Property township, secure approvals and resident consent, then connect meters and door sensors.</p></article>
+          <article data-slide-reveal><span className="slides-feasibility-time">Q2 2027</span><span className="slides-feasibility-dot" aria-hidden="true" /><h3>Test daily care</h3><p>Learn household routines, test human response, and start opt-in Community Buddy matching.</p></article>
+          <article data-slide-reveal><span className="slides-feasibility-time">Q3 2027</span><span className="slides-feasibility-dot" aria-hidden="true" /><h3>Refine alerts</h3><p>Use pilot feedback to reduce false alerts and assess the planned learning layer.</p></article>
+          <article data-slide-reveal><span className="slides-feasibility-time">Q4 2027</span><span className="slides-feasibility-dot" aria-hidden="true" /><h3>Evaluate</h3><p>Review accuracy, response time, resident acceptance and costs before wider rollout.</p></article>
+          <article data-slide-reveal><span className="slides-feasibility-time">2028 onward</span><span className="slides-feasibility-dot" aria-hidden="true" /><h3>Expand</h3><p>Deploy in stages to other suitable townships with local training and onboarding.</p></article>
+        </div>
+        <p className="slides-feasibility-note">Meter access and update speed must be verified before relying on the signals for timely alerts.</p>
+      </PageFrame>
+
+      <PageFrame number={10} className="slides-close">
+        <div className="slides-section-top"><TemanMuWordmark /><span>10 · Why TemanMu should win</span></div>
+        <div className="slides-close-heading" data-slide-reveal>
+          <p className="slides-eyebrow">Why our team should win</p>
+          <h2>Care for people. <em>Value for the township.</em></h2>
+        </div>
+        <div className="slides-close-statement" data-slide-reveal>
+          <span className="slides-close-quote" aria-hidden="true">“</span>
+          <p>TemanMu helps older residents live independently while giving caregivers a clearer view when daily routines change. Water, electricity and door signals offer privacy-conscious clues without cameras or wearables, while Community Buddies add companionship beyond safety. For Sime Darby Property, this could strengthen township appeal to multigenerational families, deepen resident engagement and create a care service that could expand across future developments. Our team has built a working prototype and planned a consent-based pilot with clear human response roles. Winning would help us test the idea in a real township, measure its impact and improve it with residents.</p>
+        </div>
+      </PageFrame>
     </div>
   </main>
 }

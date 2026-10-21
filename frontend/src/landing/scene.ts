@@ -108,7 +108,9 @@ export function startScene(root: HTMLElement, mode: 'landing' | 'presentation' =
     scene.add(s)
   })
 
-  // A small greeting on the cover gives the township a human, community-focused moment.
+  const walkers: { group: THREE.Group; legs: THREE.Group[]; arms: THREE.Group[]; x: number; z: number }[] = []
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  // Two residents stroll through the township on the presentation cover.
   if (mode === 'presentation') {
     const skin = mat('#d7a886'), hair = mat('#554235'), trousers = mat('#514d51')
     const person = (x: number, z: number, coat: string, facing: number) => {
@@ -127,10 +129,22 @@ export function startScene(root: HTMLElement, mode: 'landing' | 'presentation' =
       const cap = new THREE.Mesh(new THREE.SphereGeometry(.39, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), hair)
       cap.position.y = 2.63
       group.add(cap)
-      box(.24, .9, .28, trousers, -.2, .53, 0, group)
-      box(.24, .9, .28, trousers, .2, .53, 0, group)
-      box(.22, .95, .25, skin, -.62, 1.5, 0, group).rotation.z = -.28
-      box(.22, .95, .25, skin, .62, 1.5, 0, group).rotation.z = .28
+      const legs = [-.2, .2].map(offset => {
+        const pivot = new THREE.Group()
+        pivot.position.set(offset, .98, 0)
+        group.add(pivot)
+        box(.24, .9, .28, trousers, 0, -.45, 0, pivot)
+        return pivot
+      })
+      const arms = [-.62, .62].map(offset => {
+        const pivot = new THREE.Group()
+        pivot.position.set(offset, 1.88, 0)
+        pivot.rotation.z = offset < 0 ? -.28 : .28
+        group.add(pivot)
+        box(.22, .95, .25, skin, 0, -.38, 0, pivot)
+        return pivot
+      })
+      walkers.push({ group, legs, arms, x, z })
       return group
     }
     person(8, 22, '#a95130', -.35)
@@ -320,6 +334,21 @@ export function startScene(root: HTMLElement, mode: 'landing' | 'presentation' =
     torso.rotation.y = Math.sin(time / 1400) * .06
     headG.rotation.y = Math.sin(time / 2100) * .25
     lee.position.y = F0 + Math.sin(time / 900) * .008
+    if (walkers.length && !reducedMotion) {
+      const phase = time / 5200
+      const xShift = 2.1 * Math.sin(phase)
+      const zShift = .9 * (Math.cos(phase) - 1)
+      const facing = Math.atan2(2.1 * Math.cos(phase), -.9 * Math.sin(phase))
+      walkers.forEach(({ group, legs, arms, x, z }, index) => {
+        group.position.set(x + xShift, .1, z + zShift)
+        group.rotation.y = facing
+        const step = Math.sin(time / 520 + index * .5) * .2
+        legs[0].rotation.x = step
+        legs[1].rotation.x = -step
+        arms[0].rotation.x = -step * .6
+        arms[1].rotation.x = step * .6
+      })
+    }
     if (intro && cap1 && cap2 && hero) {
       setLayer(intro, 1 - clamp(p / .12), -p * 200)
       setLayer(cap1, band(p, .1, .18, .3, .38), (1 - band(p, .1, .18, .3, .38)) * 16)
