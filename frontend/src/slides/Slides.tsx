@@ -1,15 +1,29 @@
 import { useEffect, useRef, type ReactNode } from 'react'
+import { Camera, Watch } from 'lucide-react'
 import { startScene } from '../landing/scene'
 import './slides.css'
 
 const PAGE_COUNT = 10
 
 const members = [
-  { name: 'KHOR HONG JUN', email: 'khorhongjun@gmail.com', phone: '012-6758577' },
-  { name: 'LIM JING JET', email: 'limjingjet@example.com', phone: '012-0000001' },
-  { name: 'LEE YANG', email: 'leeyang@example.com', phone: '012-0000002' },
-  { name: 'CHO JING LING', email: 'chojingling@example.com', phone: '012-0000003' },
+  { name: 'TAN SHIHAN', role: 'Team leader', photo: '/images/team-tan-shi-han.jpeg', email: 'bryantan7837@gmail.com', phone: '01111651882' },
+  { name: 'LIM JING JET', photo: '/images/team-lim-jing-jet-white.png', email: 'jingjetlim04@gmail.com', phone: '0182369448' },
+  { name: 'KHOR HONG JUN', photo: '/images/team-khor-hong-jun.jpeg', email: 'khorhongjun@gmail.com', phone: '0126758577' },
+  { name: 'LEE YANG', photo: '/images/team-lee-yang.jpeg', email: 'leeyang20040817@gmail.com', phone: '0174575100' },
+  { name: 'CHO JING LING', photo: '/images/team-cho-jing-ling.jpeg', email: 'jinglingcho0670@gmail.com', phone: '0189129899' },
 ]
+
+function MemberCard({ member }: { member: typeof members[number] }) {
+  return <article className="slides-team-card">
+    <img className="slides-team-photo" src={member.photo} alt={member.name} />
+    <div className="slides-team-card-details">
+      <h3>{member.name}</h3>
+      {'role' in member && <span className="slides-team-role">{member.role}</span>}
+      <a href={`mailto:${member.email}`}>{member.email}</a>
+      <a href={`tel:${member.phone}`}>{member.phone}</a>
+    </div>
+  </article>
+}
 
 function TemanMuWordmark() {
   return <span className="slides-wordmark">
@@ -68,8 +82,8 @@ export function Slides() {
           <div className="slides-cover-copy">
             <p className="slides-eyebrow">Sime Darby Property · Township of Tomorrow 2026</p>
             <h1>TemanMu</h1>
-            <p className="slides-cover-tagline">Everyday routines,<br /><em>quietly looked after.</em></p>
-            <p className="slides-cover-intro">TemanMu turns everyday home signals into timely reassurance and human check-ins.</p>
+            <p className="slides-cover-tagline">Reassurance at home.<br /><em>Connection in the community.</em></p>
+            <p className="slides-cover-intro">Everyday home signals help families know when to check in. Local activities and a Community Buddy help older residents stay connected.</p>
             <span className="slides-scroll-cue">Scroll to meet the team <span aria-hidden="true">↓</span></span>
           </div>
         </div>
@@ -79,20 +93,10 @@ export function Slides() {
         <div className="slides-section-top"><TemanMuWordmark /><span>02 · The team</span></div>
         <div className="slides-team-content">
           <div className="slides-team-heading" data-slide-reveal>
-            <p className="slides-eyebrow">The people behind TemanMu</p>
             <h2>Albert &amp; Einstein</h2>
-            <div className="slides-leader"><span>Team Leader</span><strong>Tan Shi Han</strong><span>Universiti Malaya</span></div>
           </div>
-          <div className="slides-team-table-wrap" data-slide-reveal>
-            <h3>Team members</h3>
-            <table className="slides-team-table">
-              <thead><tr><th scope="col">Name</th><th scope="col">Email</th><th scope="col">Phone</th></tr></thead>
-              <tbody>{members.map(member => <tr key={member.name}>
-                <th scope="row">{member.name}</th><td>{member.email}</td><td>{member.phone}</td>
-              </tr>)}</tbody>
-            </table>
-            <p className="slides-temporary-note">Example.com emails and 012-000 numbers are temporary placeholders for three members.</p>
-          </div>
+          <div className="slides-team-row slides-team-row-first">{members.slice(0, 2).map(member => <MemberCard key={member.name} member={member} />)}</div>
+          <div className="slides-team-row slides-team-row-second">{members.slice(2).map(member => <MemberCard key={member.name} member={member} />)}</div>
         </div>
       </PageFrame>
 
@@ -113,10 +117,10 @@ export function Slides() {
           </aside>
         </div>
         <div className="slides-problem-gap">
-          <div className="slides-problem-gap-title" data-slide-reveal><span>Current solution gap</span><h3>Fall detection sees an event.<br /><em>Families need to understand the day.</em></h3></div>
+          <span className="slides-problem-gap-label">Current solution gap</span>
           <div className="slides-problem-gap-items">
-            <div data-slide-reveal><b>Cameras</b><p>Raise privacy concerns and only see covered spaces.</p></div>
-            <div data-slide-reveal><b>Wearables</b><p>Depend on being worn and charged; false alarms can occur.</p></div>
+            <article className="slides-problem-gap-card"><span className="slides-problem-gap-icon" aria-hidden="true"><Camera size={42} strokeWidth={1.6} /></span><div><b>Cameras</b><p>Raise privacy concerns and only see covered spaces.</p></div></article>
+            <article className="slides-problem-gap-card"><span className="slides-problem-gap-icon" aria-hidden="true"><Watch size={42} strokeWidth={1.6} /></span><div><b>Wearables</b><p>Depend on being worn and charged; false alarms can occur.</p></div></article>
           </div>
         </div>
         <p className="slides-problem-sources" data-slide-reveal>Sources: <a href="https://iku.nih.gov.my/images/nhms-2025/infographic-eng.pdf" target="_blank" rel="noreferrer">NHMS 2025 Key Findings</a> · <a href="https://iku.nih.gov.my/images/nhms-2025/nhms-2025-volume-2.pdf" target="_blank" rel="noreferrer">NHMS 2025 Vol. II</a> · <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC4087103/" target="_blank" rel="noreferrer">Fall Detection Devices systematic review</a></p>

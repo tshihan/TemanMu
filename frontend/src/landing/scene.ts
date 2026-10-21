@@ -108,6 +108,35 @@ export function startScene(root: HTMLElement, mode: 'landing' | 'presentation' =
     scene.add(s)
   })
 
+  // A small greeting on the cover gives the township a human, community-focused moment.
+  if (mode === 'presentation') {
+    const skin = mat('#d7a886'), hair = mat('#554235'), trousers = mat('#514d51')
+    const person = (x: number, z: number, coat: string, facing: number) => {
+      const group = new THREE.Group()
+      group.position.set(x, .1, z)
+      group.rotation.y = facing
+      scene.add(group)
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(.42, .52, 1.35, 10), mat(coat))
+      body.position.y = 1.55
+      body.castShadow = true
+      group.add(body)
+      const head = new THREE.Mesh(new THREE.SphereGeometry(.38, 14, 10), skin)
+      head.position.y = 2.53
+      head.castShadow = true
+      group.add(head)
+      const cap = new THREE.Mesh(new THREE.SphereGeometry(.39, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), hair)
+      cap.position.y = 2.63
+      group.add(cap)
+      box(.24, .9, .28, trousers, -.2, .53, 0, group)
+      box(.24, .9, .28, trousers, .2, .53, 0, group)
+      box(.22, .95, .25, skin, -.62, 1.5, 0, group).rotation.z = -.28
+      box(.22, .95, .25, skin, .62, 1.5, 0, group).rotation.z = .28
+      return group
+    }
+    person(8, 22, '#a95130', -.35)
+    person(10.3, 22.5, '#789566', 2.8)
+  }
+
   // Interior, built behind the hero window
   const room = new THREE.Group()
   scene.add(room)
