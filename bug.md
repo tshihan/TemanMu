@@ -1,6 +1,6 @@
 # Bug: Live 3D scenario hangs when the incident is handled early on Unit status
 
-**Where:** Live 3D view (`#simulator`), scenario **Unusual Inactivity** (the same pattern can affect **False Alarm Recovery**)
+**Where:** Live 3D view (`/simulator`), scenario **Unusual Inactivity** (the same pattern can affect **False Alarm Recovery**)
 **Mode:** Mock data (`VITE_USE_MOCK` not `false`)
 **Severity:** Demo-breaking. The scenario gets stuck mid-run with no error, and the 3D view no longer matches the incident.
 
@@ -21,12 +21,12 @@ closed · Guard Ali
 ## How to reproduce
 
 1. Run the frontend in mock mode (`npm run dev` in `frontend/`).
-2. Open `#simulator` in one tab and `#dashboard` (Unit status) in a second tab.
-3. In `#simulator`, choose **Unusual Inactivity** and press **Play**.
+2. Open `/simulator` in one tab and `/dashboard` (Unit status) in a second tab.
+3. In `/simulator`, choose **Unusual Inactivity** and press **Play**.
 4. Wait until the caption reaches step 5 or 6 ("Simulated call to Mum…" / "No answer; waiting for caregiver and township alert"). The incident is now in its **grace period** (15 s in mock).
 5. **Before the grace period ends**, open A-105 on Unit status and press **I'll Check Now**.
 6. Optionally record an outcome (e.g. *Resident OK*) to close it.
-7. Back in `#simulator`: the scenario never moves past step 6. Guard Ali never appears. Only **Stop** or **Reset demo** gets out of it.
+7. Back in `/simulator`: the scenario never moves past step 6. Guard Ali never appears. Only **Stop** or **Reset demo** gets out of it.
 
 ## Why it happens
 

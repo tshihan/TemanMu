@@ -37,10 +37,10 @@ One web application (one frontend build) with separate pages, opened in separate
 | Page | URL | Purpose |
 | --- | --- | --- |
 | Landing page | `/#` | Explains the product and links to every view |
-| **Township dashboard** | `/#dashboard` | Township Operator view of the whole housing block |
-| **Caregiver app** | `/#caregiver` | Mobile app for the family caregiver. Installable on a phone as a PWA |
-| **Live 3D view** | `/#simulator` | Presenter stage: the **simulated 3D home** of unit A-105, scenarios and sensor controls |
-| Slides | `/#slides` | Pitch slides |
+| **Township dashboard** | `/dashboard` | Township Operator view of the whole housing block |
+| **Caregiver app** | `/caregiver` | Mobile app for the family caregiver. Installable on a phone as a PWA |
+| **Live 3D view** | `/simulator` | Presenter stage: the **simulated 3D home** of unit A-105, scenarios and sensor controls |
+| Slides | `/slides` | Pitch slides |
 
 All pages share one live state: the real backend over REST and WebSocket, or a shared in-browser mock (section 10.3).
 
@@ -828,7 +828,7 @@ The backend team can also return the same seed-shaped stub responses from real F
 
 ### 10.4 3D Home Integration Contract
 
-The 3D home runs as its own page (`/#simulator`). It must:
+The 3D home runs as its own page (`/simulator`). It must:
 
 1. Send `POST /api/readings` with the values in section 9.4 when a sensor object is clicked or used in a scenario.
 2. Listen to the WebSocket for `incident.updated` (phone ringing, responder arrival), `companion.message_delivered` (phone call animation) and `snapshot` after reset (return the scene to its starting state).

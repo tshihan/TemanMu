@@ -85,7 +85,7 @@ export function Slides() {
   }, [])
   return <main ref={rootRef} className="slides-root">
     <div className="slides-toolbar">
-      <a href="#">← TemanMu</a>
+      <a href="/">← TemanMu</a>
       <span>Albert & Einstein · 7 of {PAGE_COUNT} sections drafted</span>
       <div className="slides-toolbar-actions">
         <span className="slides-export-status" role="status">{pptxStatus}</span>

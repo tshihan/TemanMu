@@ -21,7 +21,7 @@ export default defineConfig({
         name: 'TemanMu Caregiver',
         short_name: 'TemanMu',
         description: 'Daily reassurance and safety alerts for the people you care for.',
-        start_url: '/#caregiver',
+        start_url: '/caregiver',
         scope: '/',
         display: 'standalone',
         orientation: 'portrait',

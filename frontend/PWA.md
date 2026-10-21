@@ -1,6 +1,6 @@
 # Caregiver App (PWA)
 
-The caregiver app is **not a separate project**. It's a page of the same frontend (`/#caregiver`), and it can be **installed** like a phone app. The same `frontend/` folder and the same `npm` commands serve everything: landing page, dashboard, 3D view and caregiver app.
+The caregiver app is **not a separate project**. It's a page of the same frontend (`/caregiver`), and it can be **installed** like a phone app. The same `frontend/` folder and the same `npm` commands serve everything: landing page, dashboard, 3D view and caregiver app.
 
 The only extra is the PWA layer, which builds automatically:
 
@@ -11,9 +11,9 @@ The only extra is the PWA layer, which builds automatically:
 
 | You want to… | Run (in `frontend/`) | Open |
 |---|---|---|
-| Work on the UI, see changes live | `npm run dev` | http://localhost:5173/#caregiver |
-| Test it as a real installable app | `npm run build && npm run preview` | http://localhost:4173/#caregiver |
-| Open it from a phone on the same Wi-Fi | `npm run build && npm run preview -- --host` | `http://<laptop-IP>:4173/#caregiver` (see "On a real phone") |
+| Work on the UI, see changes live | `npm run dev` | http://localhost:5173/caregiver |
+| Test it as a real installable app | `npm run build && npm run preview` | http://localhost:4173/caregiver |
+| Open it from a phone on the same Wi-Fi | `npm run build && npm run preview -- --host` | `http://<laptop-IP>:4173/caregiver` (see "On a real phone") |
 
 **Why two modes?**
 
@@ -49,7 +49,7 @@ This works the same as the rest of the frontend:
 
 ### Option 1: Phone-sized view in Chrome (quickest, works with `npm run dev`)
 
-1. Open http://localhost:5173/#caregiver in Chrome.
+1. Open http://localhost:5173/caregiver in Chrome.
 2. Open DevTools (`Cmd+Option+I`), then click the **phone/tablet icon** (Toggle device toolbar, `Cmd+Shift+M`).
 3. Pick a device, for example **iPhone 14 Pro** or **Pixel 7**, and reload.
 
@@ -60,7 +60,7 @@ This shows the real mobile layout and touch behaviour. It's enough for checking 
 Chrome allows installing from `localhost` without HTTPS.
 
 1. `npm run build && npm run preview`
-2. Open http://localhost:4173/#caregiver in Chrome.
+2. Open http://localhost:4173/caregiver in Chrome.
 3. Click the **install icon** at the right of the address bar (or menu **⋮ → Cast, save and share → Install page as app**).
 4. TemanMu opens in its own window with its own icon, straight onto the caregiver screen. Resize the window narrow to make it phone-like.
 
@@ -68,14 +68,14 @@ To uninstall: open the app window, then **⋮ → Uninstall TemanMu**.
 
 ### Option 3: Phone emulators (optional, heavier)
 
-- **iPhone:** Xcode → Open Developer Tool → Simulator. Open Safari in the simulator and go to `http://localhost:4173/#caregiver`, then Share → **Add to Home Screen**.
-- **Android:** Android Studio → Device Manager → start an emulator. Its Chrome reaches your laptop at `http://10.0.2.2:4173/#caregiver`.
+- **iPhone:** Xcode → Open Developer Tool → Simulator. Open Safari in the simulator and go to `http://localhost:4173/caregiver`, then Share → **Add to Home Screen**.
+- **Android:** Android Studio → Device Manager → start an emulator. Its Chrome reaches your laptop at `http://10.0.2.2:4173/caregiver`.
 
 ### Checking that the PWA parts work
 
 In Chrome DevTools → **Application** tab (on the `preview` URL):
 
-- **Manifest** shows the name "TemanMu Caregiver", the icons and the start URL `/#caregiver`.
+- **Manifest** shows the name "TemanMu Caregiver", the icons and the start URL `/caregiver`.
 - **Service workers** shows `sw.js` as activated and running.
 
 ## On a real phone
@@ -84,7 +84,7 @@ Phones only allow installing over **HTTPS** (`localhost` is the only exception, 
 
 1. `npm run build && npm run preview`
 2. In another terminal: `cloudflared tunnel --url http://localhost:4173` (install with `brew install cloudflared`). It prints an `https://….trycloudflare.com` address.
-3. Open that address plus `/#caregiver` on the phone:
+3. Open that address plus `/caregiver` on the phone:
    - **Android (Chrome):** menu → **Install app**.
    - **iPhone (Safari):** Share → **Add to Home Screen**.
 

@@ -143,7 +143,7 @@ npm run dev -- --host
 Open:
 
 - http://localhost:5173 – Township / Caregiver dashboard
-- http://localhost:5173/#caregiver – caregiver mobile view (on a phone: `http://<your-computer-LAN-IP>:5173/#caregiver`)
+- http://localhost:5173/caregiver – caregiver mobile view (on a phone: `http://<your-computer-LAN-IP>:5173/caregiver`)
 - Use **Presenter simulator ↗** in the dashboard to open the 3D home demo
 
 ## Quick start (two terminals)

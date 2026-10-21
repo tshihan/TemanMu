@@ -11,13 +11,16 @@ const Landing = lazy(() => import('./landing/Landing').then(module => ({ default
 const HomeEnvironment = lazy(() => import('./home/HomeEnvironment').then(module => ({ default: module.HomeEnvironment })))
 const Slides = lazy(() => import('./slides/Slides').then(module => ({ default: module.Slides })))
 type Page = 'landing' | 'dashboard' | 'simulator' | 'caregiver' | 'slides'
-// Any other hash (including the landing page's own #how / #roles anchors) stays on the landing page.
-const PAGES: Record<string, Page> = { '#simulator': 'simulator', '#dashboard': 'dashboard', '#caregiver': 'caregiver', '#slides': 'slides' }
-const pageFromHash = (): Page => PAGES[window.location.hash] ?? 'landing'
+// Routes are real paths (/dashboard, /caregiver, ...). Anything else, including the landing page's own #how / #faq anchors, stays on the landing page.
+const PAGES: Record<string, Page> = { '/simulator': 'simulator', '/dashboard': 'dashboard', '/caregiver': 'caregiver', '/slides': 'slides' }
+const pageFromPath = (): Page => PAGES[window.location.pathname.replace(/\/+$/, '')] ?? 'landing'
+// Old hash links (/#caregiver) keep working: rewrite them to the path form.
+const legacy = window.location.pathname === '/' ? window.location.hash.slice(1) : ''
+if (PAGES['/' + legacy]) window.history.replaceState(null, '', '/' + legacy)
 
 export default function App() {
   const { connected, loaded, notifications, config } = useAppState()
-  const [page, setPage] = useState<Page>(pageFromHash)
+  const [page] = useState<Page>(pageFromPath)
   const [role] = useState<Role>('township')
   const activeUnread = notifications.filter(item => item.role === role && !item.read).length
   const inactiveRole: Role = role === 'township' ? 'caregiver' : 'township'
@@ -27,11 +30,6 @@ export default function App() {
     if (page === 'slides') return
     return connectStore()
   }, [page])
-  useEffect(() => {
-    const onHashChange = () => setPage(pageFromHash())
-    window.addEventListener('hashchange', onHashChange)
-    return () => window.removeEventListener('hashchange', onHashChange)
-  }, [])
   useEffect(() => {
     // The caregiver app keeps its own read state (per item and "Mark all read").
     if (page === 'dashboard' && role === 'township' && loaded && activeUnread)
@@ -50,16 +48,16 @@ export default function App() {
 
   if (page === 'simulator') return <div className="live-shell">
     <nav className="live-rail" aria-label="TemanMu views">
-      <a className="live-rail-logo" href="#" aria-label="TemanMu home">
+      <a className="live-rail-logo" href="/" aria-label="TemanMu home">
         <svg width="30" height="30" viewBox="0 0 64 64" aria-hidden="true">
           <path d="M14 29 L32 15 L50 29 V50 H14 Z" fill="none" stroke="#fef9ef" strokeWidth="3.6" strokeLinejoin="round" />
           <path d="M14 31 H50 M32 31 V50" stroke="#fef9ef" strokeWidth="3.6" />
           <rect x="35" y="34" width="12" height="13" fill="#f0b25a" />
         </svg>
       </a>
-      <a href="#" title="Landing page" aria-label="Landing page"><House size={19} aria-hidden="true" /></a>
-      <a href="#simulator" title="Live 3D view" aria-label="Live 3D view" aria-current="page"><Box size={19} aria-hidden="true" /></a>
-      <a href="#dashboard" target="_blank" rel="noopener" title="Product dashboard (new tab)" aria-label="Product dashboard, opens in a new tab"><Building2 size={19} aria-hidden="true" /></a>
+      <a href="/" title="Landing page" aria-label="Landing page"><House size={19} aria-hidden="true" /></a>
+      <a href="/simulator" title="Live 3D view" aria-label="Live 3D view" aria-current="page"><Box size={19} aria-hidden="true" /></a>
+      <a href="/dashboard" target="_blank" rel="noopener" title="Product dashboard (new tab)" aria-label="Product dashboard, opens in a new tab"><Building2 size={19} aria-hidden="true" /></a>
       <span className={`live-rail-status ${connected ? 'is-connected' : ''}`} role="status" title={`${usingMock ? 'Simulated data' : 'Live backend'} · ${connected ? 'Connected' : 'Connecting'}`}>
         <span className="connection-dot" aria-hidden="true" /><span>{usingMock ? 'Mock' : 'Live'}</span>
       </span>
@@ -75,7 +73,7 @@ export default function App() {
 
   return <div className="app-shell">
     <header className="app-header">
-      <a className="brand-block" href="#" aria-label="TemanMu home" style={{ color: 'inherit', textDecoration: 'none' }}>
+      <a className="brand-block" href="/" aria-label="TemanMu home" style={{ color: 'inherit', textDecoration: 'none' }}>
         <span className="brand-mark" aria-hidden="true">
           <svg width="34" height="34" viewBox="0 0 64 64">
             <path d="M14 29 L32 15 L50 29 V50 H14 Z" fill="none" stroke="#fef9ef" strokeWidth="3.6" strokeLinejoin="round" />
@@ -89,9 +87,9 @@ export default function App() {
         </div>
       </a>
       <nav className="view-navigation" aria-label="Presentation views">
-        <a href="#dashboard" target="_blank" rel="noopener" aria-current="page">Product dashboard</a>
-        <a href="#simulator" target="_blank" rel="noopener">Live 3D view <span aria-hidden="true">↗</span></a>
-        <a href="#caregiver" target="_blank" rel="noopener">Caregiver app <span aria-hidden="true">↗</span></a>
+        <a href="/dashboard" target="_blank" rel="noopener" aria-current="page">Product dashboard</a>
+        <a href="/simulator" target="_blank" rel="noopener">Live 3D view <span aria-hidden="true">↗</span></a>
+        <a href="/caregiver" target="_blank" rel="noopener">Caregiver app <span aria-hidden="true">↗</span></a>
       </nav>
       {/* <div className="header-meta">
         <span className="environment-label">{usingMock ? 'Simulated data' : 'Live backend'}</span>

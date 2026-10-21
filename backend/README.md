@@ -174,5 +174,5 @@ WebSocket: `ws://localhost:8000/ws`. Each message is `{"type", "at", "data"}`; t
 | Startup warns "no seed data" / `GET /api/units` is `[]` | Call `POST /api/demo/reset` |
 | Browser shows a CORS error | Add the page's origin to `CORS_ORIGINS` and restart |
 
-The Vite development server proxies `/api` and `/ws` to this service. The caregiver mobile view at `/#caregiver` therefore uses the same origin as the frontend, including when opened from a phone on the local network. A production frontend host needs equivalent reverse proxy routes or explicit HTTPS/WSS build URLs.
+The Vite development server proxies `/api` and `/ws` to this service. The caregiver mobile view at `/caregiver` therefore uses the same origin as the frontend, including when opened from a phone on the local network. A production frontend host needs equivalent reverse proxy routes or explicit HTTPS/WSS build URLs.
 | VS Code: "Import pydantic could not be resolved" | Command palette → Python: Select Interpreter → `backend/.venv/bin/python` |
