@@ -6,3 +6,10 @@
 .landing em { font-style: italic; }
 @keyframes tm-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 @media (prefers-reduced-motion: reduce) { .landing * { animation: none !important; } }
+.landing .lp-faq summary::-webkit-details-marker { display: none; }
+.landing .lp-faq-icon { flex: none; width: 32px; height: 32px; border-radius: 50%; border: 1px solid #d1c9bf; color: #b05a36; position: relative; font-size: 0; transition: transform .25s, background .25s, color .25s, border-color .25s; }
+.landing .lp-faq-icon::before, .landing .lp-faq-icon::after { content: ""; position: absolute; top: 50%; left: 50%; width: 12px; height: 1.5px; background: currentColor; transform: translate(-50%, -50%); }
+.landing .lp-faq-icon::after { transform: translate(-50%, -50%) rotate(90deg); }
+.landing .lp-faq[open] .lp-faq-icon { transform: rotate(45deg); background: #b05a36; border-color: #b05a36; color: #fef9ef; }
+.landing .lp-faq summary:hover .lp-faq-icon { border-color: #b05a36; }
+.landing .lp-faq summary:focus-visible { outline: 2px solid #b05a36; outline-offset: 4px; border-radius: 4px; }
