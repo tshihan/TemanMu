@@ -1,10 +1,13 @@
-import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react'
+import { lazy, Suspense, useEffect, useRef, type CSSProperties, type ReactNode } from 'react'
 import { Camera, DoorOpen, Droplets, Faucet, HeartHandshake, Lightbulb, MousePointer2, Watch, Zap } from 'lucide-react'
 import { startScene } from '../landing/scene'
 import './slides.css'
 import './present.css'
 
-const PAGE_COUNT = 4
+// The 3D home pulls in three.js and the house models, so it loads on its own after the deck appears.
+const PresentHome = lazy(() => import('./PresentHome').then(module => ({ default: module.PresentHome })))
+
+const PAGE_COUNT = 5
 const names = ['TAN SHIHAN', 'LIM JING JET', 'KHOR HONG JUN', 'LEE YANG', 'CHO JING LING']
 
 function TemanMuWordmark() {
@@ -78,7 +81,7 @@ function useHowFlowDot() {
   return { wrapRef, box2Ref, feedRef, dotRef, rowRefs }
 }
 
-// /present: a short presenting deck of cover (TemanMu + team names), the problem, the solution, and how it works.
+// /present: a short presenting deck of Madam Lee alone at home (3D), the problem, the cover (TemanMu + team names), the solution, and how it works.
 export function Present() {
   const howFlow = useHowFlowDot()
   const sceneRef = useRef<HTMLDivElement>(null)
@@ -130,16 +133,17 @@ export function Present() {
 
   return <main ref={rootRef} className="slides-root">
     <div className="slides-deck" aria-label="TemanMu presentation">
-      <PageFrame number={1} className="slides-cover present-cover">
-        <div ref={sceneRef} className="slides-live-scene" aria-hidden="true"><canvas data-lp="canvas" /></div>
-        <div className="slides-cover-top">
-          <TemanMuWordmark />
-        </div>
-        <div className="slides-cover-main">
-          <div className="slides-cover-copy">
-            <h1>TemanMu</h1>
-            <ul className="present-names">{names.map(name => <li key={name}>{name}</li>)}</ul>
-          </div>
+      <PageFrame number={1} className="present-home">
+        <Suspense fallback={null}><PresentHome /></Suspense>
+        <div className="slides-section-top"><TemanMuWordmark /><span>01 · At home</span></div>
+        <div className="present-home-copy" data-slide-reveal>
+          <p className="slides-eyebrow">Meet Madam Lee</p>
+          <h2>Madam Lee, <em>78</em></h2>
+          <ul className="present-home-facts">
+            <li>Lives on her own in a township flat</li>
+            <li>Her children work in the city and visit when they can</li>
+            <li>Cooks, tidies and gets through most days by herself</li>
+          </ul>
         </div>
       </PageFrame>
 
@@ -186,8 +190,21 @@ export function Present() {
         <p className="present-problem-sources">Sources: <a href="https://iku.nih.gov.my/images/IKU/Document/REPORT/NHMS2018/FactsheetElderlyAged60yearsorMorefinal.pdf" target="_blank" rel="noreferrer">NHMS 2018 Elderly Health</a> · <a href="https://iku.nih.gov.my/images/nhms-2025/infographic-eng.pdf" target="_blank" rel="noreferrer">NHMS 2025 Key Findings</a> · <a href="https://iku.nih.gov.my/images/nhms-2025/nhms-2025-volume-2.pdf" target="_blank" rel="noreferrer">NHMS 2025 Vol. II</a></p>
       </PageFrame>
 
-      <PageFrame number={3} className="slides-solution">
-        <div className="slides-section-top"><TemanMuWordmark /><span>03 · The solution</span></div>
+      <PageFrame number={3} className="slides-cover present-cover">
+        <div ref={sceneRef} className="slides-live-scene" aria-hidden="true"><canvas data-lp="canvas" /></div>
+        <div className="slides-cover-top">
+          <TemanMuWordmark />
+        </div>
+        <div className="slides-cover-main">
+          <div className="slides-cover-copy">
+            <h1>TemanMu</h1>
+            <ul className="present-names">{names.map(name => <li key={name}>{name}</li>)}</ul>
+          </div>
+        </div>
+      </PageFrame>
+
+      <PageFrame number={4} className="slides-solution">
+        <div className="slides-section-top"><TemanMuWordmark /><span>04 · The solution</span></div>
         <div className="slides-solution-heading" data-slide-reveal>
           <p className="slides-eyebrow">The solution</p>
         </div>
@@ -240,8 +257,8 @@ export function Present() {
         </div>
       </PageFrame>
 
-      <PageFrame number={4} className="slides-how">
-        <div className="slides-section-top"><TemanMuWordmark /><span>04 · How it works</span></div>
+      <PageFrame number={5} className="slides-how present-how">
+        <div className="slides-section-top"><TemanMuWordmark /><span>05 · How it works</span></div>
         <div className="slides-how-heading" data-slide-reveal>
           <p className="slides-eyebrow">How it works</p>
           <h2>Sensors notice. TemanMu checks. <em>People respond.</em></h2>
