@@ -89,7 +89,8 @@ export function scenarioSteps(id: ScenarioId, timing: ScenarioTiming, compressed
       { kind: 'animate', animation: 'rest', label: 'Madam Lee is napping; no sensor event' },
       { kind: 'wait', seconds: 2, label: 'The home stays quiet while she sleeps' },
       { kind: 'quietGap', label: quietGapLabel },
-      { kind: 'animate', animation: 'wake', label: 'The mobile phone rings; Madam Lee wakes up' },
+      { kind: 'wait', seconds: 4, label: 'The mobile phone rings while Madam Lee is still napping' },
+      { kind: 'animate', animation: 'wake', label: 'Madam Lee hears the phone and wakes up' },
       { kind: 'confirmCall', label: 'Answering the call: “I’m okay, I was just sleeping.”' },
       { kind: 'resolution', label: 'Backend confirms Resident OK and cancels escalation' },
     ]

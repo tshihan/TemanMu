@@ -14,10 +14,10 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=BACKEND_DIR / ".env", extra="ignore")
 
     database_url: str
-    grace_period_seconds: int = 15
+    grace_period_seconds: int = 20
     reminder_interval_seconds: int = 15
     # How long the simulated voice call rings before "no answer" (within the grace period).
-    voice_call_ring_seconds: float = 13
+    voice_call_ring_seconds: float = 18
     # Demo durations for a sustained household load. These are concern triggers,
     # not evidence of a fall or of which appliance is running.
     continuous_water_seconds: int = 45

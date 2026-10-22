@@ -6,7 +6,7 @@ import type {
 } from '../api/types'
 
 type SeedActivity = (typeof seed.community_activities)[number]
-const config: Config = { grace_period_seconds: 15, reminder_interval_seconds: 15 }
+const config: Config = { grace_period_seconds: 20, reminder_interval_seconds: 15 }
 const listeners = new Set<(event: RealtimeEvent) => void>()
 const weekdays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
 const clone = <T,>(value: T): T => structuredClone(value)
@@ -306,7 +306,7 @@ function startGrace(unit: Unit, trigger: 'quiet_gap' | 'outing_timeout' | 'careg
     if (incident.state !== 'grace') return
     incident.events.push({ type: 'voice_call_no_answer', at: now(), detail: 'No answer (simulated)' })
     publish('incident.updated', clone(incident))
-  }, Math.min(13000, state.config.grace_period_seconds * 900))
+  }, Math.min(18000, state.config.grace_period_seconds * 900))
   later(() => notifyConcern(unit, incident), state.config.grace_period_seconds * 1000)
   return incident
 }

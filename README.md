@@ -388,9 +388,9 @@ Open `backend/.env` and set `DATABASE_URL` (use the Supabase **session pooler** 
 
 ```env
 DATABASE_URL=postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres
-GRACE_PERIOD_SECONDS=15
+GRACE_PERIOD_SECONDS=20
 REMINDER_INTERVAL_SECONDS=15
-VOICE_CALL_RING_SECONDS=13
+VOICE_CALL_RING_SECONDS=18
 CONTROLLABLE_UNIT_ID=A-105
 SEED_FILE=../shared/seed.json
 CORS_ORIGINS=http://localhost:5173
