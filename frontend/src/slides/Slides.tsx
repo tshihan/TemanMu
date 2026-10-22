@@ -34,7 +34,7 @@ function TemanMuWordmark() {
         <rect x="35" y="34" width="12" height="13" fill="#f0b25a" />
       </svg>
     </span>
-    <span className="slides-wordmark-text"><span>TemanMu</span><small>Township care</small></span>
+    <span className="slides-wordmark-text"><span>TemanMu</span></span>
   </span>
 }
 

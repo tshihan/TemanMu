@@ -18,7 +18,7 @@
 /* Phones: the inline styles are tuned for desktop, so re-flow the header, hero and FAQ here. */
 @media (max-width: 720px) {
   .landing .lp-header > div { flex-wrap: nowrap !important; padding: 0 16px !important; }
-  .landing .lp-nav-link { display: none; }
+  .landing .lp-header nav { gap: 16px !important; }
   .landing .lp-hero { background: linear-gradient(0deg, #fef9ef 0%, #fef9efe6 42%, #fef9ef00 66%) !important; }
   .landing .lp-hero-inner { flex-direction: column !important; justify-content: flex-end !important; align-items: stretch !important; padding: 20px 16px 28px !important; }
   .landing .lp-hero-copy { flex: none !important; max-width: none !important; gap: 14px !important; }

@@ -83,7 +83,6 @@ export default function App() {
         </span>
         <div>
           <p className="brand-name">TemanMu</p>
-          <p className="brand-caption">Township care prototype</p>
         </div>
       </a>
       <nav className="view-navigation" aria-label="Presentation views">
