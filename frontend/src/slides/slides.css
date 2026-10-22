@@ -103,24 +103,6 @@
 .slides-problem-sources { position: relative; z-index: 2; margin: 0 0 12px; color: #756d64; font-size: 11px; line-height: 1.35; }
 .slides-problem-sources a { color: #8b4429; text-decoration: underline; text-underline-offset: 2px; }
 .slides-users { background: linear-gradient(180deg, #fef9ef 0%, #f5eee1 100%); }
-.slides-users-heading { margin: clamp(30px, 4vw, 56px) 0 clamp(22px, 2.5vw, 34px); }
-.slides-users-heading h2 { margin: 12px 0 0; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: clamp(46px, 5.1vw, 72px); font-weight: 400; line-height: 1.02; letter-spacing: -.04em; }
-.slides-users-heading h2 em { color: #a95130; font-weight: 400; }
-.slides-users-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(18px, 2.3vw, 32px); margin-bottom: 22px; }
-.slides-user-card { display: flex; flex-direction: column; min-width: 0; padding: clamp(24px, 2.5vw, 36px); border: 1px solid #d1c9bf; border-radius: 28px; background: #fef9ef; box-shadow: 0 20px 44px #58473b10; }
-.slides-user-family { background: #f4e4d7; border-color: #dfc9b7; }
-.slides-user-card-head { display: flex; align-items: center; gap: 20px; }
-.slides-user-number { width: 58px; height: 58px; flex: none; display: grid; place-items: center; border-radius: 50%; background: #a95130; color: #fef9ef; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: 27px; }
-.slides-user-family .slides-user-number { background: #2a2b2f; }
-.slides-user-overline { display: block; color: #8b4429; font-size: 12px; font-weight: 750; letter-spacing: .09em; text-transform: uppercase; }
-.slides-user-card h3 { margin: 4px 0 0; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: clamp(30px, 3vw, 42px); font-weight: 400; line-height: 1; }
-.slides-user-summary { min-height: 2.8em; margin: 20px 0 16px; color: #4e4a45; font-size: clamp(16px, 1.32vw, 19px); font-weight: 400; line-height: 1.5; }
-.slides-user-challenges { display: flex; flex-direction: column; gap: 0; margin: 0; padding: 0; list-style: none; }
-.slides-user-challenges li { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 12px; padding: 13px 0; border-top: 1px solid #d9cec0; font-size: clamp(14px, 1.12vw, 16px); line-height: 1.45; }
-.slides-user-challenges strong { color: #8b4429; }
-.slides-user-challenges span { color: #4e4a45; }
-.slides-user-need { margin: auto 0 0; padding-top: 20px; color: #2a2b2f; font-size: clamp(15px, 1.18vw, 17px); font-weight: 600; line-height: 1.45; }
-.slides-user-need span { display: block; margin-bottom: 5px; color: #8b4429; font-size: 11px; font-weight: 750; letter-spacing: .09em; text-transform: uppercase; }
 .slides-solution { background: #fef9ef; }
 .slides-solution-heading { margin: clamp(18px, 2vw, 28px) 0 0; }
 .slides-solution-heading .slides-eyebrow { margin: 0 0 10px; }
@@ -288,7 +270,6 @@
 .slides-motion-ready [data-slide-reveal].is-visible { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
 .slides-exporting [data-slide-reveal] { opacity: 1 !important; transform: none !important; transition: none !important; }
 .slides-motion-ready .slides-problem-stat,
-.slides-motion-ready .slides-user-family { transition-delay: 120ms; }
 .slides-exporting .slides-problem-trend *, .slides-exporting .slides-problem-figure mark { animation: none !important; }
 .slides-exporting .slides-room-light, .slides-exporting .slides-room-bulb, .slides-exporting .slides-room-resident, .slides-exporting .slides-room-leg-a, .slides-exporting .slides-room-leg-b { animation: none !important; }
 .slides-exporting .slides-room-light { opacity: .85; }
@@ -317,7 +298,6 @@
 @media (max-width: 850px) { .slides-problem-main { grid-template-columns: 1fr; } .slides-problem-stat { max-width: 520px; } }
 @media (max-width: 480px) { .slides-problem-risk > div { grid-template-columns: 1fr; gap: 10px; } .slides-problem-risk strong { display: inline; margin-right: 7px; } }
 @media (max-width: 600px) { .slides-problem-gap-card { gap: 14px; padding: 16px; } .slides-problem-gap-icon { width: 56px; height: 56px; border-radius: 14px; } .slides-problem-gap-icon svg { width: 34px; height: 34px; } }
-@media (max-width: 750px) { .slides-users-grid { grid-template-columns: 1fr; } .slides-user-summary { min-height: 0; } }
 @media (max-width: 850px) { .slides-solution-columns { grid-template-columns: 1fr; } .slides-solution-companion { border-left: 0; border-top: 1px solid #d1c9bf; padding: 26px 0 0; } .slides-buddy-stage { max-width: 520px; } }
 @media (max-width: 850px) { .slides-innovation-card { gap: 16px; } .slides-innovation-card h3 { font-size: clamp(25px, 3vw, 32px); } }
 @media (max-width: 600px) { .slides-sensor-demos { grid-template-columns: 1fr; } .slides-sensor-demo { display: grid; grid-template-columns: 110px minmax(0, 1fr); column-gap: 14px; align-items: center; } .slides-sensor-visual { grid-row: span 2; height: 110px; margin: 0; } .slides-buddy-stage { height: 240px; } }
@@ -327,7 +307,7 @@
 @media (max-width: 900px) { .slides-feasibility-requirements article { padding: 17px; gap: 10px; } .slides-feasibility-requirements svg { width: 25px; height: 25px; } .slides-feasibility-timeline { gap: 12px; } }
 @media (max-width: 700px) { .slides-feasibility-requirements { grid-template-columns: 1fr; } .slides-feasibility-requirements article { min-height: 0; } .slides-feasibility-timeline { grid-template-columns: 1fr; gap: 18px; padding-left: 16px; } .slides-feasibility-timeline::before { top: 10px; bottom: 12px; left: 8px; right: auto; width: 2px; height: auto; } .slides-feasibility-time { height: auto; margin-bottom: 3px; } .slides-feasibility-dot { position: absolute; top: 3px; left: -16px; width: 14px; height: 14px; margin: 0; border-width: 3px; } .slides-feasibility-timeline h3 { margin-bottom: 4px; } }
 @media (max-width: 700px) { .slides-close-statement { padding: 64px 26px 28px; } .slides-close-statement p { font-size: clamp(20px, 5vw, 27px); } }
-@media (max-width: 600px) { .slides-toolbar > span { display: none; } .slides-page { min-height: 80svh; } .slides-cover { min-height: 86svh; } .slides-cover-copy { width: 100%; } .slides-cover h1 { font-size: clamp(72px, 15vw, 100px); } .slides-cover-tagline { font-size: clamp(36px, 8vw, 52px); } .slides-cover-intro { max-width: 360px; } .slides-live-scene { opacity: .28; } .slides-problem-main { padding: 34px 0; } .slides-problem-copy h2 { font-size: clamp(45px, 11vw, 62px); } .slides-problem-alone-art { width: 100px; } .slides-problem-gap-items { grid-template-columns: 1fr; } .slides-user-challenges li { grid-template-columns: 96px minmax(0, 1fr); } }
+@media (max-width: 600px) { .slides-toolbar > span { display: none; } .slides-page { min-height: 80svh; } .slides-cover { min-height: 86svh; } .slides-cover-copy { width: 100%; } .slides-cover h1 { font-size: clamp(72px, 15vw, 100px); } .slides-cover-tagline { font-size: clamp(36px, 8vw, 52px); } .slides-cover-intro { max-width: 360px; } .slides-live-scene { opacity: .28; } .slides-problem-main { padding: 34px 0; } .slides-problem-copy h2 { font-size: clamp(45px, 11vw, 62px); } .slides-problem-alone-art { width: 100px; } .slides-problem-gap-items { grid-template-columns: 1fr; } }
 @media (max-width: 600px) { .slides-toolbar-actions { gap: 6px; } .slides-toolbar-actions button { padding: 10px 12px; font-size: 12px; } .slides-export-status { display: none; } }
 @page { size: 13.333in 7.5in; margin: 0; }
 @media print {
@@ -453,18 +433,6 @@
   .slides-close-statement { padding: .52in .48in .24in; border-radius: .18in; }
   .slides-close-quote { top: -.02in; left: .42in; font-size: 75pt; }
   .slides-close-statement p { font-size: 19pt; line-height: 1.35; }
-  .slides-users-heading { margin: .22in 0 .18in; }
-  .slides-users-heading h2 { font-size: 43pt; margin-top: .06in; }
-  .slides-users-grid { gap: .22in; margin-bottom: .15in; }
-  .slides-user-card { padding: .2in; border-radius: .18in; }
-  .slides-user-number { width: .45in; height: .45in; font-size: 20pt; }
-  .slides-user-card-head { gap: .12in; }
-  .slides-user-overline { font-size: 8pt; }
-  .slides-user-card h3 { font-size: 26pt; }
-  .slides-user-summary { min-height: 0; margin: .12in 0 .08in; font-size: 12pt; }
-  .slides-user-challenges li { grid-template-columns: .8in minmax(0, 1fr); gap: .1in; padding: .08in 0; font-size: 10.5pt; }
-  .slides-user-need { padding-top: .1in; font-size: 11pt; }
-  .slides-user-need span { font-size: 8pt; }
   .slides-pending-content { padding: 0; }
   .slides-pending-content h2 { font-size: 65pt; }
 }
@@ -551,4 +519,57 @@
 @media print {
   .slides-how-companion2 { margin-bottom: .08in; padding: .06in 0; }
   .slides-how-companion2 p { font-size: 10pt; }
+}
+
+.slides-users-layout { flex: 1; min-height: 0; display: grid; grid-template-columns: 480px minmax(0, 1fr); gap: 52px; align-items: center; margin-bottom: 16px; }
+
+.slides-users-rings { position: relative; width: 480px; height: 480px; }
+.slides-users-ring { position: absolute; border-radius: 50%; }
+.slides-users-ring-township { inset: 0; background: #f9ebdd; border: 1px solid #ecd6c2; }
+.slides-users-ring-family { inset: 82px; background: #ecc8ae; border: 1px solid #dfb293; }
+.slides-users-ring-resident { inset: 164px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; background: #a95130; color: #fef9ef; text-align: center; }
+.slides-users-ring-resident span, .slides-users-ring-label span { display: block; font-size: 11px; font-weight: 750; letter-spacing: .09em; }
+.slides-users-ring-resident strong, .slides-users-ring-label strong { font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-weight: 400; line-height: 1.05; }
+.slides-users-ring-resident strong { font-size: 24px; }
+.slides-users-ring-label { position: absolute; left: 0; right: 0; text-align: center; color: #2a2b2f; }
+.slides-users-ring-label strong { font-size: 22px; }
+.slides-users-ring-label-family { top: 100px; }
+.slides-users-ring-label-township { top: 22px; }
+.slides-users-ring-label-township span { color: #8b4429; }
+.slides-users-ring-note { position: absolute; left: 0; right: 0; text-align: center; color: #8b4429; font-size: 13px; font-weight: 600; }
+.slides-users-ring-note-family { bottom: 104px; }
+.slides-users-ring-note-township { bottom: 28px; }
+
+.slides-users-copy .slides-eyebrow { margin: 0 0 8px; }
+.slides-users-copy h2 { margin: 0 0 24px; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: clamp(36px, 3.6vw, 46px); font-weight: 400; line-height: 1.05; letter-spacing: -.035em; }
+.slides-users-copy h2 em { color: #a95130; font-weight: 400; }
+.slides-users-table-head, .slides-users-row { display: grid; grid-template-columns: 140px minmax(0, 1fr) minmax(0, 1fr); column-gap: 20px; }
+.slides-users-table-head { padding-bottom: 8px; color: #756d64; font-size: 11px; font-weight: 750; letter-spacing: .09em; text-transform: uppercase; }
+.slides-users-row { padding: 14px 0; border-top: 1px solid #d1c9bf; }
+.slides-users-row:last-child { border-bottom: 1px solid #d1c9bf; }
+.slides-users-row > div { display: flex; align-items: center; gap: 10px; align-self: start; }
+.slides-users-row i { width: 12px; height: 12px; flex: none; border-radius: 50%; }
+.slides-users-row strong { font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: 21px; font-weight: 400; }
+.slides-users-row p { margin: 0; color: #4e4a45; font-size: 15px; line-height: 1.4; }
+.slides-users-row p:last-child { color: #2a2b2f; font-weight: 600; }
+.slides-users-row-resident i { background: #a95130; }
+.slides-users-row-family i { background: #2a2b2f; }
+.slides-users-row-township i { background: #b4734f; }
+
+@media (max-width: 1100px) {
+  .slides-users-layout { grid-template-columns: 1fr; gap: 28px; }
+  .slides-users-rings { margin: 0 auto; }
+}
+@media (max-width: 600px) {
+  .slides-users-rings { transform: scale(.7); margin: -72px auto; }
+  .slides-users-table-head { display: none; }
+  .slides-users-row { grid-template-columns: 1fr; row-gap: 6px; }
+}
+@media print {
+  .slides-users-layout { grid-template-columns: 4.6in minmax(0, 1fr); gap: .5in; margin-bottom: .1in; }
+  .slides-users-rings { width: 4.6in; height: 4.6in; }
+  .slides-users-copy h2 { font-size: 33pt; margin-bottom: .2in; }
+  .slides-users-row { padding: .1in 0; }
+  .slides-users-row p { font-size: 11pt; }
+  .slides-users-row strong { font-size: 15pt; }
 }

@@ -231,31 +231,39 @@ export function Slides() {
 
       <PageFrame number={4} className="slides-users">
         <div className="slides-section-top"><TemanMuWordmark /><span>04 · Who benefits</span></div>
-        <div className="slides-users-heading" data-slide-reveal>
-          <p className="slides-eyebrow">Target users</p>
-          <h2>For the person at home.<br /><em>For the people who care.</em></h2>
-        </div>
-        <div className="slides-users-grid">
-          <article className="slides-user-card slides-user-resident" data-slide-reveal>
-            <div className="slides-user-card-head"><span className="slides-user-number">01</span><div><span className="slides-user-overline">First pillar</span><h3>Older residents</h3></div></div>
-            <p className="slides-user-summary">People such as Madam Lee, who live independently and want to keep their normal routine.</p>
-            <ul className="slides-user-challenges">
-              <li><strong>Safety</strong><span>A change in routine or medical issue may go unnoticed.</span></li>
-              <li><strong>Privacy</strong><span>Cameras and wearables can feel intrusive or burdensome.</span></li>
-              <li><strong>Connection</strong><span>Living alone can mean long stretches without contact.</span></li>
-            </ul>
-            <p className="slides-user-need"><span>What they need</span> Independence, privacy and human connection.</p>
-          </article>
-          <article className="slides-user-card slides-user-family" data-slide-reveal>
-            <div className="slides-user-card-head"><span className="slides-user-number">02</span><div><span className="slides-user-overline">Second pillar</span><h3>Families</h3></div></div>
-            <p className="slides-user-summary">Adult children and loved ones who may work or live away from the resident.</p>
-            <ul className="slides-user-challenges">
-              <li><strong>Visibility</strong><span>A phone call shows only one moment of the day.</span></li>
-              <li><strong>Uncertainty</strong><span>Silence could mean asleep, out, or needing help.</span></li>
-              <li><strong>Response</strong><span>When worried, they need someone nearby to check.</span></li>
-            </ul>
-            <p className="slides-user-need"><span>What they need</span> Daily reassurance and a clear path to action.</p>
-          </article>
+        <div className="slides-users-layout">
+          <div className="slides-users-rings" aria-label="Circles of care: the older resident at the centre, family around her, township around them">
+            <div className="slides-users-ring slides-users-ring-township" />
+            <div className="slides-users-ring slides-users-ring-family" />
+            <div className="slides-users-ring slides-users-ring-resident"><span>01</span><strong>Older<br />resident</strong></div>
+            <div className="slides-users-ring-label slides-users-ring-label-family"><span>02</span><strong>Family</strong></div>
+            <div className="slides-users-ring-label slides-users-ring-label-township"><span>03</span><strong>Township</strong></div>
+            <div className="slides-users-ring-note slides-users-ring-note-family">checks in from afar</div>
+            <div className="slides-users-ring-note slides-users-ring-note-township">responds nearby</div>
+          </div>
+
+          <div className="slides-users-copy" data-slide-reveal>
+            <p className="slides-eyebrow">Target users</p>
+            <h2>One person at home. <em>Two circles of care.</em></h2>
+            <div className="slides-users-table">
+              <div className="slides-users-table-head"><span /><span>Their worry</span><span>TemanMu gives</span></div>
+              <div className="slides-users-row slides-users-row-resident">
+                <div><i /><strong>Residents</strong></div>
+                <p>A fall or change in routine may go unnoticed, and cameras feel intrusive.</p>
+                <p>Nothing to wear or watch her, and a buddy nearby.</p>
+              </div>
+              <div className="slides-users-row slides-users-row-family">
+                <div><i /><strong>Families</strong></div>
+                <p>Silence could mean asleep, out, or needing help.</p>
+                <p>A daily status, and a clear next step when something changes.</p>
+              </div>
+              <div className="slides-users-row slides-users-row-township">
+                <div><i /><strong>Township</strong></div>
+                <p>No clear signal of which home needs a check first.</p>
+                <p>Prioritised alerts, and a record of every outcome.</p>
+              </div>
+            </div>
+          </div>
         </div>
       </PageFrame>
 
