@@ -527,6 +527,9 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
     setIntegrationError(null)
     setVisible(true)
     setPaused(false)
+    // Every scenario starts from the origin; Unusual Inactivity otherwise leaves her lying on the floor.
+    setPose('none')
+    nextCharacterCommand('reset')
     const steps = scenarioSteps(id, timing, usingMock)
     const controller = new ScenarioController()
     runner.current = controller
@@ -545,11 +548,12 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
       },
       moveResponder, checkResident: () => setResponderChecking(true),
     }
-    void controller.play(steps, actions, (index: number, step: ScenarioStep) => {
+    // Wait a frame so the reset command commits before the first step replaces it.
+    void new Promise<void>(resolve => requestAnimationFrame(() => resolve())).then(() => controller.play(steps, actions, (index: number, step: ScenarioStep) => {
       if (step.kind === 'animate' && (step.animation === 'wake' || step.animation === 'recover')) sound.current.play('wake')
       if (id === 'goingOut' && step.kind === 'visible' && step.value) sound.current.play('return')
       setScenarioProgress({ index: index + 1, total: steps.length, label: step.label, kind: step.kind })
-    })
+    }))
       .then(() => {
         if (runner.current !== controller) return
         runner.current = null
