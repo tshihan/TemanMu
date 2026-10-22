@@ -207,7 +207,8 @@ export function Slides() {
 
       <PageFrame number={5} className="slides-solution">
         <div className="slides-section-top"><TemanMuWordmark /><span>05 · The solution</span></div>
-        <div className="slides-solution-heading" data-slide-reveal><h2>Solution</h2></div>
+        <div className="slides-solution-heading" data-slide-reveal>
+          <p className="slides-eyebrow">The solution</p>        </div>
         <div className="slides-solution-columns">
           <section className="slides-solution-safety" aria-labelledby="slides-safety-title" data-slide-reveal>
             <h3 id="slides-safety-title">Safety</h3>
