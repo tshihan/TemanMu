@@ -48,7 +48,7 @@ async def post_monitoring(body: MonitoringIn) -> MonitoringResponse:
     unit_id = settings.controllable_unit_id
     if body.active:
         try:
-            await monitoring.start_watching(unit_id)
+            await monitoring.start_watching(unit_id, body.grace_period_seconds, body.voice_call_ring_seconds)
         except monitoring.UnitNotFound:
             raise HTTPException(status_code=404, detail="Unit not found. Call POST /api/demo/reset.") from None
     else:

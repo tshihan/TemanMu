@@ -11,6 +11,9 @@ export type InteractionBindings = {
   paused?: boolean
   disabled?: boolean
   responderDoorOpen?: boolean
+  /** Shown over the mobile phone after Unusual Inactivity's call goes unanswered. */
+  phoneTag?: string | null
+  phoneSpot?: PhoneSpot
   onSelect: (id: InteractionId) => void; onHover: (id: InteractionId | null) => void
 }
 export const INITIAL_OBJECT_STATES: ObjectStates = {
@@ -26,6 +29,16 @@ export const INTERACTIONS: Record<InteractionId, { label: string; approach: Wayp
   bedroomLamp: { label: 'Bedroom Lamp', approach: 'bedside', room: 'bedroom', target: [-1.22, -4.13] },
   mainDoor: { label: 'Main Door', approach: 'mainDoor', room: 'mainDoor', target: [1.5, 5] },
   telephone: { label: 'Mobile Phone', approach: 'phoneApproach', room: 'living', target: [-2.65, 2.38] },
+}
+
+/** The mobile phone lives on the coffee table, except during the nap, when it is on the bedside table. */
+export type PhoneSpot = 'living' | 'bedside'
+const PHONE_SPOTS: Record<PhoneSpot, Pick<(typeof INTERACTIONS)['telephone'], 'approach' | 'room' | 'target'>> = {
+  living: { approach: 'phoneApproach', room: 'living', target: [-2.65, 2.38] },
+  bedside: { approach: 'bedside', room: 'bedroom', target: [-1.36, -3.97] },
+}
+export function interactionSpot(id: InteractionId, phoneSpot: PhoneSpot = 'living') {
+  return id === 'telephone' ? { ...INTERACTIONS.telephone, ...PHONE_SPOTS[phoneSpot] } : INTERACTIONS[id]
 }
 
 export function interactionPrompt(id: InteractionId, states: ObjectStates) {

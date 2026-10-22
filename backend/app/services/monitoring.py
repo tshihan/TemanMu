@@ -133,16 +133,21 @@ async def _run_incident_step(incident_id: str, step: Callable[[str], Awaitable[N
 # restart turns it off.
 _watching: set[str] = set()
 _watch_started_at: dict[str, datetime] = {}
+# Per-scenario (grace, ring) seconds for incidents the watch opens; settings apply when absent.
+_call_timing: dict[str, tuple[float, float]] = {}
 
 
 def is_watching(unit_id: str) -> bool:
     return unit_id in _watching
 
 
-async def start_watching(unit_id: str) -> Unit:
+async def start_watching(
+    unit_id: str, grace_period_seconds: float | None = None, voice_call_ring_seconds: float | None = None
+) -> Unit:
     """POST /api/demo/monitoring {active: true}: turn the watch on with a fresh quiet-gap clock.
 
     The clock restarts now, or an old silence would open an incident the moment it turns on.
+    The optional timings let each scenario pace its simulated call.
     """
     async with _unit_lock(unit_id):
         unit = await db_units.get_unit(unit_id)
@@ -152,6 +157,10 @@ async def start_watching(unit_id: str) -> Unit:
             raise UnitNotControllable(unit_id)
         _watching.add(unit_id)
         _watch_started_at[unit_id] = utc_now()
+        _call_timing[unit_id] = (
+            grace_period_seconds if grace_period_seconds is not None else settings.grace_period_seconds,
+            voice_call_ring_seconds if voice_call_ring_seconds is not None else settings.voice_call_ring_seconds,
+        )
         if unit.active_incident_id is None:
             now = utc_now()
             unit = await db_units.update_unit_state(
@@ -169,6 +178,7 @@ async def stop_watching(unit_id: str) -> None:
     async with _unit_lock(unit_id):
         _watching.discard(unit_id)
         _watch_started_at.pop(unit_id, None)
+        _call_timing.pop(unit_id, None)
         timers.cancel(_watch_key(unit_id))
 
 
@@ -176,6 +186,7 @@ def stop_all_watching() -> None:
     """Demo reset: every watch off (reset has already cancelled the timers)."""
     _watching.clear()
     _watch_started_at.clear()
+    _call_timing.clear()
 
 
 async def _sustained_load_checks(unit: Unit) -> list[tuple[datetime, rules.TickDecision]]:
@@ -265,7 +276,10 @@ async def check_unit(unit_id: str) -> None:
 
 
 async def _open_incident(unit: Unit, decision: rules.TickDecision, now: datetime) -> None:
-    grace_ends_at = now + timedelta(seconds=settings.grace_period_seconds)
+    grace_seconds, ring_seconds = _call_timing.get(
+        unit.unit_id, (settings.grace_period_seconds, settings.voice_call_ring_seconds)
+    )
+    grace_ends_at = now + timedelta(seconds=grace_seconds)
     async with get_pool().acquire() as conn, conn.transaction():
         incident = await db_incidents.create_incident(unit.unit_id, now, grace_ends_at, conn=conn)
         await db_incidents.add_incident_event(
@@ -284,7 +298,7 @@ async def _open_incident(unit: Unit, decision: rules.TickDecision, now: datetime
 
     timers.cancel(_watch_key(unit.unit_id))
     _schedule_incident_timer(
-        "voice", incident.incident_id, now + timedelta(seconds=settings.voice_call_ring_seconds), _voice_no_answer
+        "voice", incident.incident_id, now + timedelta(seconds=ring_seconds), _voice_no_answer
     )
     _schedule_incident_timer("grace", incident.incident_id, grace_ends_at, _grace_ended)
     await realtime.broadcast("incident.updated", incident)

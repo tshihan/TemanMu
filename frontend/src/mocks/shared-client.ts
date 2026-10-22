@@ -100,7 +100,7 @@ export const sharedMockApi: Api = {
   requestNeighbourIntroduction: unitId => call('requestNeighbourIntroduction', unitId),
   confirmDemoCall: (id, confirmedSafe) => call('confirmDemoCall', id, confirmedSafe),
   resetDemo: () => call('resetDemo'),
-  setMonitoring: active => call('setMonitoring', active),
+  setMonitoring: (active, timing) => call('setMonitoring', active, timing),
   connect(onEvent, onStatus) {
     listeners.add(onEvent)
     if (onStatus) statusListeners.add(onStatus)

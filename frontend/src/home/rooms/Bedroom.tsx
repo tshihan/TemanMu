@@ -1,6 +1,7 @@
 import { Art, Box, Cylinder, Lamp, Plant } from '../primitives'
 import { getMaterials } from '../materials'
 import { InteractiveObject } from '../interactions/InteractiveObject'
+import { PhoneOnSurface } from './MobilePhone'
 import { interactionPrompt, type InteractionBindings } from '../interactions/registry'
 
 export function Bedroom({ interaction }: { interaction?: InteractionBindings }) {
@@ -28,9 +29,10 @@ export function Bedroom({ interaction }: { interaction?: InteractionBindings }) 
       {x === -1.22 && interaction ? <InteractiveObject id="bedroomLamp" label={interactionPrompt('bedroomLamp', interaction.states)}
         selected={interaction.selected === 'bedroomLamp'} hovered={interaction.hovered === 'bedroomLamp'} disabled={interaction.disabled}
         onSelect={interaction.onSelect} onHover={interaction.onHover}
-        hitbox={[0, 1.16, 0]} hitboxSize={[.5, .65, .5]} tooltip={[0, 1.7, 0]}>
-        <Lamp at={[0, .76, 0]} lit={interaction.states.bedroomLamp} />
-      </InteractiveObject> : <Lamp at={[0, .76, 0]} lit={!interaction} />}
+        hitbox={[.12, 1.16, -.12]} hitboxSize={[.5, .65, .5]} tooltip={[.12, 1.7, -.12]}>
+        <Lamp at={[.12, .76, -.12]} lit={interaction.states.bedroomLamp} />
+      </InteractiveObject> : <Lamp at={x === -1.22 ? [.12, .76, -.12] : [0, .76, 0]} lit={!interaction} />}
+      {x === -1.22 && interaction?.phoneSpot === 'bedside' && <PhoneOnSurface interaction={interaction} at={[-.14, .75, .16]} rotation={-Math.PI / 2} />}
     </group>)}
     <group name="wardrobe" position={[-4.98, 0, -2.55]}>
       <Box at={[0, 1.03, 0]} size={[.68, 2, 1.58]} mat={m.walnut} />

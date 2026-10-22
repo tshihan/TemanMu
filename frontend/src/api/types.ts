@@ -157,6 +157,9 @@ export type RealtimeEvent =
   | { type: 'notification.updated'; at: string; data: Notification }
   | { type: 'companion.message_delivered'; at: string; data: CompanionMessage }
 
+/** Per-scenario simulated call pacing sent with POST /api/demo/monitoring. */
+export type CallTiming = { grace_period_seconds: number; voice_call_ring_seconds: number }
+
 export interface Api {
   getConfig(): Promise<Config>
   getUnits(): Promise<Unit[]>
@@ -186,6 +189,6 @@ export interface Api {
   confirmDemoCall(id: string, confirmedSafe: true): Promise<Incident>
   resetDemo(): Promise<{ units: Unit[] }>
   // Demo-only: the home unit's quiet-gap watch runs only while a scenario plays.
-  setMonitoring(active: boolean): Promise<{ unit_id: UnitId; active: boolean }>
+  setMonitoring(active: boolean, timing?: CallTiming): Promise<{ unit_id: UnitId; active: boolean }>
   connect(onEvent: (event: RealtimeEvent) => void, onStatus?: (connected: boolean) => void): () => void
 }

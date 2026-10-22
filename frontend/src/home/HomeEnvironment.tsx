@@ -14,11 +14,11 @@ import { TownshipResponder, type ResponderCommand } from './character/TownshipRe
 import { ROOM_LABELS, type RoomId, type Waypoint } from './character/navigation'
 import { INITIAL_OBJECT_STATES, interactionPrompt, type InteractionBindings, type InteractionId, type ObjectStates } from './interactions/registry'
 import { ScenarioController, type ScenarioActions } from './scenarios/ScenarioController'
-import { DEFAULT_TIMING, SCENARIO_DESCRIPTIONS, SCENARIO_LABELS, scenarioSteps, type ScenarioId, type ScenarioStep, type ScenarioTiming } from './scenarios/definitions'
+import { DEFAULT_TIMING, SCENARIO_CALL_TIMING, SCENARIO_DESCRIPTIONS, SCENARIO_LABELS, scenarioSteps, type ScenarioId, type ScenarioStep, type ScenarioTiming } from './scenarios/definitions'
 import { api, usingMock } from '../api'
 import { primeSharedMockInactivity } from '../mocks/shared-client'
 import { applyEvent, getAppState, subscribeAppEvents, useAppState } from '../api/store'
-import type { CompanionMessage, Config, Incident, Reading, Sensor, Unit } from '../api/types'
+import type { CallTiming, CompanionMessage, Config, Incident, Reading, Sensor, Unit } from '../api/types'
 import { HOME_UNIT_ID, SensorGateway, readingForObject } from './integration/sensorGateway'
 import seed from '../../../shared/seed.json'
 import { SensorBeacons, type SensorPulses } from './SensorBeacons'
@@ -104,7 +104,7 @@ function Scene({ command, characterCommand, responderCommand, responderVisible, 
       shadow-camera-top={9} shadow-camera-bottom={-9} shadow-normalBias={.035} shadow-bias={-.0001} />
     <directionalLight position={[5, 8, -7]} intensity={.8 * light} color="#e8efff" />
     <HouseModel interaction={interaction} />
-    <ElderlyCharacter command={characterCommand} pose={pose} speech={sensorView ? null : speech} visible={visible && !sensorView} paused={paused} urgent={urgent}
+    <ElderlyCharacter command={characterCommand} pose={pose} speech={sensorView ? null : speech} visible={visible && !sensorView} paused={paused} urgent={urgent} phoneSpot={interaction.phoneSpot}
       onStatus={onCharacterStatus} onReached={onReached} onArrived={onArrived} onAnimationComplete={onAnimationComplete} />
     <SensorBeacons unit={unit} pulses={pulses} sensorView={sensorView} />
     <TownshipResponder command={responderCommand} visible={responderVisible && !sensorView} checking={responderChecking} paused={paused} onArrived={onResponderArrived} />
@@ -186,6 +186,7 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
   const [scenarioProgress, setScenarioProgress] = useState<{ index: number; total: number; label: string; kind: ScenarioStep['kind'] } | null>(null)
   const [timing, setTiming] = useState<ScenarioTiming>(DEFAULT_TIMING)
   const [picked, setPicked] = useState<ScenarioId>('normalMorning')
+  const [callCard, setCallCard] = useState<'ringing' | 'noAnswer' | null>(null)
   const [quietGap, setQuietGap] = useState<{ endsAt: number; seconds: number } | null>(null)
   const [sensorView, setSensorView] = useState(false)
   const [toolsOpen, setToolsOpen] = useState(false)
@@ -371,6 +372,8 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
     void interactWith(target, incomingCall).catch(error => { if (!(error instanceof DOMException && error.name === 'AbortError')) console.error('Interaction failed', error) })
   }
   const interaction: InteractionBindings = { states, selected, hovered, paused, responderDoorOpen, disabled: scenarioActive || resetBusy || !homeUnit,
+    phoneTag: callCard === 'noAnswer' ? 'Unanswered' : null,
+    phoneSpot: (scenario ?? picked) === 'falseAlarmRecovery' ? 'bedside' : 'living',
     onSelect: id => manualInteract(id), onHover: setHovered }
   const resetLocalObjects = () => {
     cancelSequence()
@@ -427,7 +430,8 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
   const waitForQuietGap = async (signal: AbortSignal) => {
     if (signal.aborted) throw new DOMException('Scenario stopped', 'AbortError')
     // The watch starts here, not at play: the walk and fall would otherwise use up the short demo gap.
-    try { await switchMonitoring(true) } catch { throw new Error('Could not start A-105 monitoring on the backend') }
+    const callTiming = scenarioRef.current ? SCENARIO_CALL_TIMING[scenarioRef.current] : undefined
+    try { await switchMonitoring(true, callTiming) } catch { throw new Error('Could not start A-105 monitoring on the backend') }
     if (signal.aborted) throw new DOMException('Scenario stopped', 'AbortError')
     const seconds = latestUnit.current?.quiet_gap.usual_max_seconds ?? 5
     const endsAt = Date.now() + seconds * 1000
@@ -569,7 +573,16 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
       },
       playAnimation,
       interactWith: (object, value, approach, signal) => interactWith(object, false, approach, signal, value),
-      setCharacterVisible: setVisible, setObject, waitForQuietGap, waitForNoAnswer, waitForCaregiverAlert, waitForResolution, waitForOutcome,
+      setCharacterVisible: setVisible, setObject, waitForQuietGap, waitForResolution, waitForOutcome,
+      // The phone tag stays up from the first ring until the caregiver and township alert goes out.
+      waitForNoAnswer: async signal => {
+        setCallCard('ringing')
+        try { await waitForNoAnswer(signal) } catch (error) { setCallCard(null); throw error }
+        setCallCard('noAnswer')
+      },
+      waitForCaregiverAlert: async signal => {
+        try { await waitForCaregiverAlert(signal) } finally { setCallCard(null) }
+      },
       dispatchResponder, setResponderVisible: () => setResponderVisible(true), setResponderDoor: open => {
         setResponderDoorOpen(open)
         sound.current.play(open ? 'doorOpen' : 'doorClose')
@@ -629,6 +642,7 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
     clock.current = new ScenarioController()
     cancelSequence()
     resetResponder()
+    setCallCard(null)
     setVisualStates({ ...localStates.current, telephone: 'idle' })
     pending.current.forEach(item => item.reject(new DOMException('Scenario stopped', 'AbortError')))
     pending.current.clear()
@@ -655,6 +669,7 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
   }
   const restoreScene = (unit: Unit) => {
     sound.current.stopAll()
+    setCallCard(null)
     runner.current?.stop()
     runner.current = null
     scenarioRef.current = null
@@ -720,9 +735,9 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
   }, [appState.connected])
   // The backend watches A-105 for inactivity only from a scenario's quiet-gap step until the scenario
   // ends, so it never raises incidents on its own. Calls are queued so on/off reach it in order.
-  const switchMonitoring = (active: boolean) => {
+  const switchMonitoring = (active: boolean, timing?: CallTiming) => {
     monitoringOn.current = active
-    const call = monitoringQueue.current.then(() => api.setMonitoring(active))
+    const call = monitoringQueue.current.then(() => api.setMonitoring(active, timing))
     monitoringQueue.current = call.then(() => undefined, () => undefined)
     return call
   }
@@ -821,7 +836,7 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
         <Suspense fallback={null}><Scene command={command} characterCommand={characterCommand} responderCommand={responderCommand}
           responderVisible={showResponder} responderChecking={responderChecking} interaction={interaction}
           pose={pose} speech={speech} visible={visible} paused={paused}
-          urgent={scenario === 'falseAlarmRecovery' && (scenarioProgress?.index ?? 0) >= 5}
+          urgent={false}
           sensorView={sensorView} unit={homeUnit} pulses={pulses}
           onCharacterStatus={setCharacterStatus} onReached={onReached} onArrived={onArrived} onResponderArrived={onResponderArrived}
           onAnimationComplete={onAnimationComplete} onReady={ready} /></Suspense>

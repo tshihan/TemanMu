@@ -54,7 +54,7 @@ export const liveApi: Api = {
   confirmDemoCall: (id, confirmedSafe) => post(`/api/demo/incidents/${query(id)}/confirm-call`, { confirmed_safe: confirmedSafe }),
   resetDemo: () => post('/api/demo/reset'),
   // keepalive: the 3D home turns monitoring off on pagehide, which must survive the unload.
-  setMonitoring: active => request('/api/demo/monitoring', { method: 'POST', body: JSON.stringify({ active }), keepalive: true }),
+  setMonitoring: (active, timing) => request('/api/demo/monitoring', { method: 'POST', body: JSON.stringify({ active, ...timing }), keepalive: true }),
   connect(onEvent, onStatus) {
     let closed = false
     let socket: WebSocket | undefined

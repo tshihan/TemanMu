@@ -325,6 +325,10 @@ class ResetResponse(ContractModel):
 
 class MonitoringIn(ContractModel):
     active: bool
+    # Optional per-scenario call timing for incidents opened while this watch is on;
+    # omitted fields fall back to GRACE_PERIOD_SECONDS and VOICE_CALL_RING_SECONDS.
+    grace_period_seconds: float | None = Field(default=None, gt=0, le=3600)
+    voice_call_ring_seconds: float | None = Field(default=None, gt=0, le=3600)
 
 
 class MonitoringResponse(ContractModel):

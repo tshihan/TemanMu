@@ -1,7 +1,7 @@
 import seed from '../../../shared/seed.json'
 import { ApiError } from '../api/live'
 import type {
-  Api, BuddyMatch, CommunityActivity, CompanionMessage, Config, Incident,
+  Api, BuddyMatch, CallTiming, CommunityActivity, CompanionMessage, Config, Incident,
   MessagePreset, NeighbourMatch, NeighbourState, Notification, Reading, RealtimeEvent, Role, Snapshot, Unit,
 } from '../api/types'
 
@@ -144,6 +144,8 @@ let introductions: { unit_id: string; neighbour_unit_id: string; requested_at: s
 let morningSentOn: string | null = null
 let scenarioTimers = new Set<ReturnType<typeof setTimeout>>()
 let monitoringActive = false
+// Per-scenario call pacing, like the backend watch; null uses the mock config.
+let callTiming: CallTiming | null = null
 let watchTimer: ReturnType<typeof setTimeout> | null = null
 
 export const mockSnapshot = (): Snapshot => clone(state)
@@ -284,11 +286,13 @@ function notifyConcern(unit: Unit, incident: Incident): void {
 
 function startGrace(unit: Unit, trigger: 'quiet_gap' | 'outing_timeout' | 'caregiver_confirmation' = 'quiet_gap'): Incident {
   const openedAt = now()
+  const graceSeconds = callTiming?.grace_period_seconds ?? state.config.grace_period_seconds
+  const ringMilliseconds = callTiming ? callTiming.voice_call_ring_seconds * 1000 : Math.min(18000, graceSeconds * 900)
   const detectedDetail = trigger === 'outing_timeout' ? 'Outing longer than usual'
     : trigger === 'caregiver_confirmation' ? 'No water activity since confirmed contact' : 'Water quiet gap exceeded'
   const incident: Incident = {
     incident_id: crypto.randomUUID(), unit_id: unit.unit_id, state: 'grace', opened_at: openedAt,
-    grace_ends_at: new Date(Date.now() + state.config.grace_period_seconds * 1000).toISOString(),
+    grace_ends_at: new Date(Date.now() + graceSeconds * 1000).toISOString(),
     next_reminder_at: null, reminder_count: 0, acknowledged_by: null, outcome: null, closed_at: null,
     events: [
       { type: 'detected', at: openedAt, detail: detectedDetail },
@@ -306,8 +310,8 @@ function startGrace(unit: Unit, trigger: 'quiet_gap' | 'outing_timeout' | 'careg
     if (incident.state !== 'grace') return
     incident.events.push({ type: 'voice_call_no_answer', at: now(), detail: 'No answer (simulated)' })
     publish('incident.updated', clone(incident))
-  }, Math.min(18000, state.config.grace_period_seconds * 900))
-  later(() => notifyConcern(unit, incident), state.config.grace_period_seconds * 1000)
+  }, ringMilliseconds)
+  later(() => notifyConcern(unit, incident), graceSeconds * 1000)
   return incident
 }
 
@@ -561,6 +565,7 @@ export const mockApi: Api = {
     if (watchTimer) clearTimeout(watchTimer)
     watchTimer = null
     monitoringActive = false
+    callTiming = null
     state = initialSnapshot()
     readings = []
     messages = []
@@ -573,8 +578,9 @@ export const mockApi: Api = {
     return { units: clone(state.units) }
   },
   // Watches only the two relevant demo transitions; the other quiet-gap scenario is primed explicitly.
-  async setMonitoring(active) {
+  async setMonitoring(active, timing) {
     monitoringActive = active
+    callTiming = active ? timing ?? null : null
     scheduleMockWatch(unitOrThrow('A-105'))
     return { unit_id: 'A-105', active }
   },

@@ -1,5 +1,6 @@
 import type { Waypoint } from '../character/navigation'
 import type { InteractionId } from '../interactions/registry'
+import type { CallTiming } from '../../api/types'
 
 export type ScenarioId = 'normalMorning' | 'goingOut' | 'unusualInactivity' | 'falseAlarmRecovery'
 export type ScenarioTiming = { outsideSeconds: number }
@@ -13,6 +14,13 @@ export const SCENARIO_DESCRIPTIONS: Record<ScenarioId, string> = {
   goingOut: 'Door opens, the home goes quiet, she returns. Read as a possible outing.',
   unusualInactivity: 'A long water quiet gap with no outing evidence escalates to the township.',
   falseAlarmRecovery: 'She is napping, wakes to the call and confirms she is okay. The concern resolves.',
+}
+
+/** Simulated call pacing per quiet-gap scenario. A quick unanswered call for inactivity;
+ * for the nap, the ring outlasts her waking and answering the bedside phone (about 12s). */
+export const SCENARIO_CALL_TIMING: Partial<Record<ScenarioId, CallTiming>> = {
+  unusualInactivity: { grace_period_seconds: 15, voice_call_ring_seconds: 2 },
+  falseAlarmRecovery: { grace_period_seconds: 16, voice_call_ring_seconds: 14 },
 }
 
 export type ScenarioStep =

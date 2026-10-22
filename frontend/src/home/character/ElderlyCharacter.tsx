@@ -3,7 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { Html } from '@react-three/drei'
 import { AnimationMixer, Group, MathUtils, type AnimationAction, type Bone } from 'three'
 import { ROOM_LABELS, WAYPOINTS, routeBetween, type RoomId, type Waypoint } from './navigation'
-import { INTERACTIONS, type InteractionId } from '../interactions/registry'
+import { interactionSpot, type InteractionId, type PhoneSpot } from '../interactions/registry'
 import { ROCKETBOX_SCALE, disposeAvatar, inPlace, prepareAvatar, rocketboxLoader } from './rocketbox'
 
 export type CharacterAnimation = 'rest' | 'wake' | 'collapse' | 'recover'
@@ -22,8 +22,8 @@ const MUM_SCALE = .00875
 const BED_HEAD_OFFSET = .28 - (ROCKETBOX_SCALE - MUM_SCALE) * 174
 
 /** Self-contained actor: loaded once, animated in the render loop, navigated on authored clear paths. */
-export function ElderlyCharacter({ command, pose, speech, visible, paused, urgent, onStatus, onReached, onArrived, onAnimationComplete }: {
-  command: CharacterCommand; pose: InteractionPose; speech: string | null; visible: boolean; paused: boolean; urgent: boolean
+export function ElderlyCharacter({ command, pose, speech, visible, paused, urgent, phoneSpot, onStatus, onReached, onArrived, onAnimationComplete }: {
+  command: CharacterCommand; pose: InteractionPose; speech: string | null; visible: boolean; paused: boolean; urgent: boolean; phoneSpot?: PhoneSpot
   onStatus: (status: CharacterStatus) => void; onReached: (id: number, target: InteractionId) => void
   onArrived: (id: number, target: Waypoint) => void; onAnimationComplete: (id: number, animation: CharacterAnimation) => void
 }) {
@@ -137,16 +137,16 @@ export function ElderlyCharacter({ command, pose, speech, visible, paused, urgen
       return
     }
     const target = command.kind === 'interact' ? command.destination as InteractionId : null
-    const targetWaypoint = target ? command.approach ?? INTERACTIONS[target].approach : command.destination as Waypoint
+    const targetWaypoint = target ? command.approach ?? interactionSpot(target, phoneSpot).approach : command.destination as Waypoint
     const next = queue.current[0] ?? pausedNext.current ?? anchor.current
     const remaining = routeBetween(next, targetWaypoint)
     queue.current = next === anchor.current ? remaining : [next, ...remaining]
     pausedNext.current = null
     interaction.current = target ? { id: command.id, target } : null
-    destination.current = target ? INTERACTIONS[target].room : targetWaypoint
+    destination.current = target ? interactionSpot(target, phoneSpot).room : targetWaypoint
     moveCommandId.current = command.id
     if (!queue.current.length) {
-      if (target) onStatus({ room: INTERACTIONS[target].room, destination: null, phase: 'interacting' })
+      if (target) onStatus({ room: interactionSpot(target, phoneSpot).room, destination: null, phase: 'interacting' })
       else {
         if (targetWaypoint in ROOM_LABELS) lastRoom.current = targetWaypoint as RoomId
         destination.current = null
@@ -157,7 +157,7 @@ export function ElderlyCharacter({ command, pose, speech, visible, paused, urgen
       onStatus({ room: lastRoom.current, destination: destination.current, phase: 'walking' })
     }
     invalidate()
-  }, [command, invalidate, onStatus, onArrived, urgent])
+  }, [command, invalidate, onStatus, onArrived, urgent, phoneSpot])
 
   useFrame((_, delta) => {
     const shellGroup = shell.current
@@ -209,13 +209,13 @@ export function ElderlyCharacter({ command, pose, speech, visible, paused, urgen
     }
     if (!queue.current.length && interaction.current) {
       const pending = interaction.current
-      const [x, z] = INTERACTIONS[pending.target].target
+      const [x, z] = interactionSpot(pending.target, phoneSpot).target
       const desired = Math.atan2(x - shellGroup.position.x, z - shellGroup.position.z)
       const difference = Math.atan2(Math.sin(desired - shellGroup.rotation.y), Math.cos(desired - shellGroup.rotation.y))
       shellGroup.rotation.y += MathUtils.clamp(difference, -TURN_SPEED * frame, TURN_SPEED * frame)
       if (Math.abs(difference) < .05) {
         interaction.current = null
-        lastRoom.current = INTERACTIONS[pending.target].room
+        lastRoom.current = interactionSpot(pending.target, phoneSpot).room
         destination.current = null
         onReached(pending.id, pending.target)
         onStatus({ room: lastRoom.current, destination: null, phase: 'interacting' })
