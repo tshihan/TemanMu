@@ -293,22 +293,23 @@
   .slides-water-stream { opacity: 1; }
   .slides-door-panel { transform: rotateY(-58deg); }
 }
-@media (max-width: 850px) { .slides-cover-copy { width: 76%; } .slides-live-scene { opacity: .7; } .slides-sdp-logo { top: 18px; right: 18px; width: 80px; } .slides-section-top > span:last-child { margin-right: 82px; } .slides-team-row-second { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 620px) { .slides-team-row, .slides-team-row-second { grid-template-columns: 1fr; } .slides-team-card { min-height: 0; } }
-@media (max-width: 850px) { .slides-problem-main { grid-template-columns: 1fr; } .slides-problem-stat { max-width: 520px; } }
-@media (max-width: 480px) { .slides-problem-risk > div { grid-template-columns: 1fr; gap: 10px; } .slides-problem-risk strong { display: inline; margin-right: 7px; } }
-@media (max-width: 600px) { .slides-problem-gap-card { gap: 14px; padding: 16px; } .slides-problem-gap-icon { width: 56px; height: 56px; border-radius: 14px; } .slides-problem-gap-icon svg { width: 34px; height: 34px; } }
-@media (max-width: 850px) { .slides-solution-columns { grid-template-columns: 1fr; } .slides-solution-companion { border-left: 0; border-top: 1px solid #d1c9bf; padding: 26px 0 0; } .slides-buddy-stage { max-width: 520px; } }
-@media (max-width: 850px) { .slides-innovation-card { gap: 16px; } .slides-innovation-card h3 { font-size: clamp(25px, 3vw, 32px); } }
-@media (max-width: 600px) { .slides-sensor-demos { grid-template-columns: 1fr; } .slides-sensor-demo { display: grid; grid-template-columns: 110px minmax(0, 1fr); column-gap: 14px; align-items: center; } .slides-sensor-visual { grid-row: span 2; height: 110px; margin: 0; } .slides-buddy-stage { height: 240px; } }
-@media (max-width: 600px) { .slides-innovation-heading h2 { font-size: clamp(38px, 9vw, 48px); } .slides-innovation-grid { grid-template-columns: 1fr; grid-template-rows: none; } .slides-innovation-card { padding: 22px; } .slides-innovation-card > svg { width: 32px; height: 32px; } }
-@media (max-width: 850px) { .slides-impact-grid { gap: 12px; } .slides-impact-card { padding: 18px; } .slides-impact-art-family, .slides-impact-art-township { gap: 38px; } .slides-impact-target { display: block; } .slides-impact-target span { display: block; margin-top: 4px; } }
-@media (max-width: 700px) { .slides-impact-grid { grid-template-columns: 1fr; } .slides-impact-card { min-height: 0; } .slides-impact-art { height: 110px; } .slides-impact-target { display: flex; min-height: 0; } .slides-impact-target span { margin: 0; } }
-@media (max-width: 900px) { .slides-feasibility-requirements article { padding: 17px; gap: 10px; } .slides-feasibility-requirements svg { width: 25px; height: 25px; } .slides-feasibility-timeline { gap: 12px; } }
-@media (max-width: 700px) { .slides-feasibility-requirements { grid-template-columns: 1fr; } .slides-feasibility-requirements article { min-height: 0; } .slides-feasibility-timeline { grid-template-columns: 1fr; gap: 18px; padding-left: 16px; } .slides-feasibility-timeline::before { top: 10px; bottom: 12px; left: 8px; right: auto; width: 2px; height: auto; } .slides-feasibility-time { height: auto; margin-bottom: 3px; } .slides-feasibility-dot { position: absolute; top: 3px; left: -16px; width: 14px; height: 14px; margin: 0; border-width: 3px; } .slides-feasibility-timeline h3 { margin-bottom: 4px; } }
-@media (max-width: 700px) { .slides-close-statement { padding: 64px 26px 28px; } .slides-close-statement p { font-size: clamp(20px, 5vw, 27px); } }
-@media (max-width: 600px) { .slides-toolbar > span { display: none; } .slides-page { min-height: 80svh; } .slides-cover { min-height: 86svh; } .slides-cover-copy { width: 100%; } .slides-cover h1 { font-size: clamp(72px, 15vw, 100px); } .slides-cover-tagline { font-size: clamp(36px, 8vw, 52px); } .slides-cover-intro { max-width: 360px; } .slides-live-scene { opacity: .28; } .slides-problem-main { padding: 34px 0; } .slides-problem-copy h2 { font-size: clamp(45px, 11vw, 62px); } .slides-problem-alone-art { width: 100px; } .slides-problem-gap-items { grid-template-columns: 1fr; } }
-@media (max-width: 600px) { .slides-toolbar-actions { gap: 6px; } .slides-toolbar-actions button { padding: 10px 12px; font-size: 12px; } .slides-export-status { display: none; } }
+@media screen and (max-width: 850px) { .slides-cover-copy { width: 76%; } .slides-live-scene { opacity: .7; } .slides-sdp-logo { top: 18px; right: 18px; width: 80px; } .slides-section-top > span:last-child { margin-right: 82px; } .slides-team-row-second { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media screen and (max-width: 620px) { .slides-team-row, .slides-team-row-second { grid-template-columns: 1fr; } .slides-team-card { min-height: 0; } }
+@media screen and (max-width: 850px) { .slides-problem-main { grid-template-columns: 1fr; } .slides-problem-stat { max-width: 520px; } }
+@media screen and (max-width: 480px) { .slides-problem-risk > div { grid-template-columns: 1fr; gap: 10px; } .slides-problem-risk strong { display: inline; margin-right: 7px; } }
+@media screen and (max-width: 600px) { .slides-problem-gap-card { gap: 14px; padding: 16px; } .slides-problem-gap-icon { width: 56px; height: 56px; border-radius: 14px; } .slides-problem-gap-icon svg { width: 34px; height: 34px; } }
+@media screen and (max-width: 750px) { .slides-users-grid { grid-template-columns: 1fr; } .slides-user-summary { min-height: 0; } }
+@media screen and (max-width: 850px) { .slides-solution-columns { grid-template-columns: 1fr; } .slides-solution-companion { border-left: 0; border-top: 1px solid #d1c9bf; padding: 26px 0 0; } .slides-buddy-stage { max-width: 520px; } }
+@media screen and (max-width: 850px) { .slides-innovation-card { gap: 16px; } .slides-innovation-card h3 { font-size: clamp(25px, 3vw, 32px); } }
+@media screen and (max-width: 600px) { .slides-sensor-demos { grid-template-columns: 1fr; } .slides-sensor-demo { display: grid; grid-template-columns: 110px minmax(0, 1fr); column-gap: 14px; align-items: center; } .slides-sensor-visual { grid-row: span 2; height: 110px; margin: 0; } .slides-buddy-stage { height: 240px; } }
+@media screen and (max-width: 600px) { .slides-innovation-heading h2 { font-size: clamp(38px, 9vw, 48px); } .slides-innovation-grid { grid-template-columns: 1fr; grid-template-rows: none; } .slides-innovation-card { padding: 22px; } .slides-innovation-card > svg { width: 32px; height: 32px; } }
+@media screen and (max-width: 850px) { .slides-impact-grid { gap: 12px; } .slides-impact-card { padding: 18px; } .slides-impact-art-family, .slides-impact-art-township { gap: 38px; } .slides-impact-target { display: block; } .slides-impact-target span { display: block; margin-top: 4px; } }
+@media screen and (max-width: 700px) { .slides-impact-grid { grid-template-columns: 1fr; } .slides-impact-card { min-height: 0; } .slides-impact-art { height: 110px; } .slides-impact-target { display: flex; min-height: 0; } .slides-impact-target span { margin: 0; } }
+@media screen and (max-width: 900px) { .slides-feasibility-requirements article { padding: 17px; gap: 10px; } .slides-feasibility-requirements svg { width: 25px; height: 25px; } .slides-feasibility-timeline { gap: 12px; } }
+@media screen and (max-width: 700px) { .slides-feasibility-requirements { grid-template-columns: 1fr; } .slides-feasibility-requirements article { min-height: 0; } .slides-feasibility-timeline { grid-template-columns: 1fr; gap: 18px; padding-left: 16px; } .slides-feasibility-timeline::before { top: 10px; bottom: 12px; left: 8px; right: auto; width: 2px; height: auto; } .slides-feasibility-time { height: auto; margin-bottom: 3px; } .slides-feasibility-dot { position: absolute; top: 3px; left: -16px; width: 14px; height: 14px; margin: 0; border-width: 3px; } .slides-feasibility-timeline h3 { margin-bottom: 4px; } }
+@media screen and (max-width: 700px) { .slides-close-statement { padding: 64px 26px 28px; } .slides-close-statement p { font-size: clamp(20px, 5vw, 27px); } }
+@media screen and (max-width: 600px) { .slides-toolbar > span { display: none; } .slides-page { min-height: 80svh; } .slides-cover { min-height: 86svh; } .slides-cover-copy { width: 100%; } .slides-cover h1 { font-size: clamp(72px, 15vw, 100px); } .slides-cover-tagline { font-size: clamp(36px, 8vw, 52px); } .slides-cover-intro { max-width: 360px; } .slides-live-scene { opacity: .28; } .slides-problem-main { padding: 34px 0; } .slides-problem-copy h2 { font-size: clamp(45px, 11vw, 62px); } .slides-problem-alone-art { width: 100px; } .slides-problem-gap-items { grid-template-columns: 1fr; } .slides-user-challenges li { grid-template-columns: 96px minmax(0, 1fr); } }
+@media screen and (max-width: 600px) { .slides-toolbar-actions { gap: 6px; } .slides-toolbar-actions button { padding: 10px 12px; font-size: 12px; } .slides-export-status { display: none; } }
 @page { size: 13.333in 7.5in; margin: 0; }
 @media print {
   .slides-motion-ready [data-slide-reveal] { opacity: 1; transform: none; transition: none; }
@@ -497,7 +498,7 @@
   .slides-how-sensors > span::before, .slides-how-bars i { animation: none; }
   .slides-how-dot { display: none; }
 }
-@media (max-width: 900px) {
+@media screen and (max-width: 900px) {
   .slides-how-flow2 { grid-template-columns: 1fr; gap: 16px; }
   .slides-how-inputs { padding-top: 0; }
   .slides-how-feed, .slides-how-dot, .slides-how-stub, .slides-how-outcome::before, .slides-how-outcomes-head > span:first-child { display: none; }
@@ -519,6 +520,42 @@
 @media print {
   .slides-how-companion2 { margin-bottom: .08in; padding: .06in 0; }
   .slides-how-companion2 p { font-size: 10pt; }
+
+  /* Print keeps the 16:9 desktop composition even when Chrome reports a narrow viewport. */
+  .slides-team-row-second { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .slides-team-content { justify-content: center; gap: .12in; padding: 0; }
+  .slides-team-heading .slides-eyebrow { margin-bottom: .07in; font-size: 14pt; }
+  .slides-team-heading h2 { font-size: 37pt; }
+  .slides-team-row { gap: .12in; }
+  .slides-team-card { min-height: 1.48in; padding: .1in; gap: .11in; }
+  .slides-team-photo { width: .94in; height: 1.2in; }
+  .slides-team-card-details { gap: .04in; }
+  .slides-team-card h3 { font-size: 12pt; }
+  .slides-team-role { font-size: 7pt; }
+  .slides-team-card a { font-size: 7.5pt; }
+
+  .slides-problem-main { align-items: center; padding: .07in 0 .1in; }
+  .slides-problem-copy h2 { font-size: 39pt; margin: .06in 0 .1in; }
+  .slides-problem-lead { font-size: 13pt; line-height: 1.35; }
+  .slides-problem-risk { margin-top: .07in; padding-top: .06in; }
+  .slides-problem-thesis { margin-top: .07in; font-size: 13pt; line-height: 1.2; }
+  .slides-users-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+  .slides-how-flow2 { grid-template-columns: 3.05in .35in minmax(0, 1fr); gap: 0; margin-bottom: .08in; }
+  .slides-how-inputs { padding-top: 0; gap: .1in; }
+  .slides-how-box { gap: .07in; padding: .12in; }
+  .slides-how-box h3 { font-size: 16pt; }
+  .slides-how-box p { font-size: 10pt; }
+  .slides-how-feed, .slides-how-stub, .slides-how-outcome::before,
+  .slides-how-outcomes-head > span:first-child, .slides-how-outcomes-head > span:last-child { display: block; }
+  .slides-how-branch { grid-template-columns: .28in minmax(0, 1fr); }
+  .slides-how-outcomes { grid-template-rows: .18in repeat(3, minmax(0, 1fr)); gap: .08in; }
+  .slides-how-outcomes-head { grid-template-columns: .28in 1.55in minmax(0, 1fr); gap: .12in; }
+  .slides-how-outcome { grid-template-columns: 1.55in minmax(0, 1fr); gap: .12in; padding: .1in .12in; }
+  .slides-how-outcome h3 { font-size: 14pt; }
+  .slides-how-outcome > p, .slides-how-chain { font-size: 9pt; }
+  .slides-how-chain { gap: .05in; }
+  .slides-how-chain b { padding: .05in .08in; }
 }
 
 .slides-users-layout { flex: 1; min-height: 0; display: grid; grid-template-columns: 480px minmax(0, 1fr); gap: 52px; align-items: center; margin-bottom: 16px; }
@@ -556,11 +593,11 @@
 .slides-users-row-family i { background: #2a2b2f; }
 .slides-users-row-township i { background: #b4734f; }
 
-@media (max-width: 1100px) {
+@media screen and (max-width: 1100px) {
   .slides-users-layout { grid-template-columns: 1fr; gap: 28px; }
   .slides-users-rings { margin: 0 auto; }
 }
-@media (max-width: 600px) {
+@media screen and (max-width: 600px) {
   .slides-users-rings { transform: scale(.7); margin: -72px auto; }
   .slides-users-table-head { display: none; }
   .slides-users-row { grid-template-columns: 1fr; row-gap: 6px; }
