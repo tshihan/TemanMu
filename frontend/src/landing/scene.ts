@@ -292,6 +292,9 @@ export function startScene(root: HTMLElement, mode: 'landing' | 'presentation' =
     if (!w || !h) return
     renderer.setSize(w, h, false)
     camera.aspect = w / h
+    // Portrait screens: widen the vertical FOV so the horizontal view stays close to the desktop framing.
+    const minAspect = 1.2
+    camera.fov = camera.aspect >= minAspect ? 34 : Math.min(72, 2 * THREE.MathUtils.radToDeg(Math.atan(Math.tan(THREE.MathUtils.degToRad(17)) * minAspect / camera.aspect)))
     if (mode === 'presentation') camera.setViewOffset(w, h, -w * .28, 0, w, h)
     camera.updateProjectionMatrix()
   }

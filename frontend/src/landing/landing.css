@@ -13,3 +13,18 @@
 .landing .lp-faq[open] .lp-faq-icon { transform: rotate(45deg); background: #b05a36; border-color: #b05a36; color: #fef9ef; }
 .landing .lp-faq summary:hover .lp-faq-icon { border-color: #b05a36; }
 .landing .lp-faq summary:focus-visible { outline: 2px solid #b05a36; outline-offset: 4px; border-radius: 4px; }
+.landing section { scroll-margin-top: 72px; }
+
+/* Phones: the inline styles are tuned for desktop, so re-flow the header, hero and FAQ here. */
+@media (max-width: 720px) {
+  .landing .lp-header > div { flex-wrap: nowrap !important; padding: 0 16px !important; }
+  .landing .lp-nav-link { display: none; }
+  .landing .lp-hero { background: linear-gradient(0deg, #fef9ef 0%, #fef9efe6 42%, #fef9ef00 66%) !important; }
+  .landing .lp-hero-inner { flex-direction: column !important; justify-content: flex-end !important; align-items: stretch !important; padding: 20px 16px 28px !important; }
+  .landing .lp-hero-copy { flex: none !important; max-width: none !important; gap: 14px !important; }
+  .landing .lp-hero-copy h1 { font-size: clamp(30px, 8.5vw, 40px) !important; }
+  .landing .lp-hero-copy p { font-size: 15px !important; line-height: 1.5 !important; }
+  .landing .lp-hero-card { display: none !important; }
+  .landing .lp-faq > p { padding-right: 0 !important; }
+  .landing .lp-faq summary { gap: 16px !important; }
+}

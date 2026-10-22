@@ -178,6 +178,10 @@ button:focus-visible, select:focus-visible, .divider:focus-visible { outline: 3p
   .panel-heading, .dashboard-header { padding: 18px 20px; }
   .dashboard-content { padding: 18px 20px; }
 }
+@media (max-width: 800px) {
+  .app-header { height: auto; }
+  .view-navigation { overflow-x: auto; justify-content: flex-start; }
+}
 @media (max-width: 620px) {
   .workspace { padding: 10px; }
   .caregiver-status { padding: 20px; }
