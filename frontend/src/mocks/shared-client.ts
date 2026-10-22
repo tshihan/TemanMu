@@ -30,13 +30,35 @@ function handleMessageError() {
   statusListeners.forEach(listener => listener(false))
 }
 
+// Reloading one tab starts a fresh demo: that tab resets the shared session and every other open tab
+// reloads with it. Returns true for the tab the user reloaded.
+const RELOAD_FLAG = 'temanmu-synced-reload'
+function syncReloadAcrossTabs(): boolean {
+  let synced = false
+  try { synced = sessionStorage.getItem(RELOAD_FLAG) === '1'; sessionStorage.removeItem(RELOAD_FLAG) } catch { /* storage unavailable */ }
+  const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined
+  // A tab reloaded by another tab must not broadcast or reset again, or the tabs would reload each other forever.
+  const userReload = navigation?.type === 'reload' && !synced
+  if (typeof BroadcastChannel === 'undefined') return userReload
+  const channel = new BroadcastChannel('temanmu-demo-reload')
+  if (userReload) channel.postMessage('reload')
+  channel.onmessage = () => {
+    try { sessionStorage.setItem(RELOAD_FLAG, '1') } catch { /* storage unavailable */ }
+    window.location.reload()
+  }
+  return userReload
+}
+
 function ensureWorker(): SharedWorker {
   if (worker) return worker
+  const userReload = syncReloadAcrossTabs()
   worker = new SharedWorker(new URL('./shared-worker.ts', import.meta.url), { type: 'module', name: 'temanmu-demo-session' })
   worker.port.onmessage = handleMessage
   worker.port.onmessageerror = handleMessageError
   worker.port.start()
   window.addEventListener('pagehide', () => worker?.port.postMessage({ kind: 'disconnect' }), { once: true })
+  // Sent before any other request, so this tab's first reads already see the fresh demo.
+  if (userReload) void call('resetDemo').catch(error => console.error('Could not reset the demo after reload', error))
   return worker
 }
 
