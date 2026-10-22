@@ -10,9 +10,10 @@ import './live.css'
 const Landing = lazy(() => import('./landing/Landing').then(module => ({ default: module.Landing })))
 const HomeEnvironment = lazy(() => import('./home/HomeEnvironment').then(module => ({ default: module.HomeEnvironment })))
 const Slides = lazy(() => import('./slides/Slides').then(module => ({ default: module.Slides })))
-type Page = 'landing' | 'dashboard' | 'simulator' | 'caregiver' | 'slides'
+const Present = lazy(() => import('./slides/Present').then(module => ({ default: module.Present })))
+type Page = 'landing' | 'dashboard' | 'simulator' | 'caregiver' | 'slides' | 'present'
 // Routes are real paths (/dashboard, /caregiver, ...). Anything else, including the landing page's own #how / #faq anchors, stays on the landing page.
-const PAGES: Record<string, Page> = { '/simulator': 'simulator', '/dashboard': 'dashboard', '/caregiver': 'caregiver', '/slides': 'slides' }
+const PAGES: Record<string, Page> = { '/simulator': 'simulator', '/dashboard': 'dashboard', '/caregiver': 'caregiver', '/slides': 'slides', '/present': 'present' }
 const pageFromPath = (): Page => PAGES[window.location.pathname.replace(/\/+$/, '')] ?? 'landing'
 // Old hash links (/#caregiver) keep working: rewrite them to the path form.
 const legacy = window.location.pathname === '/' ? window.location.hash.slice(1) : ''
@@ -27,7 +28,7 @@ export default function App() {
   const inactiveUnread = notifications.filter(item => item.role === inactiveRole && !item.read).length
 
   useEffect(() => {
-    if (page === 'slides') return
+    if (page === 'slides' || page === 'present') return
     return connectStore()
   }, [page])
   useEffect(() => {
@@ -42,6 +43,7 @@ export default function App() {
   if (page === 'landing') return <Suspense fallback={null}><Landing /></Suspense>
 
   if (page === 'slides') return <Suspense fallback={null}><Slides /></Suspense>
+  if (page === 'present') return <Suspense fallback={null}><Present /></Suspense>
 
   // The installed caregiver app (PWA start page): the phone screen only, no dashboard chrome.
   if (page === 'caregiver') return <CaregiverApp standalone />
