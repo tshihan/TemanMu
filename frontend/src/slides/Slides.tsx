@@ -75,7 +75,7 @@ function useHowFlowDot() {
       if (reduce) return
       const rows = rowEls.map(r => rel(r!))
       const x0 = b.x + b.w, xs = rows[0].x - 28, xe = rows[0].x - 4
-      const el = now - start, i = Math.floor(el / cycle) % 3
+      const el = Math.max(0, now - start), i = Math.floor(el / cycle) % 3
       let t = el % cycle, x: number, y: number, show = true, glow = false
       const ry = rows[i].y + rows[i].h / 2
       if (t < T[0]) { x = x0 + (xs - x0) * ease(t / T[0]); y = fy }
