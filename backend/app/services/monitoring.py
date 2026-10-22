@@ -82,6 +82,18 @@ def _has_event(incident: Incident, event_type: str) -> bool:
     return any(e.type == event_type for e in incident.events)
 
 
+def _is_sustained_load_incident(incident: Incident | None) -> bool:
+    if incident is None:
+        return False
+    return any(
+        event.type == "detected" and event.detail in (
+            reasons.DETECTED_CONTINUOUS_WATER,
+            reasons.DETECTED_SUSTAINED_POWER,
+        )
+        for event in incident.events
+    )
+
+
 async def _notify_both(unit_id: str, kind: NotificationKind, message: str, incident_id: str) -> None:
     for role in BOTH_ROLES:
         await create_notification(role, unit_id, kind, message, incident_id=incident_id)
@@ -120,6 +132,7 @@ async def _run_incident_step(incident_id: str, step: Callable[[str], Awaitable[N
 # so A-105 never raises incidents on its own between scenarios. In memory, so a reset or a
 # restart turns it off.
 _watching: set[str] = set()
+_watch_started_at: dict[str, datetime] = {}
 
 
 def is_watching(unit_id: str) -> bool:
@@ -138,6 +151,7 @@ async def start_watching(unit_id: str) -> Unit:
         if not unit.controllable:
             raise UnitNotControllable(unit_id)
         _watching.add(unit_id)
+        _watch_started_at[unit_id] = utc_now()
         if unit.active_incident_id is None:
             now = utc_now()
             unit = await db_units.update_unit_state(
@@ -154,12 +168,55 @@ async def stop_watching(unit_id: str) -> None:
     """POST /api/demo/monitoring {active: false}. Active incidents keep their own timers."""
     async with _unit_lock(unit_id):
         _watching.discard(unit_id)
+        _watch_started_at.pop(unit_id, None)
         timers.cancel(_watch_key(unit_id))
 
 
 def stop_all_watching() -> None:
     """Demo reset: every watch off (reset has already cancelled the timers)."""
     _watching.clear()
+    _watch_started_at.clear()
+
+
+async def _sustained_load_checks(unit: Unit) -> list[tuple[datetime, rules.TickDecision]]:
+    """Deadlines for current loads, based on meter transitions, not repeat samples."""
+    checks: list[tuple[datetime, rules.TickDecision]] = []
+    watch_start = _watch_started_at.get(unit.unit_id)
+    if watch_start is None:
+        return checks
+    if unit.latest.water_lpm > 0:
+        started = await db_readings.active_load_started_at(unit.unit_id, "water", 0)
+        if started is not None:
+            due = max(started, watch_start) + timedelta(seconds=settings.continuous_water_seconds)
+            checks.append((due, rules.TickDecision(
+                kind="continuous_water",
+                reason="Water has continued flowing longer than expected. A check is needed; this may be a tap left on or a leak.",
+                detected_detail=reasons.DETECTED_CONTINUOUS_WATER,
+            )))
+    power_threshold = unit.baseline.standby_power_kw + settings.high_power_above_standby_kw
+    if unit.latest.power_kw > power_threshold:
+        started = await db_readings.active_load_started_at(unit.unit_id, "electricity", power_threshold)
+        if started is not None:
+            due = max(started, watch_start) + timedelta(seconds=settings.high_power_seconds)
+            checks.append((due, rules.TickDecision(
+                kind="sustained_power",
+                reason="Electricity use has stayed unusually high. A check is needed; the meter cannot identify the appliance or resident activity.",
+                detected_detail=reasons.DETECTED_SUSTAINED_POWER,
+            )))
+    return checks
+
+
+async def _next_watch_check(unit: Unit, incident: Incident | None) -> tuple[datetime, rules.TickDecision | None] | None:
+    if incident is not None:
+        return None
+    checks: list[tuple[datetime, rules.TickDecision | None]] = []
+    # A running tap is handled by the continuous-flow rule, not "no water use".
+    if unit.latest.water_lpm <= 0 or unit.status == "possible_away":
+        quiet_due = rules.next_check_at(_facts(unit, incident))
+        if quiet_due is not None:
+            checks.append((quiet_due, None))
+    checks.extend(await _sustained_load_checks(unit))
+    return min(checks, key=lambda item: item[0]) if checks else None
 
 
 async def _arm_watch_locked(unit_id: str) -> None:
@@ -170,11 +227,11 @@ async def _arm_watch_locked(unit_id: str) -> None:
     if unit is None or not unit.controllable:
         timers.cancel(_watch_key(unit_id))
         return
-    due = rules.next_check_at(_facts(unit, await _active_incident(unit)))
-    if due is None:
+    next_check = await _next_watch_check(unit, await _active_incident(unit))
+    if next_check is None:
         timers.cancel(_watch_key(unit_id))
     else:
-        timers.schedule(_watch_key(unit_id), due, lambda: check_unit(unit_id))
+        timers.schedule(_watch_key(unit_id), next_check[0], lambda: check_unit(unit_id))
 
 
 async def arm_watch(unit_id: str) -> None:
@@ -192,7 +249,12 @@ async def check_unit(unit_id: str) -> None:
         if unit is None or not unit.controllable:
             return
         now = utc_now()
-        decision = rules.on_tick(_facts(unit, await _active_incident(unit)), now, local_hhmm)
+        incident = await _active_incident(unit)
+        next_check = await _next_watch_check(unit, incident)
+        if next_check is None or now < next_check[0]:
+            await _arm_watch_locked(unit_id)
+            return
+        decision = next_check[1] or rules.on_tick(_facts(unit, incident), now, local_hhmm)
         if decision is None:
             await _arm_watch_locked(unit_id)  # not due yet (e.g. clock skew): try again later
             return
@@ -541,7 +603,8 @@ async def ingest_reading(body: ReadingIn) -> Unit:
         emergency_open = incident is not None and (
             _has_event(incident, "unable_to_verify") or _has_event(incident, "emergency_called")
         )
-        resolving = incident if decision.resolve_incident and not emergency_open else None
+        sustained_open = _is_sustained_load_incident(incident)
+        resolving = incident if decision.resolve_incident and not emergency_open and not sustained_open else None
 
         async with get_pool().acquire() as conn, conn.transaction():
             reading = await db_readings.insert_reading(reading, conn=conn)
@@ -550,8 +613,9 @@ async def ingest_reading(body: ReadingIn) -> Unit:
                 resolved = await _auto_resolve(conn, resolving, reading.recorded_at, decision.resolve_reason)
             # After the incident write, so the unit's derived active_incident_id is current.
             changes = decision.changes.as_kwargs()
-            if emergency_open:
-                # Activity is useful context, but cannot certify safety after a reported 999 call.
+            if emergency_open or sustained_open:
+                # A new utility load cannot certify safety after a sustained-load concern.
+                # Preserve the open case while updating its latest meter context.
                 for field in ("status", "status_reason", "status_since"):
                     changes.pop(field, None)
             unit = await db_units.update_unit_state(unit.unit_id, **changes, conn=conn)
@@ -572,7 +636,7 @@ async def ingest_reading(body: ReadingIn) -> Unit:
                     reasons.auto_resolved_message(unit.resident_name),
                     resolving.incident_id,
                 )
-        elif decision.is_activity and not await _morning_reassurance_sent(unit.unit_id):
+        elif incident is None and decision.is_activity and not await _morning_reassurance_sent(unit.unit_id):
             await create_notification(
                 "caregiver",
                 unit.unit_id,

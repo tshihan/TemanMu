@@ -18,6 +18,11 @@ class Settings(BaseSettings):
     reminder_interval_seconds: int = 15
     # How long the simulated voice call rings before "no answer" (within the grace period).
     voice_call_ring_seconds: float = 2
+    # Demo durations for a sustained household load. These are concern triggers,
+    # not evidence of a fall or of which appliance is running.
+    continuous_water_seconds: int = 45
+    high_power_seconds: int = 45
+    high_power_above_standby_kw: float = 1.0
     controllable_unit_id: str = "A-105"
     seed_file: Path = Path("../shared/seed.json")
     # NoDecode stops pydantic-settings from JSON-decoding the env value, so the

@@ -42,3 +42,22 @@ async def list_readings(
             since,
         )
     return [_row_to_reading(r) for r in rows]
+
+
+async def active_load_started_at(
+    unit_id: str, sensor: str, threshold: float, conn: asyncpg.Connection | None = None
+) -> datetime | None:
+    """First reading in the current above-threshold run, in ingestion order.
+
+    An off/below-threshold reading ends a run. The caller checks the current
+    household value first, so an old run cannot be mistaken for a live load.
+    """
+    async with connection(conn) as c:
+        return await c.fetchval(
+            """select min(recorded_at) from readings
+                where unit_id = $1 and sensor = $2 and value_num > $3
+                  and id > coalesce((select max(id) from readings
+                                      where unit_id = $1 and sensor = $2
+                                        and value_num <= $3), 0)""",
+            unit_id, sensor, threshold,
+        )
