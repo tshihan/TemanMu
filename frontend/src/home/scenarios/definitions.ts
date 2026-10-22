@@ -35,14 +35,10 @@ export type ScenarioStep =
   | { kind: 'hold'; label: string }
 
 export function scenarioSteps(id: ScenarioId, timing: ScenarioTiming, compressedDemoTime = false): ScenarioStep[] {
-  const quietGapLabel = compressedDemoTime
-    ? 'Demo time jump: usual water quiet gap has elapsed; no outing evidence'
-    : 'Waiting for the real water quiet gap and backend check'
+  const quietGapLabel = 'Fast-forward 4 hours: no water use, longer than her usual quiet gap; no outing evidence'
   switch (id) {
     case 'normalMorning': return [
-      { kind: 'move', to: 'bedside', label: 'Returning to the bedside' },
-      { kind: 'animate', animation: 'rest', label: 'Resting in bed' },
-      { kind: 'wait', seconds: 1.2, label: 'A quiet moment' },
+      { kind: 'wait', seconds: 1.2, label: 'Asleep in bed' },
       { kind: 'animate', animation: 'wake', label: 'Waking and getting out of bed' },
       { kind: 'move', to: 'bathroom', label: 'Walking to the bathroom' },
       { kind: 'interact', object: 'bathroomTap', value: true, label: 'Turning on the bathroom tap' },

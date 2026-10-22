@@ -22,7 +22,7 @@ import type { CompanionMessage, Config, Incident, Reading, Sensor, Unit } from '
 import { HOME_UNIT_ID, SensorGateway, readingForObject } from './integration/sensorGateway'
 import seed from '../../../shared/seed.json'
 import { SensorBeacons, type SensorPulses } from './SensorBeacons'
-import { Pause, Play, RotateCcw, Settings2, Square, Volume2, VolumeX, X } from 'lucide-react'
+import { FastForward, Pause, Play, RotateCcw, Settings2, Square, Volume2, VolumeX, X } from 'lucide-react'
 import { HomeSoundscape } from './soundscape'
 import './home.css'
 
@@ -123,6 +123,29 @@ class SceneBoundary extends Component<{ children: ReactNode }, { failed: boolean
 }
 const ready = () => { /* Stable callback: resizing must not create a render loop. */ }
 
+const QUIET_GAP_STORY_MINUTES = 4 * 60
+
+/** Plays the learned 4-hour quiet gap as a fast-forward over the real demo gap (5 seconds for A-105). */
+function QuietGapOverlay({ endsAt, seconds }: { endsAt: number; seconds: number }) {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 50)
+    return () => clearInterval(timer)
+  }, [])
+  const progress = Math.min(1, Math.max(0, 1 - (endsAt - now) / 1000 / seconds))
+  const done = progress >= 1
+  const storyTime = (minutes: number) => `${Math.floor(minutes / 60)}h ${String(Math.round(minutes) % 60).padStart(2, '0')}m`
+  return <div className={`live-fast-forward ${done ? 'is-done' : ''}`} role="status" aria-live="polite">
+    <span className="live-fast-forward-icon" aria-hidden="true"><FastForward size={20} /></span>
+    <div>
+      <small>{done ? 'Longer than her usual quiet gap' : 'Fast-forward · water quiet gap'}</small>
+      <strong>{storyTime(Math.floor(progress * QUIET_GAP_STORY_MINUTES))} <em>/ {storyTime(QUIET_GAP_STORY_MINUTES)} without water use</em></strong>
+      <span className="live-fast-forward-bar"><i style={{ width: `${progress * 100}%` }} /></span>
+      <span className="live-fast-forward-note">Her usual quiet gap of 4 hours is learned from her past history</span>
+    </div>
+  </div>
+}
+
 /** Self-contained viewer. The parent controls its dimensions; no API or store dependency. */
 export function HomeEnvironment({ className = '' }: { className?: string }) {
   const appState = useAppState()
@@ -163,6 +186,7 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
   const [scenarioProgress, setScenarioProgress] = useState<{ index: number; total: number; label: string; kind: ScenarioStep['kind'] } | null>(null)
   const [timing, setTiming] = useState<ScenarioTiming>(DEFAULT_TIMING)
   const [picked, setPicked] = useState<ScenarioId>('normalMorning')
+  const [quietGap, setQuietGap] = useState<{ endsAt: number; seconds: number } | null>(null)
   const [sensorView, setSensorView] = useState(false)
   const [toolsOpen, setToolsOpen] = useState(false)
   const [soundOn, setSoundOn] = useState(() => { try { return localStorage.getItem('temanmu.home.sound') !== 'off' } catch { return true } })
@@ -402,7 +426,20 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
   }
   const waitForQuietGap = async (signal: AbortSignal) => {
     if (signal.aborted) throw new DOMException('Scenario stopped', 'AbortError')
+    // The watch starts here, not at play: the walk and fall would otherwise use up the short demo gap.
+    try { await switchMonitoring(true) } catch { throw new Error('Could not start A-105 monitoring on the backend') }
+    if (signal.aborted) throw new DOMException('Scenario stopped', 'AbortError')
+    const seconds = latestUnit.current?.quiet_gap.usual_max_seconds ?? 5
+    const endsAt = Date.now() + seconds * 1000
+    setQuietGap({ endsAt, seconds })
+    try { await quietGapIncident(endsAt, signal) } finally { setQuietGap(null) }
+    setVisualStates({ ...localStates.current, telephone: 'ringing' })
+  }
+  const quietGapIncident = async (endsAt: number, signal: AbortSignal) => {
     if (usingMock) {
+      // Wait out the same gap the backend would, then let the mock raise the incident.
+      const remaining = (endsAt - Date.now()) / 1000
+      if (remaining > 0) await clock.current.wait(remaining, signal)
       const prior = await api.getUnitIncidents(HOME_UNIT_ID)
       if (prior.some(item => ['grace', 'notified', 'acknowledged'].includes(item.state)))
         throw new Error('A previous A-105 incident is still active. Close it on the dashboard or use Reset Demo before starting this scenario.')
@@ -423,7 +460,6 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
       setResponseIncidentId(incident.incident_id)
       applyEvent({ type: 'incident.updated', at: incident.opened_at, data: incident })
     } else await waitForGrace(signal)
-    setVisualStates({ ...localStates.current, telephone: 'ringing' })
   }
   const waitForNoAnswer = async (signal: AbortSignal) => {
     const id = graceIncident.current
@@ -509,9 +545,10 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
     setIntegrationError(null)
     setVisible(true)
     setPaused(false)
-    // Every scenario starts from the origin; Unusual Inactivity otherwise leaves her lying on the floor.
+    // Every scenario starts from a fixed spot; Unusual Inactivity otherwise leaves her lying on the floor.
+    // Normal Morning starts with her already asleep in bed.
     setPose('none')
-    nextCharacterCommand('reset')
+    nextCharacterCommand(id === 'normalMorning' ? 'resetInBed' : 'reset')
     const steps = scenarioSteps(id, timing, usingMock)
     const controller = new ScenarioController()
     runner.current = controller
@@ -681,19 +718,17 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
       }
     }
   }, [appState.connected])
-  // The backend watches A-105 for inactivity only while a scenario plays, so it never raises
-  // incidents on its own between scenarios. Calls are queued so on/off reach it in order.
-  useEffect(() => {
-    if (scenarioActive === monitoringOn.current) return
-    const active = scenarioActive
+  // The backend watches A-105 for inactivity only from a scenario's quiet-gap step until the scenario
+  // ends, so it never raises incidents on its own. Calls are queued so on/off reach it in order.
+  const switchMonitoring = (active: boolean) => {
     monitoringOn.current = active
-    monitoringQueue.current = monitoringQueue.current.then(() => api.setMonitoring(active)).then(() => undefined, error => {
-      console.error('Could not switch A-105 monitoring', error)
-      if (active && runner.current) {
-        stopScenario()
-        setIntegrationError('Could not start A-105 monitoring on the backend; scenario stopped.')
-      }
-    })
+    const call = monitoringQueue.current.then(() => api.setMonitoring(active))
+    monitoringQueue.current = call.then(() => undefined, () => undefined)
+    return call
+  }
+  useEffect(() => {
+    if (scenarioActive || !monitoringOn.current) return
+    switchMonitoring(false).catch(error => console.error('Could not switch off A-105 monitoring', error))
   }, [scenarioActive])
   useEffect(() => {
     const off = () => {
@@ -752,11 +787,9 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
   const demoNote = scenario === 'unusualInactivity' && (scenarioProgress?.index ?? 0) >= 7
     ? 'Guard Ali’s visit is a reenactment after the township acknowledgement. A human must still record the outcome.'
     : scenario === 'falseAlarmRecovery' && scenarioActive
-      ? usingMock ? 'Demo time is compressed: a long quiet gap triggers a simulated check-in call while Madam Lee is napping.'
-        : 'Waiting for the backend quiet-gap check. The call and safety confirmation are simulated for this demo.'
+      ? 'Demo time is compressed: 5 seconds stand in for her usual 4-hour quiet gap, so a simulated check-in call rings while Madam Lee is napping.'
     : scenario === 'unusualInactivity' && scenarioActive
-      ? usingMock ? 'Demo time is compressed: the quiet gap stands in for several hours without water use. The fall is for the audience, not a sensor reading.'
-        : 'Waiting for the backend to establish a prolonged water quiet gap. The fall is for the audience, not a sensor reading.'
+      ? 'Demo time is compressed: 5 seconds stand in for her usual 4-hour quiet gap, learned from her past history. The fall is for the audience, not a sensor reading.'
       : null
   const pickScenario = (id: ScenarioId) => {
     if (scenarioActive) return
@@ -855,6 +888,8 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
       </div>
     </div>}
 
+    {quietGap && <QuietGapOverlay endsAt={quietGap.endsAt} seconds={quietGap.seconds} />}
+
     <div className="live-top-right">
       <p className="live-demo-badge"><b>Demo only</b>Real homes are sensed, never seen.</p>
     </div>
@@ -886,13 +921,17 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
         </button>
         <div className="live-player-body">
           <div className="live-player-caption" role="status" aria-live="polite">
-            <strong>{caption}</strong>
+            <strong>{scenarioProgress?.kind === 'quietGap' && scenarioActive && <FastForward size={14} className="live-caption-ff" aria-hidden="true" />}{caption}</strong>
             <span>{SCENARIO_LABELS[shownScenario]} · {stepIndex ? `Step ${stepIndex} of ${timelineSteps.length}` : `${timelineSteps.length} steps`} · <em className={`live-playback-${scenarioState}`}>{playback}</em></span>
           </div>
-          <div className="live-timeline" aria-hidden="true">
-            <span className="live-timeline-fill" style={{ width: `${stepIndex / timelineSteps.length * 100}%` }} />
-            {timelineSteps.map((step, index) => <i key={index} title={step.label} className={index < stepIndex ? 'is-done' : ''}
-              style={{ left: `${(index + 1) / timelineSteps.length * 100}%` }} />)}
+          <div className="live-timeline-track">
+            <div className="live-timeline" aria-hidden="true">
+              <span className="live-timeline-fill" style={{ width: `${stepIndex / timelineSteps.length * 100}%` }} />
+              {timelineSteps.map((step, index) => <i key={index} title={step.label} className={index < stepIndex ? 'is-done' : ''}
+                style={{ left: `${(index + 1) / timelineSteps.length * 100}%` }} />)}
+            </div>
+            {timelineSteps.map((step, index) => step.kind === 'quietGap' && <span key={index} className={`live-timeline-ff ${index < stepIndex ? 'is-done' : ''} ${index === stepIndex - 1 && scenarioActive ? 'is-current' : ''}`}
+              title="Quiet gap (demo fast-forward)" style={{ left: `${(index + .5) / timelineSteps.length * 100}%` }}><FastForward size={10} aria-hidden="true" /></span>)}
           </div>
           <p className="live-player-note">{demoNote ?? SCENARIO_DESCRIPTIONS[shownScenario]}</p>
         </div>

@@ -10,7 +10,7 @@ test('inactivity demo shows a quiet gap, call, no answer, then caregiver alert',
     'responderMove', 'responderDoor', 'responderCheck', 'hold',
   ])
   assert.match(steps[1].label, /no sensor event/i)
-  assert.match(steps[3].label, /demo time jump/i)
+  assert.match(steps[3].label, /fast-forward 4 hours/i)
   assert.match(steps[7].label, /Guard Ali accepts/i)
   assert.equal(steps[11].to, 'responderCheck')
   assert.equal(steps.some(step => step.kind === 'object' && step.object === 'mainDoor'), false)

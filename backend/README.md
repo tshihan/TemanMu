@@ -142,7 +142,7 @@ Decisions:
 | D2 | Returning from Possible Away, closing an incident and auto-resolving one all restart the quiet-gap clock (`last_water_activity_at` = that moment). |
 | D3 | The simulated voice call rings for `VOICE_CALL_RING_SECONDS` before "no answer". |
 | D4 | Activity also auto-resolves an **acknowledged** incident (PRD §6.2: "at any point before closing"). |
-| D5 | The quiet-gap watch is demo-controlled: on while a scenario plays, off otherwise. Turning it off leaves an active incident's grace and reminder timers running. |
+| D5 | The quiet-gap watch is demo-controlled: on from a scenario's quiet-gap step until the scenario ends, off otherwise. Turning it off leaves an active incident's grace and reminder timers running. |
 
 WebSocket: `ws://localhost:8000/ws`. Each message is `{"type", "at", "data"}`; the first is a
 `snapshot`. After a reading, events go out in this order: `reading.received`,

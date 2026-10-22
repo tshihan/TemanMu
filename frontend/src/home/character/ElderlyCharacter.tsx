@@ -7,7 +7,7 @@ import { INTERACTIONS, type InteractionId } from '../interactions/registry'
 import { ROCKETBOX_SCALE, disposeAvatar, inPlace, prepareAvatar, rocketboxLoader } from './rocketbox'
 
 export type CharacterAnimation = 'rest' | 'wake' | 'collapse' | 'recover'
-export type CharacterCommand = { destination: Waypoint | InteractionId | CharacterAnimation | 'reset' | 'stop'; id: number; kind?: 'move' | 'interact' | 'animate'; approach?: Waypoint }
+export type CharacterCommand = { destination: Waypoint | InteractionId | CharacterAnimation | 'reset' | 'resetInBed' | 'stop'; id: number; kind?: 'move' | 'interact' | 'animate'; approach?: Waypoint }
 export type CharacterStatus = { room: RoomId; destination: Waypoint | null; phase: 'loading' | 'idle' | 'walking' | 'interacting' | 'error' }
 export type InteractionPose = 'none' | 'reach' | 'phone'
 
@@ -92,19 +92,25 @@ export function ElderlyCharacter({ command, pose, speech, visible, paused, urgen
   useEffect(() => {
     if (command.id === 0 || command.id === handledCommandId.current || !shell.current) return
     handledCommandId.current = command.id
-    if (command.destination === 'reset') {
+    if (command.destination === 'reset' || command.destination === 'resetInBed') {
+      // resetInBed starts her already lying down at the bedside, the end state of the 'rest' animation.
+      const inBed = command.destination === 'resetInBed'
+      const start = inBed ? 'bedside' : 'bedroom'
       queue.current = []
       pausedNext.current = null
       interaction.current = null
       motion.current = null
-      restPose.current = 0
+      restPose.current = inBed ? 1 : 0
       fallPose.current = 0
-      anchor.current = 'bedroom'
+      anchor.current = start
       lastRoom.current = 'bedroom'
       destination.current = null
-      shell.current.position.set(WAYPOINTS.bedroom[0], .045, WAYPOINTS.bedroom[1])
+      shell.current.position.set(WAYPOINTS[start][0], .045, WAYPOINTS[start][1])
       shell.current.rotation.y = 0
-      if (poseGroup.current) { poseGroup.current.position.set(0, 0, 0); poseGroup.current.rotation.set(0, 0, 0) }
+      if (poseGroup.current) {
+        if (inBed) { poseGroup.current.position.set(-1.4, .82, BED_HEAD_OFFSET); poseGroup.current.rotation.set(-Math.PI / 2, 0, 0) }
+        else { poseGroup.current.position.set(0, 0, 0); poseGroup.current.rotation.set(0, 0, 0) }
+      }
       onStatus({ room: 'bedroom', destination: null, phase: 'idle' })
       invalidate()
       return
