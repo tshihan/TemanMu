@@ -337,6 +337,9 @@ export const mockApi: Api = {
     const unit = unitOrThrow(input.unit_id)
     if (!unit.controllable) throw new ApiError(403, 'Only the controllable unit accepts readings')
     const reading: Reading = { ...input, recorded_at: input.recorded_at || now() }
+    // Mirrors the backend: a repeated meter sample of an unchanged load is not new resident activity.
+    const wasActive = reading.sensor === 'door' ? unit.latest.door === 'open'
+      : reading.sensor === 'water' ? unit.latest.water_lpm > 0 : unit.latest.power_kw > unit.baseline.standby_power_kw
     if (reading.sensor === 'door') {
       if (reading.value !== 'open' && reading.value !== 'closed') throw new ApiError(422, 'Invalid door value')
       unit.latest.door = reading.value
@@ -351,7 +354,7 @@ export const mockApi: Api = {
     publish('reading.received', clone(reading))
     const activity = reading.sensor === 'door' ? reading.value === 'open' : typeof reading.value === 'number' && reading.value > (reading.sensor === 'electricity' ? unit.baseline.standby_power_kw : 0)
     const incident = latestIncident(unit.unit_id)
-    if (activity && incident && !incident.events.some(event => event.type === 'emergency_called' || event.type === 'unable_to_verify')) autoResolve(unit, incident)
+    if (activity && !wasActive && incident && !incident.events.some(event => event.type === 'emergency_called' || event.type === 'unable_to_verify')) autoResolve(unit, incident)
     else if (incident?.events.some(event => event.type === 'emergency_called' || event.type === 'unable_to_verify')) publish('unit.updated', clone(unit))
     else if (activity && reading.sensor === 'door' && !incident) {
       if (unit.status === 'possible_away') updateUnit(unit, 'routine', 'Front door opened again; the resident may have returned home')
@@ -398,6 +401,8 @@ export const mockApi: Api = {
       unit.status = 'routine'
       unit.status_reason = `Incident closed by ${actor.name}: Resident OK`
       unit.status_since = incident.closed_at
+      // Re-anchor the quiet gap like the backend, or the old silence still reads as overdue.
+      unit.quiet_gap.last_water_activity_at = incident.closed_at
       unit.active_incident_id = null
       publish('incident.updated', clone(incident))
       publish('unit.updated', clone(unit))
@@ -454,7 +459,8 @@ export const mockApi: Api = {
     const unit = unitOrThrow(incident.unit_id)
     unit.status = 'routine'
     unit.status_reason = 'Incident closed by responder'
-    unit.status_since = now()
+    unit.status_since = incident.closed_at
+    unit.quiet_gap.last_water_activity_at = incident.closed_at
     unit.active_incident_id = null
     publish('incident.updated', clone(incident))
     publish('unit.updated', clone(unit))
