@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Activity, Brain, Camera, DoorOpen, Droplets, Faucet, HeartHandshake, Home, Layers, Lightbulb, MousePointer2, PhoneCall, ShieldCheck, Users, Watch, Zap } from 'lucide-react'
+import { Brain, Camera, DoorOpen, Droplets, Faucet, HeartHandshake, Home, Layers, Lightbulb, MousePointer2, PhoneCall, ShieldCheck, Users, Watch, Zap } from 'lucide-react'
 import { startScene } from '../landing/scene'
 import './slides.css'
 
@@ -46,7 +46,57 @@ function PageFrame({ number, className = '', children }: { number: number; class
   </section>
 }
 
+function useHowFlowDot() {
+  const wrapRef = useRef<HTMLDivElement>(null)
+  const box2Ref = useRef<HTMLDivElement>(null)
+  const feedRef = useRef<HTMLDivElement>(null)
+  const dotRef = useRef<HTMLSpanElement>(null)
+  const rowRefs = [useRef<HTMLDivElement>(null), useRef<HTMLDivElement>(null), useRef<HTMLDivElement>(null)]
+
+  useEffect(() => {
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const T = [900, 450, 450, 1100] // feed → spine → branch → highlight
+    const cycle = T.reduce((a, b) => a + b, 0)
+    const ease = (x: number) => (x < .5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2)
+    const colors = ['#4d6b3a', '#8b5a13', '#a95130']
+    const start = performance.now()
+    let raf = 0
+
+    const tick = (now: number) => {
+      raf = requestAnimationFrame(tick)
+      const wrap = wrapRef.current, box2 = box2Ref.current, feed = feedRef.current, dot = dotRef.current
+      const rowEls = rowRefs.map(r => r.current)
+      if (!wrap || !box2 || !feed || !dot || rowEls.some(r => !r)) return
+      const wr = wrap.getBoundingClientRect()
+      const rel = (el: Element) => { const r = el.getBoundingClientRect(); return { x: r.left - wr.left, y: r.top - wr.top, w: r.width, h: r.height } }
+      const b = rel(box2)
+      const fy = b.y + b.h / 2
+      feed.style.top = `${fy}px`
+      if (reduce) return
+      const rows = rowEls.map(r => rel(r!))
+      const x0 = b.x + b.w, xs = rows[0].x - 28, xe = rows[0].x - 4
+      const el = now - start, i = Math.floor(el / cycle) % 3
+      let t = el % cycle, x: number, y: number, show = true, glow = false
+      const ry = rows[i].y + rows[i].h / 2
+      if (t < T[0]) { x = x0 + (xs - x0) * ease(t / T[0]); y = fy }
+      else if ((t -= T[0]) < T[1]) { x = xs; y = fy + (ry - fy) * ease(t / T[1]) }
+      else if ((t -= T[1]) < T[2]) { x = xs + (xe - xs) * ease(t / T[2]); y = ry }
+      else { x = xe; y = ry; show = false; glow = true }
+      dot.style.left = `${x}px`
+      dot.style.top = `${y}px`
+      dot.style.opacity = show ? '1' : '0'
+      dot.style.background = x < xs ? '#a95130' : colors[i]
+      rowEls.forEach((r, k) => r!.classList.toggle('is-active', glow && k === i))
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [])
+
+  return { wrapRef, box2Ref, feedRef, dotRef, rowRefs }
+}
+
 export function Slides() {
+  const howFlow = useHowFlowDot()
   const sceneRef = useRef<HTMLDivElement>(null)
   const rootRef = useRef<HTMLElement>(null)
   const [pptxStatus, setPptxStatus] = useState('')
@@ -104,7 +154,7 @@ export function Slides() {
             <p className="slides-eyebrow">Sime Darby Property · Township of Tomorrow 2026</p>
             <h1>TemanMu</h1>
             <p className="slides-cover-tagline">Reassurance at home.<br /><em>Connection in the community.</em></p>
-            <p className="slides-cover-intro">TemanMu helps families feel reassured about their loved ones’ safety at home and connects older residents living alone with neighbours and the wider community.</p>
+            <p className="slides-cover-intro">TemanMu reassures families that their loved ones are safe at home, and connects older residents living alone with their neighbours.</p>
             <span className="slides-scroll-cue">Scroll to meet the team <span aria-hidden="true">↓</span></span>
           </div>
         </div>
@@ -231,8 +281,8 @@ export function Slides() {
               </article>
             </div>
             <div className="slides-learning-note">
-              <strong>Planned learning layer · Machine learning + PPO engine</strong>
-              <p>Learn each resident’s patterns to make alerts more accurate and reduce false alarms. This will need validation with real-world data.</p>
+              <strong>Learns each resident · Adapts to each resident</strong>
+              <p>Machine learning (PPO) learns individual routines and refines alerts over time, so a late riser or a regular walker doesn’t trigger a false alarm.</p>
             </div>
           </section>
           <section className="slides-solution-companion" aria-labelledby="slides-companion-title" data-slide-reveal>
@@ -253,9 +303,7 @@ export function Slides() {
               </div>
               <img className="slides-buddy-art" src="/images/community-buddy.png" alt="An older resident walking and chatting with a Community Buddy" />
             </div>
-            <p>A caregiver can request a <strong>Community Buddy</strong> matched by shared interests, so the resident has someone to join at a nearby activity.</p>
-            <span className="slides-buddy-note">Voluntary participation · Human connection on ordinary days</span>
-          </section>
+            <p><strong>Two ways to connect.</strong> A <strong>Community Buddy</strong> (a township volunteer) joins a resident for nearby activities. <strong>Neighbour matching</strong> introduces residents with similar routines, such as two early walkers on the same street.</p>          </section>
         </div>
       </PageFrame>
 
@@ -280,7 +328,7 @@ export function Slides() {
           </article>
           <article className="slides-innovation-card" data-slide-reveal>
             <Brain className="slides-innovation-icon slides-innovation-icon-brain" aria-hidden="true" />
-            <div><span>04 · Planned learning layer</span><h3>Adapts to each resident</h3><p>Machine learning and the PPO engine aim to learn individual routines and refine alerts over time, subject to real-world validation.</p></div>
+            <div><span>04 · Learns each resident</span><h3>Adapts to each resident</h3><p>Machine learning (PPO) learns individual routines and refines alerts over time, so a late riser or a regular walker doesn’t trigger a false alarm.</p></div>
           </article>
         </div>
         <p className="slides-innovation-companion-note" data-slide-reveal><strong>Beyond safety</strong> · Community Buddy brings companionship and local activities into ordinary days.</p>
@@ -290,45 +338,66 @@ export function Slides() {
         <div className="slides-section-top"><TemanMuWordmark /><span>07 · How it works</span></div>
         <div className="slides-how-heading" data-slide-reveal>
           <p className="slides-eyebrow">How it works</p>
-          <h2>Daily clues lead to <em>human care.</em></h2>
-          <p>TemanMu notices a change in routine, explains what it knows, and gives people a clear way to check in.</p>
+          <h2>Sensors notice. TemanMu checks. <em>People respond.</em></h2>
         </div>
 
-        <div className="slides-how-flow" aria-label="Safety workflow">
-          <article className="slides-how-step" data-slide-reveal>
-            <span className="slides-how-step-number">01 · Listen</span>
-            <div className="slides-how-signals" aria-hidden="true"><Droplets /><Zap /><DoorOpen /></div>
-            <h3>Notice ordinary activity</h3>
-            <p>Water, electricity and front-door events provide quiet clues throughout the day.</p>
-          </article>
-          <article className="slides-how-step" data-slide-reveal>
-            <span className="slides-how-step-number">02 · Compare</span>
-            <Activity className="slides-how-step-icon" aria-hidden="true" />
-            <h3>Check the usual rhythm</h3>
-            <p>TemanMu compares those clues with the resident’s usual quiet gap and outing time.</p>
-          </article>
-          <article className="slides-how-step" data-slide-reveal>
-            <span className="slides-how-step-number">03 · Explain</span>
-            <Layers className="slides-how-step-icon" aria-hidden="true" />
-            <h3>Show the right status</h3>
-            <p>Routine brings reassurance. An uncertain pattern becomes Possible Away or Unusual Inactivity.</p>
-          </article>
+        <div ref={howFlow.wrapRef} className="slides-how-flow2" aria-label="Safety workflow">
+          <span ref={howFlow.dotRef} className="slides-how-dot" aria-hidden="true" />
+
+          <div className="slides-how-inputs">
+            <article className="slides-how-box">
+              <span className="slides-how-label">1 · At home</span>
+              <div className="slides-how-sensors" aria-hidden="true">
+                <span><Droplets /></span><span><Zap /></span><span><DoorOpen /></span>
+              </div>
+              <h3>Water, electricity and door sensors pick up daily activity</h3>
+              <p>No cameras. Nothing to wear or charge.</p>
+            </article>
+            <div className="slides-how-down" aria-hidden="true">↓</div>
+            <article ref={howFlow.box2Ref} className="slides-how-box">
+              <div className="slides-how-box-top">
+                <span className="slides-how-label">2 · TemanMu</span>
+                <span className="slides-how-bars" aria-hidden="true">{[.5, .8, .4, 1, .6, .9, .45].map((v, i) => <i key={i} style={{ height: `${22 * v}px`, animationDelay: `${i * .15}s` }} />)}</span>
+              </div>
+              <h3>Compares today with her usual routine</h3>
+              <p>How long the home is normally quiet, and how long she is normally out.</p>
+            </article>
+          </div>
+
+          <div className="slides-how-feed" aria-hidden="true"><div ref={howFlow.feedRef} /></div>
+
+          <div className="slides-how-outcomes">
+            <div className="slides-how-outcomes-head"><span /><span>3 · Result is one of</span><span>4 · What happens</span></div>
+
+            <div className="slides-how-branch slides-how-branch-first">
+              <span className="slides-how-stub" aria-hidden="true" />
+              <div ref={howFlow.rowRefs[0]} className="slides-how-outcome slides-how-outcome-routine">
+                <div><span>Routine</span><h3>Activity as usual</h3></div>
+                <p>Family sees a calm status on their phone. <strong>No one needs to act.</strong></p>
+              </div>
+            </div>
+
+            <div className="slides-how-branch">
+              <span className="slides-how-stub" aria-hidden="true" />
+              <div ref={howFlow.rowRefs[1]} className="slides-how-outcome slides-how-outcome-away">
+                <div><span>Possible Away</span><h3>Door opened, then the home went quiet</h3></div>
+                <div className="slides-how-chain"><b>Family is told she may be out</b><i>→</i><b>Family may call her</b><i>→</i><b>Home and okay? Back to Routine</b></div>
+              </div>
+            </div>
+
+            <div className="slides-how-branch slides-how-branch-last">
+              <span className="slides-how-stub" aria-hidden="true" />
+              <div ref={howFlow.rowRefs[2]} className="slides-how-outcome slides-how-outcome-concern">
+                <div><span>Unusual Inactivity</span><h3>Quiet for longer than usual</h3></div>
+                <div className="slides-how-chain"><b>TemanMu calls her</b><i>→</i><b>No answer: family + township alerted</b><i>→</i><b>Someone checks, records outcome</b></div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div className="slides-how-paths" aria-label="What happens after a change in routine">
-          <article className="slides-how-path slides-how-path-away" data-slide-reveal>
-            <div className="slides-how-path-title"><PhoneCall aria-hidden="true" /><div><span>Possible Away</span><h3>Caregiver chooses to check</h3></div></div>
-            <p>A door event does not prove an outing. The caregiver may call; if the resident confirms they are home and okay, the caregiver returns the status to Routine.</p>
-          </article>
-          <article className="slides-how-path slides-how-path-concern" data-slide-reveal>
-            <div className="slides-how-path-title"><ShieldCheck aria-hidden="true" /><div><span>Unusual Inactivity</span><h3>People follow up together</h3></div></div>
-            <p>TemanMu makes a simulated check-in call. If there is no answer, caregiver and township are alerted; a person checks and records the outcome.</p>
-          </article>
-        </div>
-
-        <div className="slides-how-companion" data-slide-reveal>
+        <div className="slides-how-companion2">
           <HeartHandshake aria-hidden="true" />
-          <div><strong>Companion on ordinary days</strong><p>Caregiver requests a Community Buddy → matched by shared interest → invited to a nearby activity.</p></div>
+          <p><strong>Companion on ordinary days</strong> · Family can invite her to nearby activities, match her with a volunteer buddy, or introduce her to a neighbour on the same routine.</p>
         </div>
       </PageFrame>
 
