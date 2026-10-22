@@ -183,6 +183,7 @@ export interface Api {
   requestBuddy(unitId: UnitId): Promise<BuddyMatch>
   setNeighbourConsent(unitId: UnitId, open: boolean): Promise<NeighbourState>
   requestNeighbourIntroduction(unitId: UnitId): Promise<NeighbourState>
+  confirmDemoCall(id: string, confirmedSafe: true): Promise<Incident>
   resetDemo(): Promise<{ units: Unit[] }>
   // Demo-only: the home unit's quiet-gap watch runs only while a scenario plays.
   setMonitoring(active: boolean): Promise<{ unit_id: UnitId; active: boolean }>

@@ -246,8 +246,8 @@ def test_caregiver_confirmation_restarts_watch_without_faking_water_use():
     assert on_tick(f, confirmed + timedelta(seconds=29), clock) is None
     decision = on_tick(f, confirmed + timedelta(seconds=30), clock)
     assert decision is not None
-    assert decision.detected_detail == "No water activity since caregiver confirmation"
-    assert "caregiver spoke" in decision.reason
+    assert decision.detected_detail == "No water activity since confirmed contact"
+    assert "confirmed contact" in decision.reason
 
 
 def test_water_after_caregiver_confirmation_becomes_quiet_gap_anchor():

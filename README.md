@@ -228,7 +228,7 @@ Each scenario runs with one click in the Live 3D view. Real-world timings (hours
 | **1. Normal Morning** | Madam Lee wakes, uses the bathroom tap and boils the kettle. Sarah's phone shows "Mum's day has started" | Daily reassurance, without anyone asking |
 | **2. Going Out** | She leaves through the front door and comes back. The home goes quiet, but nobody is alerted | Outings do not cause false alarms |
 | **3. Unusual Inactivity** | She collapses (shown for the audience only, not a sensor reading). The quiet-gap bar fills, her phone rings with no answer, then Sarah and Guard Ali are alerted together. Guard Ali walks in to check on her | The full safety response, from first sign to recorded outcome |
-| **4. False Alarm Recovery** | It starts like Scenario 3, but during the grace period she gets up and uses the tap | Any sign of activity cancels the alert. Nobody is bothered |
+| **4. False Alarm Recovery** | Madam Lee naps in bed, wakes to her mobile phone and confirms she is okay | The simulated call confirmation closes the concern as Resident OK during grace, without a water reading or escalation |
 
 ### A suggested 3-minute walkthrough for judges
 
@@ -390,7 +390,7 @@ Open `backend/.env` and set `DATABASE_URL` (use the Supabase **session pooler** 
 DATABASE_URL=postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres
 GRACE_PERIOD_SECONDS=15
 REMINDER_INTERVAL_SECONDS=15
-VOICE_CALL_RING_SECONDS=2
+VOICE_CALL_RING_SECONDS=13
 CONTROLLABLE_UNIT_ID=A-105
 SEED_FILE=../shared/seed.json
 CORS_ORIGINS=http://localhost:5173

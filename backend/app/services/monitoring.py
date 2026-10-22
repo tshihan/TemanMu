@@ -392,6 +392,39 @@ async def _incident_unit_id(incident_id: str) -> str:
     return incident.unit_id
 
 
+async def confirm_demo_call(incident_id: str) -> Incident:
+    """Presenter simulation, never evidence from a real telephone provider."""
+    unit_id = await _incident_unit_id(incident_id)
+    async with _unit_lock(unit_id):
+        now = utc_now()
+        async with get_pool().acquire() as conn, conn.transaction():
+            incident = await db_incidents.get_incident_for_update(incident_id, conn)
+            unit = await db_units.get_unit(unit_id, conn=conn)
+            if unit is None or not unit.controllable or unit_id != settings.controllable_unit_id:
+                raise IncidentConflict("Call simulation is available only for the demo unit")
+            if incident is None or incident.state != "grace" or incident.grace_ends_at is None or now >= incident.grace_ends_at:
+                raise IncidentConflict("The demo call must be confirmed during the grace period")
+            if not _has_event(incident, "voice_call_started"):
+                raise IncidentConflict("No demo call was started")
+            report = 'Simulated call: resident answered and confirmed, “I’m okay, I was just sleeping.”'
+            await db_incidents.update_incident(
+                incident_id, state="closed", outcome="resident_ok", report=report,
+                closed_at=now, grace_ends_at=None, next_reminder_at=None, conn=conn,
+            )
+            incident = await db_incidents.add_incident_event(
+                incident_id, "closed", now, detail=report, conn=conn
+            )
+            unit = await db_units.update_unit_state(
+                unit_id, status="routine", status_reason=report, status_since=now,
+                last_caregiver_confirmation_at=now, conn=conn,
+            )
+        timers.cancel_incident(incident_id)
+        await realtime.broadcast("incident.updated", incident)
+        await realtime.broadcast("unit.updated", unit)
+        await _arm_watch_locked(unit_id)
+        return incident
+
+
 async def confirm_home_after_call(unit_id: str, name: str) -> Unit:
     """Record a caregiver's direct verbal confirmation while an outing is only possible."""
     async with _unit_lock(unit_id):

@@ -51,6 +51,7 @@ export const liveApi: Api = {
   requestBuddy: unit_id => post('/api/companion/buddy/request', { unit_id }),
   setNeighbourConsent: (unit_id, open) => post('/api/companion/neighbours/consent', { unit_id, open }),
   requestNeighbourIntroduction: unit_id => post('/api/companion/neighbours/introduce', { unit_id }),
+  confirmDemoCall: (id, confirmedSafe) => post(`/api/demo/incidents/${query(id)}/confirm-call`, { confirmed_safe: confirmedSafe }),
   resetDemo: () => post('/api/demo/reset'),
   // keepalive: the 3D home turns monitoring off on pagehide, which must survive the unload.
   setMonitoring: active => request('/api/demo/monitoring', { method: 'POST', body: JSON.stringify({ active }), keepalive: true }),

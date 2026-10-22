@@ -98,6 +98,7 @@ export const sharedMockApi: Api = {
   requestBuddy: unitId => call('requestBuddy', unitId),
   setNeighbourConsent: (unitId, open) => call('setNeighbourConsent', unitId, open),
   requestNeighbourIntroduction: unitId => call('requestNeighbourIntroduction', unitId),
+  confirmDemoCall: (id, confirmedSafe) => call('confirmDemoCall', id, confirmedSafe),
   resetDemo: () => call('resetDemo'),
   setMonitoring: active => call('setMonitoring', active),
   connect(onEvent, onStatus) {

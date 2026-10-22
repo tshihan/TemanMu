@@ -271,8 +271,8 @@ function notifyConcern(unit: Unit, incident: Incident): void {
   const detected = incident.events.find(event => event.type === 'detected')?.detail
   const reason = detected === 'Outing longer than usual'
     ? 'Possible outing lasted longer than usual. Mum did not answer the simulated call.'
-    : detected === 'No water activity since caregiver confirmation'
-      ? 'No water use since the caregiver confirmed Mum was home. Mum did not answer the simulated call.'
+    : detected === 'No water activity since confirmed contact'
+      ? 'No water use since Mum was confirmed okay at home. Mum did not answer the simulated call.'
       : `No water use beyond the usual ${unit.baseline.usual_quiet_gap_seconds}-second gap; no door outing and electricity at standby. Mum did not answer the simulated call.`
   updateUnit(unit, 'unresolved_concern', reason)
   publish('incident.updated', clone(incident))
@@ -285,7 +285,7 @@ function notifyConcern(unit: Unit, incident: Incident): void {
 function startGrace(unit: Unit, trigger: 'quiet_gap' | 'outing_timeout' | 'caregiver_confirmation' = 'quiet_gap'): Incident {
   const openedAt = now()
   const detectedDetail = trigger === 'outing_timeout' ? 'Outing longer than usual'
-    : trigger === 'caregiver_confirmation' ? 'No water activity since caregiver confirmation' : 'Water quiet gap exceeded'
+    : trigger === 'caregiver_confirmation' ? 'No water activity since confirmed contact' : 'Water quiet gap exceeded'
   const incident: Incident = {
     incident_id: crypto.randomUUID(), unit_id: unit.unit_id, state: 'grace', opened_at: openedAt,
     grace_ends_at: new Date(Date.now() + state.config.grace_period_seconds * 1000).toISOString(),
@@ -298,7 +298,7 @@ function startGrace(unit: Unit, trigger: 'quiet_gap' | 'outing_timeout' | 'careg
   state.incidents.unshift(incident)
   unit.active_incident_id = incident.incident_id
   const statusReason = trigger === 'outing_timeout' ? 'Possible outing has lasted longer than usual; checking whether Mum is okay.'
-    : trigger === 'caregiver_confirmation' ? 'No water use since the caregiver confirmed Mum was home; checking again.'
+    : trigger === 'caregiver_confirmation' ? 'No water use since Mum was confirmed okay at home; checking again.'
       : `No water use longer than the usual ${unit.baseline.usual_quiet_gap_seconds}-second gap. No door outing; electricity remains at standby.`
   updateUnit(unit, 'unusual_inactivity', statusReason)
   publish('incident.updated', clone(incident))
@@ -306,7 +306,7 @@ function startGrace(unit: Unit, trigger: 'quiet_gap' | 'outing_timeout' | 'careg
     if (incident.state !== 'grace') return
     incident.events.push({ type: 'voice_call_no_answer', at: now(), detail: 'No answer (simulated)' })
     publish('incident.updated', clone(incident))
-  }, Math.min(2000, state.config.grace_period_seconds * 500))
+  }, Math.min(13000, state.config.grace_period_seconds * 900))
   later(() => notifyConcern(unit, incident), state.config.grace_period_seconds * 1000)
   return incident
 }
@@ -536,6 +536,25 @@ export const mockApi: Api = {
     introductions.push({ unit_id: unitId, neighbour_unit_id: found.unitId, requested_at: now() })
     notify({ role: 'caregiver', unit_id: unitId, kind: 'neighbour_introduced', message: `Introduction requested. The community coordinator will arrange for ${unit.caregiver_relationship} to meet ${found.match.name}.`, incident_id: null })
     return neighbourState(unitId)
+  },
+  async confirmDemoCall(id, confirmedSafe) {
+    const incident = incidentOrThrow(id)
+    const unit = unitOrThrow(incident.unit_id)
+    if (confirmedSafe !== true || unit.unit_id !== 'A-105' || !unit.controllable)
+      throw new ApiError(409, 'Call simulation is available only for the demo unit with explicit safety confirmation')
+    if (incident.state !== 'grace' || !incident.grace_ends_at || Date.now() >= Date.parse(incident.grace_ends_at)
+      || !incident.events.some(event => event.type === 'voice_call_started'))
+      throw new ApiError(409, 'The demo call must be confirmed during the grace period')
+    clearScenarioTimers()
+    const at = now()
+    const report = 'Simulated call: resident answered and confirmed, “I’m okay, I was just sleeping.”'
+    Object.assign(incident, { state: 'closed', outcome: 'resident_ok', report, closed_at: at, grace_ends_at: null, next_reminder_at: null })
+    incident.events.push({ type: 'closed', at, detail: report })
+    unit.active_incident_id = null
+    unit.quiet_gap.last_caregiver_confirmation_at = at
+    updateUnit(unit, 'routine', report)
+    publish('incident.updated', clone(incident))
+    return clone(incident)
   },
   async resetDemo() {
     clearScenarioTimers()

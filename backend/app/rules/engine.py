@@ -194,7 +194,7 @@ def on_tick(facts: UnitFacts, now: datetime, clock_text: ClockText = utc_hhmm) -
         return TickDecision(
             kind="quiet_gap",
             reason=(
-                f"No water use since the caregiver spoke with {facts.caregiver_relationship}; "
+                f"No water use since confirmed contact with {facts.caregiver_relationship}; "
                 "another check is needed."
                 if facts.last_caregiver_confirmation_at == anchor else
                 reasons.quiet_gap_reason(
@@ -206,7 +206,7 @@ def on_tick(facts: UnitFacts, now: datetime, clock_text: ClockText = utc_hhmm) -
                 )
             ),
             detected_detail=(
-                "No water activity since caregiver confirmation"
+                "No water activity since confirmed contact"
                 if facts.last_caregiver_confirmation_at == anchor else reasons.DETECTED_QUIET_GAP
             ),
         )

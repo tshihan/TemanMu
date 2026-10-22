@@ -12,7 +12,7 @@ export const SCENARIO_DESCRIPTIONS: Record<ScenarioId, string> = {
   normalMorning: 'Wakes, uses the tap and kettle. Readings stay within routine.',
   goingOut: 'Door opens, the home goes quiet, she returns. Read as a possible outing.',
   unusualInactivity: 'A long water quiet gap with no outing evidence escalates to the township.',
-  falseAlarmRecovery: 'She gets up and uses the tap during the grace period, so the alert resolves itself.',
+  falseAlarmRecovery: 'She is napping, wakes to the call and confirms she is okay. The concern resolves.',
 }
 
 export type ScenarioStep =
@@ -31,6 +31,7 @@ export type ScenarioStep =
   | { kind: 'responderMove'; to: Waypoint; label: string }
   | { kind: 'responderCheck'; label: string }
   | { kind: 'resolution'; label: string }
+  | { kind: 'confirmCall'; label: string }
   | { kind: 'hold'; label: string }
 
 export function scenarioSteps(id: ScenarioId, timing: ScenarioTiming, compressedDemoTime = false): ScenarioStep[] {
@@ -84,16 +85,13 @@ export function scenarioSteps(id: ScenarioId, timing: ScenarioTiming, compressed
       { kind: 'hold', label: 'Guard Ali is checking; outcome awaits a human report' },
     ]
     case 'falseAlarmRecovery': return [
-      { kind: 'move', to: 'collapseSpot', label: 'Walking beside the sofa' },
-      { kind: 'animate', animation: 'collapse', label: 'Audience-only fall; no sensor event' },
-      { kind: 'wait', seconds: 2, label: 'No water use; the home remains quiet' },
+      { kind: 'move', to: 'bedside', label: 'Settling down for a nap' },
+      { kind: 'animate', animation: 'rest', label: 'Madam Lee is napping; no sensor event' },
+      { kind: 'wait', seconds: 2, label: 'The home stays quiet while she sleeps' },
       { kind: 'quietGap', label: quietGapLabel },
-      { kind: 'animate', animation: 'recover', label: 'Gradually getting up' },
-      { kind: 'move', to: 'bathroom', label: 'Walking to the bathroom' },
-      { kind: 'interact', object: 'bathroomTap', value: true, label: 'Turning on the bathroom tap' },
-      { kind: 'resolution', label: 'Checking backend incident resolution' },
-      { kind: 'wait', seconds: 1.8, label: 'Using the sink' },
-      { kind: 'interact', object: 'bathroomTap', value: false, label: 'Turning off the bathroom tap' },
+      { kind: 'animate', animation: 'wake', label: 'The mobile phone rings; Madam Lee wakes up' },
+      { kind: 'confirmCall', label: 'Answering the call: “I’m okay, I was just sleeping.”' },
+      { kind: 'resolution', label: 'Backend confirms Resident OK and cancels escalation' },
     ]
   }
 }

@@ -23,3 +23,11 @@ test('false alarm recovers after the quiet gap but before an alert', () => {
   assert.equal(steps.some(step => step.kind === 'alert'), false)
   assert.equal(steps.some(step => step.kind === 'noAnswer'), false)
 })
+
+test('nap recovery confirms the call without a fall or utility interaction', () => {
+  const steps = scenarioSteps('falseAlarmRecovery', DEFAULT_TIMING, true)
+  assert.equal(steps[0].to, 'bedside')
+  assert.deepEqual(steps.filter(step => step.kind === 'animate').map(step => step.animation), ['rest', 'wake'])
+  assert.equal(steps.some(step => step.kind === 'interact'), false)
+  assert.ok(steps.findIndex(step => step.kind === 'quietGap') < steps.findIndex(step => step.kind === 'confirmCall'))
+})

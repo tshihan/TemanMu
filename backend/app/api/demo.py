@@ -1,12 +1,29 @@
+from typing import Literal
+
 from fastapi import APIRouter, HTTPException
 
-from app.models import MonitoringIn, MonitoringResponse, ResetResponse
+from app.models import ContractModel, Incident, MonitoringIn, MonitoringResponse, ResetResponse
 from app.seed import SeedError
 from app.services import monitoring
 from app.services.reset import reset_demo
 from app.settings import settings
 
 router = APIRouter(tags=["demo"])
+
+
+class CallConfirmation(ContractModel):
+    confirmed_safe: Literal[True]
+
+
+@router.post("/demo/incidents/{incident_id}/confirm-call", response_model=Incident)
+async def confirm_call(incident_id: str, body: CallConfirmation) -> Incident:
+    """Simulate the resident explicitly confirming safety during the demo call."""
+    try:
+        return await monitoring.confirm_demo_call(incident_id)
+    except monitoring.IncidentNotFound:
+        raise HTTPException(status_code=404, detail="Incident not found") from None
+    except monitoring.IncidentConflict as e:
+        raise HTTPException(status_code=409, detail=str(e)) from None
 
 
 @router.post("/demo/reset", response_model=ResetResponse)

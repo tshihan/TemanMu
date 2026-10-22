@@ -122,7 +122,6 @@ class SceneBoundary extends Component<{ children: ReactNode }, { failed: boolean
   }
 }
 const ready = () => { /* Stable callback: resizing must not create a render loop. */ }
-const isDeadlinePast = (deadline: string) => Date.now() >= Date.parse(deadline)
 
 /** Self-contained viewer. The parent controls its dimensions; no API or store dependency. */
 export function HomeEnvironment({ className = '' }: { className?: string }) {
@@ -144,8 +143,6 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
   const deliveredCalls = useRef(new Set<string>())
   const graceIncident = useRef<string | null>(null)
   const [responseIncidentId, setResponseIncidentId] = useState<string | null>(null)
-  const graceDeadline = useRef<string | null>(null)
-  const lastPositiveWaterAt = useRef<string | null>(null)
   const scenarioRef = useRef<ScenarioId | null>(null)
   const [command, setCommand] = useState<Command>({ action: 'reset', id: 0 })
   const [characterCommand, setCharacterCommand] = useState<CharacterCommand>({ destination: 'reset', id: 0 })
@@ -285,12 +282,6 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
   const sendObjectState = async (target: Exclude<InteractionId, 'telephone'>, on: boolean) => {
     const unit = latestUnit.current
     if (!unit) throw new Error('A-105 has not loaded from the backend')
-    if (scenarioRef.current === 'falseAlarmRecovery' && target === 'bathroomTap' && on) {
-      const incident = getAppState().incidents.find(item => item.incident_id === graceIncident.current)
-      if (incident?.state !== 'grace') throw new Error('The backend incident left grace before Madam Lee reached the tap')
-      if (graceDeadline.current && isDeadlinePast(graceDeadline.current))
-        throw new Error('The backend grace period expired before Madam Lee reached the tap')
-    }
     const reading = readingForObject(target, on, unit, localStates.current)
     setTransmission('sending')
     setIntegrationError(null)
@@ -299,12 +290,9 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
       setVisualStates({ ...localStates.current, [target]: on })
       if (confirmed) syncUnit(confirmed)
       setTransmission('confirmed')
-      const refreshReadings = api.getReadings(HOME_UNIT_ID).then(items => {
+      void api.getReadings(HOME_UNIT_ID).then(items => {
         setLastReading(items.at(-1) ?? null)
-        if (scenarioRef.current === 'falseAlarmRecovery' && target === 'bathroomTap' && on)
-          lastPositiveWaterAt.current = items.filter(item => item.sensor === 'water' && item.value === 6).at(-1)?.recorded_at ?? null
       }).catch(() => { /* WebSocket reading event may supply the timestamp. */ })
-      if (scenarioRef.current === 'falseAlarmRecovery' && target === 'bathroomTap' && on) await refreshReadings
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') throw error
       setTransmission('error')
@@ -411,7 +399,6 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
     if (!incident) throw new Error('The backend grace state ended before recovery could begin')
     graceIncident.current = incident.incident_id
     setResponseIncidentId(incident.incident_id)
-    graceDeadline.current = incident.grace_ends_at
   }
   const waitForQuietGap = async (signal: AbortSignal) => {
     if (signal.aborted) throw new DOMException('Scenario stopped', 'AbortError')
@@ -434,7 +421,6 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
         throw new Error('The mock session did not create a new inactivity incident. Close every TemanMu tab, then reopen the app to refresh its SharedWorker.')
       graceIncident.current = incident.incident_id
       setResponseIncidentId(incident.incident_id)
-      graceDeadline.current = incident.grace_ends_at
       applyEvent({ type: 'incident.updated', at: incident.opened_at, data: incident })
     } else await waitForGrace(signal)
     setVisualStates({ ...localStates.current, telephone: 'ringing' })
@@ -503,10 +489,8 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
     if (!id) throw new Error('No backend incident was observed')
     await waitForIncident(items => items.some(item => item.incident_id === id && ['auto_resolved', 'notified', 'closed'].includes(item.state)), signal)
     const incident = getAppState().incidents.find(item => item.incident_id === id)
-    if (incident?.state !== 'auto_resolved') throw new Error(`The backend did not auto-resolve the incident${incident ? ` (state: ${incident.state})` : ''}`)
-    const readingAt = lastPositiveWaterAt.current ?? getAppState().readingsByUnit[HOME_UNIT_ID]?.filter(item => item.sensor === 'water' && item.value === 6).at(-1)?.recorded_at
-    if (!readingAt || !graceDeadline.current || Date.parse(readingAt) >= Date.parse(graceDeadline.current))
-      throw new Error('The activity was not confirmed within the backend grace period')
+    if (incident?.state !== 'closed' || incident.outcome !== 'resident_ok' || !incident.report?.startsWith('Simulated call:'))
+      throw new Error('The backend has not confirmed Resident OK from the simulated call')
     setVisualStates({ ...localStates.current, telephone: 'idle' })
   }
   const waitForOutcome = async (signal: AbortSignal) => {
@@ -521,8 +505,6 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
     resetResponder()
     graceIncident.current = null
     setResponseIncidentId(null)
-    graceDeadline.current = null
-    lastPositiveWaterAt.current = null
     scenarioRef.current = id
     setIntegrationError(null)
     setVisible(true)
@@ -539,6 +521,15 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
     setScenarioProgress(null)
     const actions: ScenarioActions = {
       moveTo,
+      confirmCall: async signal => {
+        await interactWith('telephone', true, undefined, signal, undefined, 'I’m okay, I was just sleeping.')
+        await controller.gate()
+        if (signal.aborted) throw new DOMException('Scenario stopped', 'AbortError')
+        const id = graceIncident.current
+        if (!id) throw new Error('No backend inactivity incident was observed')
+        const confirmed = await api.confirmDemoCall(id, true)
+        applyEvent({ type: 'incident.updated', at: confirmed.closed_at!, data: confirmed })
+      },
       playAnimation,
       interactWith: (object, value, approach, signal) => interactWith(object, false, approach, signal, value),
       setCharacterVisible: setVisible, setObject, waitForQuietGap, waitForNoAnswer, waitForCaregiverAlert, waitForResolution, waitForOutcome,
@@ -642,8 +633,6 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
     setIntegrationError(null)
     graceIncident.current = null
     setResponseIncidentId(null)
-    graceDeadline.current = null
-    lastPositiveWaterAt.current = null
     nextCharacterCommand('reset')
     syncUnit(unit)
     setScenario(null)
@@ -732,7 +721,6 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
       setLastReading(event.data)
       setRecentReadings(items => [event.data, ...items.filter(item =>
         item.recorded_at !== event.data.recorded_at || item.sensor !== event.data.sensor || item.value !== event.data.value)].slice(0, 5))
-      if (scenarioRef.current === 'falseAlarmRecovery' && event.data.sensor === 'water' && event.data.value === 6) lastPositiveWaterAt.current = event.data.recorded_at
       const sensor = event.data.sensor
       const pulse = Date.now()
       setPulses(value => ({ ...value, [sensor]: pulse }))
@@ -763,7 +751,10 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
     : scenarioState === 'idle' ? 'Ready' : scenarioState[0].toUpperCase() + scenarioState.slice(1)
   const demoNote = scenario === 'unusualInactivity' && (scenarioProgress?.index ?? 0) >= 7
     ? 'Guard Ali’s visit is a reenactment after the township acknowledgement. A human must still record the outcome.'
-    : (scenario === 'unusualInactivity' || scenario === 'falseAlarmRecovery') && scenarioActive
+    : scenario === 'falseAlarmRecovery' && scenarioActive
+      ? usingMock ? 'Demo time is compressed: a long quiet gap triggers a simulated check-in call while Madam Lee is napping.'
+        : 'Waiting for the backend quiet-gap check. The call and safety confirmation are simulated for this demo.'
+    : scenario === 'unusualInactivity' && scenarioActive
       ? usingMock ? 'Demo time is compressed: the quiet gap stands in for several hours without water use. The fall is for the audience, not a sensor reading.'
         : 'Waiting for the backend to establish a prolonged water quiet gap. The fall is for the audience, not a sensor reading.'
       : null
