@@ -164,6 +164,7 @@ export function Slides() {
         <div className="slides-section-top"><TemanMuWordmark /><span>02 · The team</span></div>
         <div className="slides-team-content">
           <div className="slides-team-heading" data-slide-reveal>
+            <p className="slides-eyebrow">Universiti Malaya</p>
             <h2>Albert &amp; Einstein</h2>
           </div>
           <div className="slides-team-row slides-team-row-first">{members.slice(0, 2).map(member => <MemberCard key={member.name} member={member} />)}</div>
@@ -207,10 +208,13 @@ export function Slides() {
           </div>
           <aside className="slides-problem-stat" aria-label="Older Malaysians living alone" data-slide-reveal>
             <span className="slides-problem-stat-kicker">Malaysia · aged 60+</span>
-            <div className="slides-problem-figure" aria-label="Living alone rose from 6.3 percent in 2018 to 18.8 percent in 2025">
-              <strong><span className="slides-problem-figure-start">6.3<small>%</small></span><span className="slides-problem-figure-end">18.8<small>%</small></span></strong>
-              <div className="slides-problem-years" aria-hidden="true"><span>2018</span><span>→</span><span>2025</span></div>
-              <p>of older Malaysians lived alone</p>
+            <div className="slides-problem-figure">
+              <div className="slides-problem-trend">
+                <div className="slides-problem-trend-from"><span>2018</span><strong>6.3<small>%</small></strong></div>
+                <span className="slides-problem-trend-arrow" aria-hidden="true">→</span>
+                <div className="slides-problem-trend-to"><span>2025</span><strong>18.8<small>%</small></strong></div>
+              </div>
+              <p>of older Malaysians lived alone, <mark>nearly 3× in 7 years</mark></p>
             </div>
             <div className="slides-problem-support"><strong>33.1<small>%</small></strong><p>reported poor social support</p></div>
           </aside>
@@ -281,8 +285,8 @@ export function Slides() {
               </article>
             </div>
             <div className="slides-learning-note">
-              <strong>Learns each resident · Adapts to each resident</strong>
-              <p>Machine learning (PPO) learns individual routines and refines alerts over time, so a late riser or a regular walker doesn’t trigger a false alarm.</p>
+              <strong>Learns what a normal day looks like for her</strong>
+              <p>Over the first few weeks, TemanMu learns her usual wake-up time, outings and quiet hours. A late riser or a regular walker won’t trigger a false alarm.</p>
             </div>
           </section>
           <section className="slides-solution-companion" aria-labelledby="slides-companion-title" data-slide-reveal>
@@ -311,7 +315,7 @@ export function Slides() {
         <div className="slides-section-top"><TemanMuWordmark /><span>06 · Innovation</span></div>
         <div className="slides-innovation-heading" data-slide-reveal>
           <p className="slides-eyebrow">Innovation</p>
-          <h2>What makes TemanMu idea unique &amp; different?</h2>
+          <h2>What makes TemanMu unique?</h2>
         </div>
         <div className="slides-innovation-grid">
           <article className="slides-innovation-card" data-slide-reveal>
@@ -328,7 +332,7 @@ export function Slides() {
           </article>
           <article className="slides-innovation-card" data-slide-reveal>
             <Brain className="slides-innovation-icon slides-innovation-icon-brain" aria-hidden="true" />
-            <div><span>04 · Learns each resident</span><h3>Adapts to each resident</h3><p>Machine learning (PPO) learns individual routines and refines alerts over time, so a late riser or a regular walker doesn’t trigger a false alarm.</p></div>
+            <div><span>04 · Personal, not one-size-fits-all</span><h3>Alerts tuned to each home</h3><p>Typical systems use fixed rules, like “no movement for 12 hours.” TemanMu sets limits from each resident’s own history, and caregiver feedback keeps improving them.</p></div>
           </article>
         </div>
         <p className="slides-innovation-companion-note" data-slide-reveal><strong>Beyond safety</strong> · Community Buddy brings companionship and local activities into ordinary days.</p>

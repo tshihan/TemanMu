@@ -33,6 +33,7 @@
 .slides-section-top > span:last-child { margin-right: 115px; color: #8b4429; font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 .slides-team-content { width: 100%; flex: 1; display: flex; flex-direction: column; justify-content: center; gap: clamp(16px, 2vw, 24px); padding: 20px 0 28px; }
 .slides-team-heading { text-align: center; }
+.slides-team-heading .slides-eyebrow { margin: 0 0 12px; font-size: clamp(18px, 1.8vw, 26px); letter-spacing: .12em; }
 .slides-team-heading h2 { margin: 0; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: clamp(48px, 5vw, 70px); font-weight: 400; line-height: 1; letter-spacing: -.04em; }
 .slides-team-row { display: grid; gap: clamp(14px, 1.8vw, 24px); width: 100%; margin: 0 auto; }
 .slides-team-row-first { max-width: 890px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -71,17 +72,23 @@
 .slides-problem-stat { padding: clamp(22px, 2.5vw, 34px); border: 1px solid #d8c5ad; border-radius: 28px; background: #f4e4d7; box-shadow: 0 22px 60px #8b442918; }
 .slides-problem-stat-kicker { display: block; color: #8b4429; font-size: 13px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
 .slides-problem-figure { padding: 14px 0 18px; }
-.slides-problem-figure > strong, .slides-problem-support > strong { position: relative; display: block; height: 1em; color: #8b4429; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: clamp(84px, 8vw, 118px); font-weight: 400; line-height: 1; letter-spacing: -.06em; white-space: nowrap; }
-.slides-problem-figure > strong span { position: absolute; top: 0; left: 0; }
-.slides-problem-figure > strong small, .slides-problem-support > strong small { font-size: .55em; }
-.slides-problem-figure-start { opacity: 0; }
-.slides-problem-figure-end { opacity: 1; }
-.slides-motion-ready .slides-problem-stat.is-visible .slides-problem-figure-start { animation: slides-stat-start 3.1s ease forwards; }
-.slides-motion-ready .slides-problem-stat.is-visible .slides-problem-figure-end { animation: slides-stat-end 3.1s ease forwards; }
-@keyframes slides-stat-start { 0%, 38% { opacity: 1; transform: translateY(0); } 52%, 100% { opacity: 0; transform: translateY(-12px); } }
-@keyframes slides-stat-end { 0%, 38% { opacity: 0; transform: translateY(12px); } 52%, 100% { opacity: 1; transform: translateY(0); } }
-.slides-problem-years { display: flex; align-items: center; gap: 16px; padding: 5px 0 0; color: #8b4429; font-size: 13px; font-weight: 750; letter-spacing: .04em; }
-.slides-problem-years span:nth-child(2) { font-size: 20px; }
+.slides-problem-trend strong, .slides-problem-support > strong { display: block; color: #8b4429; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: clamp(84px, 8vw, 118px); font-weight: 400; line-height: 1; letter-spacing: -.06em; white-space: nowrap; }
+.slides-problem-trend strong small, .slides-problem-support > strong small { font-size: .55em; }
+.slides-problem-trend { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 4px 14px; }
+.slides-problem-trend > div > span { display: block; margin-bottom: 4px; color: #8b4429; font-size: 13px; font-weight: 750; letter-spacing: .04em; }
+.slides-problem-trend-from > span { opacity: .7; }
+.slides-problem-trend-from strong { color: #a08f80; font-size: clamp(34px, 3.2vw, 46px); }
+.slides-problem-trend-to strong { font-size: clamp(66px, 6.4vw, 96px); }
+.slides-problem-trend-arrow { padding-bottom: .55em; color: #b76d4c; font-size: 26px; line-height: 1; }
+.slides-problem-figure mark { padding: 0 2px; background: linear-gradient(#e8bfa5, #e8bfa5) left bottom / 100% 40% no-repeat; color: inherit; }
+.slides-motion-ready .slides-problem-stat.is-visible .slides-problem-trend-from { animation: slides-trend-rise .6s ease .5s both; }
+.slides-motion-ready .slides-problem-stat.is-visible .slides-problem-trend-arrow { animation: slides-trend-arrow .5s ease 1.1s both; }
+.slides-motion-ready .slides-problem-stat.is-visible .slides-problem-trend-to { animation: slides-trend-grow .8s cubic-bezier(.2, .75, .2, 1.15) 1.5s both; transform-origin: left bottom; }
+.slides-motion-ready .slides-problem-stat.is-visible .slides-problem-figure mark { animation: slides-trend-mark .7s ease 2.3s both; }
+@keyframes slides-trend-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes slides-trend-arrow { from { opacity: 0; transform: translateX(-14px); } to { opacity: 1; transform: none; } }
+@keyframes slides-trend-grow { from { opacity: 0; transform: scale(.55); } to { opacity: 1; transform: none; } }
+@keyframes slides-trend-mark { from { background-size: 0% 40%; } to { background-size: 100% 40%; } }
 .slides-problem-figure p, .slides-problem-support p { margin: 4px 0 0; color: #4e4a45; font-size: clamp(16px, 1.35vw, 19px); font-weight: 600; line-height: 1.3; }
 .slides-problem-support { padding-top: 17px; border-top: 1px solid #c9ac97; }
 .slides-problem-support > strong { font-size: clamp(84px, 8vw, 118px); }
@@ -282,8 +289,7 @@
 .slides-exporting [data-slide-reveal] { opacity: 1 !important; transform: none !important; transition: none !important; }
 .slides-motion-ready .slides-problem-stat,
 .slides-motion-ready .slides-user-family { transition-delay: 120ms; }
-.slides-exporting .slides-problem-figure-start { animation: none !important; opacity: 0 !important; }
-.slides-exporting .slides-problem-figure-end { animation: none !important; opacity: 1 !important; transform: none !important; }
+.slides-exporting .slides-problem-trend *, .slides-exporting .slides-problem-figure mark { animation: none !important; }
 .slides-exporting .slides-room-light, .slides-exporting .slides-room-bulb, .slides-exporting .slides-room-resident, .slides-exporting .slides-room-leg-a, .slides-exporting .slides-room-leg-b { animation: none !important; }
 .slides-exporting .slides-room-light { opacity: .85; }
 .slides-exporting .slides-room-bulb { opacity: 1; }
@@ -297,7 +303,7 @@
   .slides-room-bulb { opacity: 1; }
   .slides-room-resident { transform: translateX(50px); }
   .slides-impact-art * { animation: none !important; }
-  .slides-motion-ready .slides-problem-stat.is-visible .slides-problem-figure-start, .slides-motion-ready .slides-problem-stat.is-visible .slides-problem-figure-end { animation: none; }
+  .slides-problem-trend *, .slides-problem-figure mark { animation: none !important; }
   .slides-motion-ready .slides-solution-companion.is-visible .slides-buddy-ui { animation: none; opacity: 0; }
   .slides-motion-ready .slides-solution-companion.is-visible .slides-buddy-art { animation: none; opacity: 1; transform: none; }
   .slides-motion-ready .slides-solution-companion.is-visible .slides-buddy-pointer, .slides-motion-ready .slides-solution-companion.is-visible .slides-buddy-phone-pending { animation: none; }
@@ -341,6 +347,7 @@
   .slides-live-scene { opacity: 1; }
   .slides-team-content { gap: .18in; padding: .12in 0 .2in; }
   .slides-team-heading h2 { font-size: 45pt; }
+  .slides-team-heading .slides-eyebrow { font-size: 17pt; }
   .slides-team-row { gap: .16in; }
   .slides-team-row-first { max-width: 8.5in; }
   .slides-team-card { min-height: 1.85in; padding: .14in; border-radius: .14in; }
@@ -362,13 +369,15 @@
   .slides-room-bulb { opacity: 1; }
   .slides-room-resident { transform: translateX(50px); }
   .slides-problem-stat { padding: .22in; border-radius: .2in; }
-  .slides-problem-figure > strong, .slides-problem-support > strong { font-size: 66pt; }
+  .slides-problem-support > strong { font-size: 66pt; }
+  .slides-problem-trend-to strong { font-size: 58pt; }
+  .slides-problem-trend-from strong { font-size: 26pt; }
+  .slides-problem-trend-arrow { font-size: 16pt; }
   .slides-problem-figure { padding: .08in 0 .12in; }
-  .slides-problem-years { font-size: 9pt; }
+  .slides-problem-trend > div > span { font-size: 9pt; }
   .slides-problem-figure p, .slides-problem-support p { font-size: 12pt; }
   .slides-problem-support { padding-top: .1in; }
-  .slides-problem-figure-start { animation: none !important; opacity: 0 !important; }
-  .slides-problem-figure-end { animation: none !important; opacity: 1 !important; transform: none !important; }
+  .slides-problem-trend *, .slides-problem-figure mark { animation: none !important; }
   .slides-problem-gap { gap: .12in; padding: .17in 0 .1in; }
   .slides-problem-gap-card { gap: .13in; padding: .13in; border-radius: .1in; }
   .slides-problem-gap-icon { width: .55in; height: .55in; border-radius: .1in; }
