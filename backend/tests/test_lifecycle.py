@@ -92,6 +92,36 @@ async def test_open_incident(client, broadcasts):
     assert f"watch:{UNIT}" not in keys
 
 
+@pytest.mark.parametrize(
+    ("sensor", "value", "setting", "detail"),
+    [
+        ("water", 6, "continuous_water_seconds", "Continuous water flow longer than expected"),
+        ("electricity", 1.8, "high_power_seconds", "Sustained high electricity use"),
+    ],
+)
+async def test_sustained_load_opens_concern_and_repeat_cannot_clear_it(
+    client, monkeypatch, sensor, value, setting, detail
+):
+    monkeypatch.setattr(settings, setting, 1)
+    monkeypatch.setattr(settings, "grace_period_seconds", 5)
+    response = await post(client, sensor, value)
+    assert response.status_code == 201
+
+    async def load_incident():
+        active = await incidents.list_active_incidents()
+        return active[0] if active else None
+
+    incident = await wait_for(load_incident)
+    assert incident.events[0].detail == detail
+    assert incident.state == "grace"
+    assert (await units.get_unit(UNIT)).status == "unusual_inactivity"
+
+    repeat = await post(client, sensor, value)
+    assert repeat.status_code == 201
+    assert (await incidents.get_incident(incident.incident_id)).state == "grace"
+    assert (await units.get_unit(UNIT)).status == "unusual_inactivity"
+
+
 async def test_grace_ends_then_reminders(client, broadcasts):
     incident = await open_quiet_gap_incident()
     iid = incident.incident_id

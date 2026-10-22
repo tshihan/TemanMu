@@ -122,6 +122,8 @@ def closed_reason(name: str, outcome: str) -> str:
 
 DETECTED_QUIET_GAP = "Water quiet gap exceeded"
 DETECTED_OUTING = "Outing longer than usual"
+DETECTED_CONTINUOUS_WATER = "Continuous water flow longer than expected"
+DETECTED_SUSTAINED_POWER = "Sustained high electricity use"
 VOICE_NO_ANSWER = "No answer (simulated)"
 VOICE_CANCELLED = "simulated"
 NOTIFIED = "Caregiver and township notified together"

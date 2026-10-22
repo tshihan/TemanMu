@@ -60,7 +60,7 @@ class ReadingDecision:
 
 @dataclass(frozen=True)
 class TickDecision:
-    kind: Literal["quiet_gap", "outing_timeout"]
+    kind: Literal["quiet_gap", "outing_timeout", "continuous_water", "sustained_power"]
     reason: str  # U1 / U2
     detected_detail: str  # "Water quiet gap exceeded" / "Outing longer than usual"
 
@@ -99,6 +99,12 @@ def on_reading(facts: UnitFacts, reading: Reading, clock_text: ClockText = utc_h
         latest["last_door_event_at"] = at
 
     activity = is_activity(reading.sensor, value, facts.baseline)
+    # A repeated meter sample of an unchanged load is not new resident activity.
+    new_activity = activity and (
+        (reading.sensor == "door" and facts.door != "open") or
+        (reading.sensor == "water" and facts.water_lpm <= 0) or
+        (reading.sensor == "electricity" and facts.power_kw <= facts.baseline.standby_power_kw)
+    )
 
     def decide(**status_changes) -> ReadingDecision:
         return ReadingDecision(
@@ -115,6 +121,8 @@ def on_reading(facts: UnitFacts, reading: Reading, clock_text: ClockText = utc_h
     back_home = dict(status="routine", status_since=at, last_water_activity_at=at)
 
     # R1: activity resolves an active incident.
+    if _has_active_incident(facts) and not new_activity:
+        return decide()
     if _has_active_incident(facts):
         reason = reasons.resolved_reason(
             reasons.activity_signal(reading.sensor, value), during_grace=facts.incident_state == "grace"

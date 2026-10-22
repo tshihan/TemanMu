@@ -110,6 +110,25 @@ def test_r1_not_triggered_by_non_activity():
     assert d.changes.status is None
 
 
+@pytest.mark.parametrize(
+    ("sensor", "value", "previous"),
+    [
+        ("water", 6, {"water_lpm": 6}),
+        ("water", 9, {"water_lpm": 6}),
+        ("electricity", 1.8, {"power_kw": 1.8}),
+        ("electricity", 1.9, {"power_kw": 1.8}),
+        ("door", "open", {"door": "open"}),
+    ],
+)
+def test_repeated_unchanged_load_does_not_resolve_incident(sensor, value, previous):
+    d = on_reading(
+        facts(status="unusual_inactivity", incident_state="grace", **previous),
+        reading(sensor, value), clock,
+    )
+    assert not d.resolve_incident
+    assert d.changes.status is None
+
+
 def test_r2_door_open_while_away_is_back_home():
     r = reading("door", "open")
     d = on_reading(facts(status="possible_away"), r, clock)
