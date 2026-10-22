@@ -25,7 +25,7 @@ export const INTERACTIONS: Record<InteractionId, { label: string; approach: Wayp
   television: { label: 'Television', approach: 'tvApproach', room: 'living', target: [-5.02, 1.55] },
   bedroomLamp: { label: 'Bedroom Lamp', approach: 'bedside', room: 'bedroom', target: [-1.22, -4.13] },
   mainDoor: { label: 'Main Door', approach: 'mainDoor', room: 'mainDoor', target: [1.5, 5] },
-  telephone: { label: 'Telephone', approach: 'phoneApproach', room: 'living', target: [-4.72, 4.05] },
+  telephone: { label: 'Mobile Phone', approach: 'phoneApproach', room: 'living', target: [-2.65, 2.38] },
 }
 
 export function interactionPrompt(id: InteractionId, states: ObjectStates) {
@@ -36,6 +36,6 @@ export function interactionPrompt(id: InteractionId, states: ObjectStates) {
     case 'television': return states.television ? 'Turn Off TV' : 'Turn On TV'
     case 'bedroomLamp': return states.bedroomLamp ? 'Turn Off Bedroom Lamp' : 'Turn On Bedroom Lamp'
     case 'mainDoor': return states.mainDoor ? 'Close Door' : 'Open Door'
-    case 'telephone': return 'Answer Telephone'
+    case 'telephone': return 'Answer Mobile Phone'
   }
 }

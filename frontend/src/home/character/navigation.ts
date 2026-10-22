@@ -26,9 +26,7 @@ export const WAYPOINTS = {
   showerApproach: [2.15, -1.85],
   kettleApproach: [4.32, 2.08],
   tvApproach: [-4.35, 1.55],
-  phoneLane: [-1.42, 3.55],
-  phoneCrossing: [-3.95, 3.55],
-  phoneApproach: [-4.03, 4.05],
+  phoneApproach: [-2.13, 2.65],
 } as const
 
 export type Waypoint = keyof typeof WAYPOINTS
@@ -49,11 +47,10 @@ const EDGES: [Waypoint, Waypoint][] = [
   ['mainDoor', 'doorThreshold'], ['doorThreshold', 'porch'], ['porch', 'outside'],
   ['bathroom', 'tapApproach'], ['kitchen', 'kettleApproach'],
   ['bathroomInner', 'showerApproach'], ['livingLane', 'tvApproach'],
-  ['living', 'phoneLane'], ['phoneLane', 'phoneCrossing'],
-  ['phoneCrossing', 'phoneApproach'],
+  ['living', 'phoneApproach'],
   ['northLane', 'livingLane'], ['livingLane', 'living'],
   ['living', 'dining'], ['dining', 'entryLane'],
-  ['living', 'collapseSpot'], ['collapseSpot', 'phoneLane'],
+  ['living', 'collapseSpot'],
   ['dining', 'responderCheck'],
 ]
 

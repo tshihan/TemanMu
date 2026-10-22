@@ -15,7 +15,6 @@ const obstacles = [
   [.5, 1.8, .34, 2.36], [.85, 1.45, -.38, .27], [.85, 1.45, 2.42, 3.1],
   [-.14, .46, 1.05, 1.65], [1.84, 2.44, 1.05, 1.65], // dining table and chairs
   [-.975, .275, 4.29, 4.75], // entry bench
-  [-5.095, -4.345, 3.725, 4.375], // telephone side table
 ]
 
 test('all room and object approach pairs have clear, connected walking routes', () => {
