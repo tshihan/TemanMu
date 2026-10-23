@@ -3,29 +3,29 @@ import test from 'node:test'
 import { DEFAULT_TIMING, scenarioSteps } from './definitions.ts'
 
 test('inactivity demo shows a quiet gap, call, no answer, then caregiver alert', () => {
-  const steps = scenarioSteps('unusualInactivity', DEFAULT_TIMING, true)
+  const steps = scenarioSteps('unusualInactivity', DEFAULT_TIMING)
   assert.deepEqual(steps.map(step => step.kind), [
     'move', 'animate', 'wait', 'quietGap', 'noAnswer', 'alert',
-    'wait', 'dispatchResponder', 'responderVisible', 'responderMove', 'responderDoor',
+    'dispatchResponder', 'responderVisible', 'responderMove', 'responderDoor',
     'responderMove', 'responderDoor', 'responderCheck', 'hold',
   ])
   assert.match(steps[1].label, /no sensor event/i)
   assert.match(steps[3].label, /fast-forward 4 hours/i)
-  assert.match(steps[7].label, /Guard Ali accepts/i)
-  assert.equal(steps[11].to, 'responderCheck')
+  assert.match(steps[6].label, /acknowledge on the township dashboard/i)
+  assert.equal(steps[10].to, 'responderCheck')
   assert.equal(steps.some(step => step.kind === 'object' && step.object === 'mainDoor'), false)
   assert.match(steps.at(-1).label, /outcome awaits a human report/i)
 })
 
 test('false alarm recovers after the quiet gap but before an alert', () => {
-  const steps = scenarioSteps('falseAlarmRecovery', DEFAULT_TIMING, true)
+  const steps = scenarioSteps('falseAlarmRecovery', DEFAULT_TIMING)
   assert.ok(steps.findIndex(step => step.kind === 'quietGap') < steps.findIndex(step => step.kind === 'resolution'))
   assert.equal(steps.some(step => step.kind === 'alert'), false)
   assert.equal(steps.some(step => step.kind === 'noAnswer'), false)
 })
 
 test('nap recovery confirms the call without a fall or utility interaction', () => {
-  const steps = scenarioSteps('falseAlarmRecovery', DEFAULT_TIMING, true)
+  const steps = scenarioSteps('falseAlarmRecovery', DEFAULT_TIMING)
   assert.equal(steps[0].to, 'bedside')
   assert.deepEqual(steps.filter(step => step.kind === 'animate').map(step => step.animation), ['rest', 'wake'])
   assert.equal(steps.some(step => step.kind === 'interact'), false)

@@ -201,12 +201,38 @@ function notify(notification: Omit<Notification, 'notification_id' | 'created_at
   publish('notification.created', clone(entry))
 }
 
-function updateUnit(unit: Unit, status: Unit['status'], reason: string): void {
+function updateUnit(unit: Unit, status: Unit['status'], reason: string, since = now()): void {
   unit.status = status
   unit.status_reason = reason
-  unit.status_since = now()
+  unit.status_since = since
   scheduleMockWatch(unit)
   publish('unit.updated', clone(unit))
+}
+
+// Resident activity with no open incident. Mirrors the backend's rules/engine.py on_reading
+// (R2-R5, N3) and its reason lines in rules/reasons.py, so mock and live screens match.
+function applyActivity(unit: Unit, reading: Reading): void {
+  const at = reading.recorded_at
+  const backHome = (reason: string) => {
+    unit.quiet_gap.last_water_activity_at = at
+    updateUnit(unit, 'routine', reason, at)
+  }
+  // Staying routine keeps status_since; any other status returns to routine like coming home.
+  const toRoutine = (reason: string) => unit.status === 'routine' ? updateUnit(unit, 'routine', reason, unit.status_since) : backHome(reason)
+  if (reading.sensor === 'door') {
+    const clock = localHHMM(at)
+    const waterOn = unit.latest.water_lpm > 0
+    const powerOn = unit.latest.power_kw > unit.baseline.standby_power_kw
+    if (unit.status === 'possible_away') backHome(`Door opened at ${clock}: back home`)
+    else if (unit.status === 'routine' && !waterOn && !powerOn)
+      updateUnit(unit, 'possible_away', `Door opened at ${clock}, then no water use and electricity back to standby: probably out`, at)
+    else toRoutine(`Door opened at ${clock} while ${waterOn && powerOn ? 'water and electricity were' : waterOn ? 'water was' : 'electricity was'} in use: at home`)
+  } else if (unit.status === 'possible_away') {
+    const signal = reading.sensor === 'water' ? 'water' : 'electricity'
+    const doorAt = unit.latest.last_door_event_at
+    backHome(doorAt ? `Door opened at ${localHHMM(doorAt)} and ${signal} use detected: back home`
+      : `${signal[0].toUpperCase()}${signal.slice(1)} use detected: back home`)
+  } else toRoutine(reading.sensor === 'water' ? 'Water activity within usual routine' : 'Water and electricity activity within usual routine')
 }
 
 function latestIncident(unitId: string): Incident | undefined {
@@ -360,15 +386,8 @@ export const mockApi: Api = {
     const incident = latestIncident(unit.unit_id)
     if (activity && !wasActive && incident && !incident.events.some(event => event.type === 'emergency_called' || event.type === 'unable_to_verify')) autoResolve(unit, incident)
     else if (incident?.events.some(event => event.type === 'emergency_called' || event.type === 'unable_to_verify')) publish('unit.updated', clone(unit))
-    else if (activity && reading.sensor === 'door' && !incident) {
-      if (unit.status === 'possible_away') updateUnit(unit, 'routine', 'Front door opened again; the resident may have returned home')
-      else if (unit.status === 'routine' && unit.latest.water_lpm === 0 && unit.latest.power_kw <= unit.baseline.standby_power_kw)
-        updateUnit(unit, 'possible_away', 'Front door opened, then the home went quiet: possible outing')
-      else publish('unit.updated', clone(unit))
-    }
-    else if (activity && reading.sensor !== 'door' && ['routine', 'possible_away'].includes(unit.status)) {
-      updateUnit(unit, 'routine', reading.sensor === 'electricity' ? 'Water and electricity activity within usual routine' : 'Water activity detected within usual routine')
-    } else publish('unit.updated', clone(unit))
+    else if (activity && !incident) applyActivity(unit, reading)
+    else publish('unit.updated', clone(unit))
     if (morningSentOn !== localDay() && activity && !incident) {
       morningSentOn = localDay()
       notify({ role: 'caregiver', unit_id: unit.unit_id, kind: 'morning_reassurance', message: `${unit.caregiver_relationship}'s day has started. ${activityMessage(reading.sensor)}`, incident_id: null })
@@ -581,7 +600,16 @@ export const mockApi: Api = {
   async setMonitoring(active, timing) {
     monitoringActive = active
     callTiming = active ? timing ?? null : null
-    scheduleMockWatch(unitOrThrow('A-105'))
+    const unit = unitOrThrow('A-105')
+    // Like the backend's start_watching: the quiet-gap clock restarts now, or an old silence
+    // (e.g. since the last confirmed call) would open an incident the moment the watch turns on.
+    if (active && !latestIncident(unit.unit_id)) {
+      const at = now()
+      unit.quiet_gap.last_water_activity_at = at
+      if (unit.status === 'possible_away') unit.status_since = at
+      publish('unit.updated', clone(unit))
+    }
+    scheduleMockWatch(unit)
     return { unit_id: 'A-105', active }
   },
   connect(onEvent, onStatus) {

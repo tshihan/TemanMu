@@ -16,6 +16,7 @@ import { INITIAL_OBJECT_STATES, interactionPrompt, type InteractionBindings, typ
 import { ScenarioController, type ScenarioActions } from './scenarios/ScenarioController'
 import { DEFAULT_TIMING, SCENARIO_CALL_TIMING, SCENARIO_DESCRIPTIONS, SCENARIO_LABELS, scenarioSteps, type ScenarioId, type ScenarioStep, type ScenarioTiming } from './scenarios/definitions'
 import { api, usingMock } from '../api'
+import { ApiError } from '../api/live'
 import { primeSharedMockInactivity } from '../mocks/shared-client'
 import { applyEvent, getAppState, subscribeAppEvents, useAppState } from '../api/store'
 import type { CallTiming, CompanionMessage, Config, Incident, Reading, Sensor, Unit } from '../api/types'
@@ -124,6 +125,8 @@ class SceneBoundary extends Component<{ children: ReactNode }, { failed: boolean
 const ready = () => { /* Stable callback: resizing must not create a render loop. */ }
 
 const QUIET_GAP_STORY_MINUTES = 4 * 60
+/** Mock mode only: seconds of playback to wait for a township click before Guard Ali acknowledges. */
+const MOCK_AUTO_ACK_SECONDS = 10
 
 /** Plays the learned 4-hour quiet gap as a fast-forward over the real demo gap (5 seconds for A-105). */
 function QuietGapOverlay({ endsAt, seconds }: { endsAt: number; seconds: number }) {
@@ -187,6 +190,7 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
   const [timing, setTiming] = useState<ScenarioTiming>(DEFAULT_TIMING)
   const [picked, setPicked] = useState<ScenarioId>('normalMorning')
   const [callCard, setCallCard] = useState<'ringing' | 'noAnswer' | null>(null)
+  const [autoAcknowledged, setAutoAcknowledged] = useState(false)
   const [quietGap, setQuietGap] = useState<{ endsAt: number; seconds: number } | null>(null)
   const [sensorView, setSensorView] = useState(false)
   const [toolsOpen, setToolsOpen] = useState(false)
@@ -513,9 +517,33 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
     const incident = getAppState().incidents.find(item => item.incident_id === id)
     if (incident?.state === 'closed' || incident?.state === 'auto_resolved')
       throw new DOMException('The incident was resolved before the township visit', 'AbortError')
-    if (usingMock && incident?.state === 'notified')
-      await api.acknowledgeIncident(id, { role: 'township', name: seed.responders.township })
-    else if (usingMock && (incident?.state !== 'acknowledged' || incident.acknowledged_by?.role !== 'township'))
+    if (usingMock && incident?.state === 'notified') {
+      // Like live mode, wait for a click on the township dashboard. Without a backend nobody else may be
+      // watching, so Guard Ali acknowledges after MOCK_AUTO_ACK_SECONDS of playback with no response.
+      const waiting = new AbortController()
+      const stop = () => waiting.abort()
+      signal.addEventListener('abort', stop, { once: true })
+      try {
+        await Promise.race([
+          waitForIncident(items => items.some(item => item.incident_id === id && item.state !== 'notified'), waiting.signal),
+          clock.current.wait(MOCK_AUTO_ACK_SECONDS, waiting.signal),
+        ])
+      } finally {
+        waiting.abort()
+        signal.removeEventListener('abort', stop)
+      }
+      if (signal.aborted) throw new DOMException('Scenario stopped', 'AbortError')
+      if (getAppState().incidents.find(item => item.incident_id === id)?.state === 'notified') {
+        try {
+          await api.acknowledgeIncident(id, { role: 'township', name: seed.responders.township })
+          setAutoAcknowledged(true)
+          setScenarioProgress(progress => progress && { ...progress, label: `No response in ${MOCK_AUTO_ACK_SECONDS} seconds: Guard Ali acknowledged automatically (demo)` })
+        } catch (error) {
+          // Someone clicked at the same moment; the wait below confirms who took the visit.
+          if (!(error instanceof ApiError && error.status === 409)) throw error
+        }
+      }
+    } else if (usingMock && (incident?.state !== 'acknowledged' || incident.acknowledged_by?.role !== 'township'))
       throw new Error('The incident cannot be dispatched to Guard Ali. Reset Demo and try again.')
     await waitForIncident(items => items.some(item => item.incident_id === id && ['acknowledged', 'closed', 'auto_resolved'].includes(item.state)), signal)
     const response = getAppState().incidents.find(item => item.incident_id === id)
@@ -545,6 +573,7 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
     resetResponder()
     graceIncident.current = null
     setResponseIncidentId(null)
+    setAutoAcknowledged(false)
     scenarioRef.current = id
     setIntegrationError(null)
     setVisible(true)
@@ -553,7 +582,7 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
     // Normal Morning starts with her already asleep in bed.
     setPose('none')
     nextCharacterCommand(id === 'normalMorning' ? 'resetInBed' : 'reset')
-    const steps = scenarioSteps(id, timing, usingMock)
+    const steps = scenarioSteps(id, timing)
     const controller = new ScenarioController()
     runner.current = controller
     clock.current = controller
@@ -793,13 +822,17 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
   const characterBusy = characterStatus.phase === 'loading' || characterStatus.phase === 'error'
   const canStart = !scenarioActive && !resetBusy && !!homeUnit && (usingMock || appState.connected) && !characterBusy
   const shownScenario = scenario ?? picked
-  const timelineSteps = scenarioSteps(shownScenario, timing, usingMock)
+  const timelineSteps = scenarioSteps(shownScenario, timing)
   const stepIndex = scenarioState === 'complete' ? timelineSteps.length : scenarioProgress?.index ?? 0
   const caption = scenarioState === 'complete' ? 'Scenario complete' : scenarioState === 'stopped' ? 'Scenario stopped'
     : scenarioProgress?.label ?? (canStart ? `Press play to run “${SCENARIO_LABELS[picked]}”` : 'Preparing the home…')
   const playback = scenarioState === 'running' && scenarioProgress?.kind === 'hold' ? 'Awaiting outcome'
     : scenarioState === 'idle' ? 'Ready' : scenarioState[0].toUpperCase() + scenarioState.slice(1)
-  const demoNote = scenario === 'unusualInactivity' && (scenarioProgress?.index ?? 0) >= 7
+  const demoNote = scenario === 'unusualInactivity' && scenarioActive && autoAcknowledged
+    ? `Nobody acknowledged within ${MOCK_AUTO_ACK_SECONDS} seconds, so Guard Ali acknowledged automatically (demo only). A human must still record the outcome.`
+    : usingMock && scenario === 'unusualInactivity' && scenarioActive && scenarioProgress?.kind === 'dispatchResponder'
+      ? `Click “I'll Check Now” on the township dashboard. If nobody responds within ${MOCK_AUTO_ACK_SECONDS} seconds, Guard Ali acknowledges automatically (demo only).`
+    : scenario === 'unusualInactivity' && (scenarioProgress?.index ?? 0) >= 7
     ? 'Guard Ali’s visit is a reenactment after the township acknowledgement. A human must still record the outcome.'
     : scenario === 'falseAlarmRecovery' && scenarioActive
       ? 'Demo time is compressed: 5 seconds stand in for her usual 4-hour quiet gap, so a simulated check-in call rings while Madam Lee is napping.'

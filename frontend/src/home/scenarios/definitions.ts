@@ -42,7 +42,7 @@ export type ScenarioStep =
   | { kind: 'confirmCall'; label: string }
   | { kind: 'hold'; label: string }
 
-export function scenarioSteps(id: ScenarioId, timing: ScenarioTiming, compressedDemoTime = false): ScenarioStep[] {
+export function scenarioSteps(id: ScenarioId, timing: ScenarioTiming): ScenarioStep[] {
   const quietGapLabel = 'Fast-forward 4 hours: no water use, longer than her usual quiet gap; no outing evidence'
   switch (id) {
     case 'normalMorning': return [
@@ -78,8 +78,7 @@ export function scenarioSteps(id: ScenarioId, timing: ScenarioTiming, compressed
       { kind: 'quietGap', label: quietGapLabel },
       { kind: 'noAnswer', label: 'Simulated call to Mum; waiting for an answer' },
       { kind: 'alert', label: 'No answer; waiting for caregiver and township alert' },
-      ...(compressedDemoTime ? [{ kind: 'wait' as const, seconds: 6, label: 'Caregiver and township can respond' }] : []),
-      { kind: 'dispatchResponder', label: compressedDemoTime ? 'Guard Ali accepts the township alert (demo)' : 'Waiting for Guard Ali to acknowledge on the township dashboard' },
+      { kind: 'dispatchResponder', label: 'Waiting for Guard Ali to acknowledge on the township dashboard' },
       { kind: 'responderVisible', label: 'Guard Ali arrives outside A-105' },
       { kind: 'responderMove', to: 'porch', label: 'Guard Ali approaches the entrance' },
       { kind: 'responderDoor', open: true, label: 'Guard Ali opens the door (visual reenactment)' },
