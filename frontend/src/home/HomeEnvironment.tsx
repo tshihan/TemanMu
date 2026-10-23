@@ -126,7 +126,7 @@ const ready = () => { /* Stable callback: resizing must not create a render loop
 
 const QUIET_GAP_STORY_MINUTES = 4 * 60
 /** Mock mode only: seconds of playback to wait for a township click before Guard Ali acknowledges. */
-const MOCK_AUTO_ACK_SECONDS = 10
+const MOCK_AUTO_ACK_SECONDS = 20
 
 /** Plays the learned 4-hour quiet gap as a fast-forward over the real demo gap (5 seconds for A-105). */
 function QuietGapOverlay({ endsAt, seconds }: { endsAt: number; seconds: number }) {
