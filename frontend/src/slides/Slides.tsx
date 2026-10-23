@@ -497,25 +497,29 @@ export function Slides() {
         <p className="slides-feasibility-note">Home counts are planning assumptions, not programme commitments. Expansion depends on evidence from the preceding phase.</p>
       </PageFrame>
 
-      <PageFrame number={11} className="slides-visual-concept">
+      <PageFrame number={11} className="slides-visual">
         <div className="slides-section-top"><TemanMuWordmark /><span>11 · Visual concept</span></div>
-        <div className="slides-impact-heading">
-          <p className="slides-eyebrow">Visual concept</p>
-          <h2>One shared view of care. <em>Two connected interfaces.</em></h2>
+        <div className="slides-visual-heading" data-slide-reveal>
+          <p className="slides-eyebrow">Visual concept · One moment, three views</p>
+          <h2>From a quiet home <em>to a human response.</em></h2>
         </div>
-        <div className="slides-concept-layout">
-          <figure className="slides-concept-desktop">
-            <a href="/dashboard" target="_blank" rel="noreferrer" aria-label="Open township dashboard"><div className="slides-concept-laptop"><img src="/images/visual-concept/dashboard.png" alt="Prototype township dashboard showing the block map, unit A-105 and homes needing attention" /></div></a>
-            <figcaption><strong>Township dashboard</strong><span>See which homes need attention and coordinate nearby checks.</span></figcaption>
+        <div className="slides-visual-flow" aria-label="The Unusual Inactivity scenario seen from the home, the family and the township">
+          <figure className="slides-visual-step slides-visual-home" data-slide-reveal>
+            <div className="slides-visual-media"><img src="/images/visual-home-sensors.jpg" alt="3D view of Mum's flat with water meter, power meter and door sensor readings" /></div>
+            <figcaption><span>1 · At home</span><h3>The home goes quiet</h3><p>No water use beyond her usual gap, power at standby, door closed. Only meters and a door sensor, no cameras.</p></figcaption>
           </figure>
-
-          <div className="slides-concept-link"><span>↔</span><strong>Shared live updates</strong><small>Water · power · door</small></div>
-          <figure className="slides-concept-mobile">
-            <a href="/caregiver" target="_blank" rel="noreferrer" aria-label="Open caregiver app"><div className="slides-concept-phone"><img src="/images/visual-concept/caregiver.png" alt="Prototype caregiver app showing Madam Lee in unit A-105, routine status and household activity timeline" /></div></a>
-            <figcaption><strong>Caregiver app</strong><span>See Mum’s day and check in when something changes.</span></figcaption>
+          <span className="slides-visual-arrow" aria-hidden="true">→</span>
+          <figure className="slides-visual-step slides-visual-family" data-slide-reveal>
+            <div className="slides-visual-media"><span className="slides-visual-phone"><img src="/images/visual-caregiver-alert.jpg" alt="Caregiver app showing an Unusual inactivity alert with options to check in or ask the township to visit" /></span></div>
+            <figcaption><span>2 · Family</span><h3>Sarah is alerted</h3><p>TemanMu called Mum first. No answer, so Sarah can check in herself or ask the township to visit.</p></figcaption>
+          </figure>
+          <span className="slides-visual-arrow" aria-hidden="true">→</span>
+          <figure className="slides-visual-step slides-visual-township" data-slide-reveal>
+            <div className="slides-visual-media"><img src="/images/visual-township-incident.png" alt="Township dashboard incident panel for unit A-105 with an I'll Check Now button" /></div>
+            <figcaption><span>3 · Township</span><h3>A responder takes it</h3><p>The operator sees unit A-105 at the same time, accepts the check and records the outcome.</p></figcaption>
           </figure>
         </div>
-        <p className="slides-concept-note">Prototype screenshots · Simulated household data · Select either screen to open the interface</p>
+        <p className="slides-visual-note">Screenshots from the working TemanMu prototype, Unusual Inactivity scenario, simulated data.</p>
       </PageFrame>
 
       <PageFrame number={12} className="slides-close">
@@ -530,15 +534,19 @@ export function Slides() {
         </div>
       </PageFrame>
 
-      <PageFrame number={13} className="slides-cover slides-thanks">
+      <PageFrame number={13} className="slides-thanks">
         <div ref={thanksSceneRef} className="slides-live-scene" aria-hidden="true"><canvas data-lp="canvas" /></div>
-        <div className="slides-cover-top"><TemanMuWordmark /></div>
-        <div className="slides-cover-main">
-          <div className="slides-cover-copy">
-            <p className="slides-eyebrow">Albert &amp; Einstein · Universiti Malaya</p>
-            <h1>Thank you</h1>
-            <p className="slides-cover-tagline">Reassurance at home.<br /><em>Connection in the community.</em></p>
-          </div>
+        <div className="slides-thanks-main">
+          <span className="slides-thanks-mark" aria-hidden="true">
+            <svg viewBox="0 0 64 64">
+              <path d="M14 29 L32 15 L50 29 V50 H14 Z" fill="none" stroke="#fef9ef" strokeWidth="3.6" strokeLinejoin="round" />
+              <path d="M14 31 H50 M32 31 V50" stroke="#fef9ef" strokeWidth="3.6" />
+              <rect x="35" y="34" width="12" height="13" fill="#f0b25a" />
+            </svg>
+          </span>
+          <h1>Thank you</h1>
+          <p className="slides-thanks-name"><em>TemanMu</em></p>
+          <p className="slides-thanks-team">Albert &amp; Einstein · Universiti Malaya</p>
         </div>
       </PageFrame>
     </div>
