@@ -1,8 +1,8 @@
-import { mockApi, mockSnapshot, primeMockInactivity } from './api'
+import { mockApi, mockSnapshot, primeMockInactivity, settleMockHome } from './api'
 import type { Api, RealtimeEvent } from '../api/types'
 
 type Method = Exclude<keyof Api, 'connect'>
-type Request = { id: number; method: Method | 'primeInactivity'; args: unknown[] }
+type Request = { id: number; method: Method | 'primeInactivity' | 'settleHome'; args: unknown[] }
 type Reply = { kind: 'reply'; id: number; result?: unknown; error?: { status?: number; message: string } }
 type EventMessage = { kind: 'event'; event: RealtimeEvent }
 
@@ -25,12 +25,12 @@ scope.onconnect = event => {
       return
     }
     const { id, method, args } = data
-    if (method === 'primeInactivity') {
+    if (method === 'primeInactivity' || method === 'settleHome') {
       try {
-        const incident = primeMockInactivity()
-        port.postMessage({ kind: 'reply', id, result: incident } satisfies Reply)
+        const result = method === 'primeInactivity' ? primeMockInactivity() : settleMockHome()
+        port.postMessage({ kind: 'reply', id, result } satisfies Reply)
       } catch (error) {
-        port.postMessage({ kind: 'reply', id, error: { message: error instanceof Error ? error.message : 'Could not start mock inactivity' } } satisfies Reply)
+        port.postMessage({ kind: 'reply', id, error: { message: error instanceof Error ? error.message : 'Could not prepare the mock home' } } satisfies Reply)
       }
       return
     }

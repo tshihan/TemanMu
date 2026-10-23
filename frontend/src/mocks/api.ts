@@ -165,6 +165,21 @@ export function primeMockInactivity(): Incident {
   return startGrace(unit)
 }
 
+// Presenter-only: a scenario stopped midway (e.g. Going Out with the door open) leaves sensors as they were.
+// Put A-105 back to "home, door closed, utilities off" so the next quiet-gap scenario can start cleanly.
+export function settleMockHome(): Unit {
+  const unit = unitOrThrow('A-105')
+  if (latestIncident(unit.unit_id)) return clone(unit)
+  const unsettled = unit.status !== 'routine' || unit.latest.door !== 'closed'
+    || unit.latest.water_lpm > 0 || unit.latest.power_kw > unit.baseline.standby_power_kw
+  if (!unsettled) return clone(unit)
+  unit.latest.door = 'closed'
+  unit.latest.water_lpm = 0
+  unit.latest.power_kw = unit.baseline.standby_power_kw
+  updateUnit(unit, 'routine', 'At home')
+  return clone(unit)
+}
+
 function later(action: () => void, milliseconds: number): void {
   const timer = setTimeout(() => { scenarioTimers.delete(timer); action() }, milliseconds)
   scenarioTimers.add(timer)

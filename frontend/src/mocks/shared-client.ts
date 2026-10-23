@@ -1,7 +1,7 @@
 import { ApiError } from '../api/live'
-import type { Api, Incident, RealtimeEvent } from '../api/types'
+import type { Api, Incident, RealtimeEvent, Unit } from '../api/types'
 
-type Method = Exclude<keyof Api, 'connect'> | 'primeInactivity'
+type Method = Exclude<keyof Api, 'connect'> | 'primeInactivity' | 'settleHome'
 type Reply = { kind: 'reply'; id: number; result?: unknown; error?: { status?: number; message: string } }
 type EventMessage = { kind: 'event'; event: RealtimeEvent }
 
@@ -71,6 +71,7 @@ function call<T>(method: Method, ...args: unknown[]): Promise<T> {
 }
 
 export const primeSharedMockInactivity = () => call<Incident | undefined>('primeInactivity')
+export const settleSharedMockHome = () => call<Unit>('settleHome')
 
 export const sharedMockApi: Api = {
   getConfig: () => call('getConfig'),

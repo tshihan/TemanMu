@@ -17,7 +17,7 @@ import { ScenarioController, type ScenarioActions } from './scenarios/ScenarioCo
 import { DEFAULT_TIMING, SCENARIO_CALL_TIMING, SCENARIO_DESCRIPTIONS, SCENARIO_LABELS, scenarioSteps, type ScenarioId, type ScenarioStep, type ScenarioTiming } from './scenarios/definitions'
 import { api, usingMock } from '../api'
 import { ApiError } from '../api/live'
-import { primeSharedMockInactivity } from '../mocks/shared-client'
+import { primeSharedMockInactivity, settleSharedMockHome } from '../mocks/shared-client'
 import { applyEvent, getAppState, subscribeAppEvents, useAppState } from '../api/store'
 import type { CallTiming, CompanionMessage, Config, Incident, Reading, Sensor, Unit } from '../api/types'
 import { HOME_UNIT_ID, SensorGateway, readingForObject } from './integration/sensorGateway'
@@ -618,8 +618,12 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
       },
       moveResponder, checkResident: () => setResponderChecking(true),
     }
+    // A stopped Going Out can leave the door open or the unit "possibly away", which blocks the quiet gap.
+    const settle = usingMock && (id === 'unusualInactivity' || id === 'falseAlarmRecovery')
+      ? settleSharedMockHome().then(unit => { if (runner.current === controller) syncUnit(unit) })
+      : Promise.resolve()
     // Wait a frame so the reset command commits before the first step replaces it.
-    void new Promise<void>(resolve => requestAnimationFrame(() => resolve())).then(() => controller.play(steps, actions, (index: number, step: ScenarioStep) => {
+    void Promise.all([settle, new Promise<void>(resolve => requestAnimationFrame(() => resolve()))]).then(() => controller.play(steps, actions, (index: number, step: ScenarioStep) => {
       if (step.kind === 'animate' && (step.animation === 'wake' || step.animation === 'recover')) sound.current.play('wake')
       if (id === 'goingOut' && step.kind === 'visible' && step.value) sound.current.play('return')
       setScenarioProgress({ index: index + 1, total: steps.length, label: step.label, kind: step.kind })
