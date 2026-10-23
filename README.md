@@ -12,8 +12,7 @@ If their usual routine suddenly stops, TemanMu gets a real person to check on th
 
 > Built by team **Albert & Einstein** (Universiti Malaya) for the **Sime Darby Property Township of Tomorrow 2026** hackathon.
 
-🌐 **[Live demo](https://temanmu-nine.vercel.app/)** · 🎬 [Pitch slides](https://temanmu-nine.vercel.app/slides) · 📄 [Product requirements](temanmu-prd.md) · ❓ [FAQ](faq.md)
-
+🌐 **[Live demo](https://temanmu-nine.vercel.app/)** · 🎬 [Pitch slides](https://temanmu-nine.vercel.app/slides)
 ---
 
 ## The problem
