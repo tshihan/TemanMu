@@ -194,10 +194,12 @@ export function Present() {
         <div ref={sceneRef} className="slides-live-scene" aria-hidden="true"><canvas data-lp="canvas" /></div>
         <div className="slides-cover-top">
           <TemanMuWordmark />
+          <span className="present-team-name">Team Albert and Einstein</span>
         </div>
         <div className="slides-cover-main">
           <div className="slides-cover-copy">
             <h1>TemanMu</h1>
+            <p className="slides-cover-tagline">Reassurance at home.<br /><em>Connection in the community.</em></p>
             <ul className="present-names">{names.map(name => <li key={name}>{name}</li>)}</ul>
           </div>
         </div>

@@ -1,6 +1,10 @@
 /* No toolbar on /present, so the cover fills the whole screen. */
 .present-cover { min-height: 100svh; }
-.present-names { margin: 32px 0 0; padding: 0; list-style: none; display: grid; gap: 10px; color: #4e4a45; font-size: clamp(18px, 1.7vw, 24px); font-weight: 600; letter-spacing: .06em; }
+/* Keep the copy high, like the /slides cover, so the trees don't run under the words. */
+.present-cover .slides-cover-main { align-items: flex-start; }
+.present-cover .slides-cover-copy { padding-top: clamp(24px, 6svh, 72px); }
+.present-names { max-width: 480px; margin: 28px 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 6px 18px; color: #6b655e; font-size: clamp(12px, 1vw, 15px); font-weight: 600; letter-spacing: .08em; }
+.present-team-name { margin-right: 115px; color: #8b4429; font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 
 /* Page 2 · The problem (from slide-1b.html) */
 /* Sized to the screen height so the whole page fits in one view when presenting. */
