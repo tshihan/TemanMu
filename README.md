@@ -8,7 +8,7 @@
 
 TemanMu looks after older people who live alone, using only the water, electricity and front-door activity in their home. No cameras, no wristbands, no app for the older person to learn.
 
-If their usual routine suddenly stops, TemanMu gets a real person to check on them quickly. On ordinary days, it sends the family a calm "Mum's day has started" message and helps the resident meet people nearby.
+If their usual routine suddenly stops, TemanMu gets a real person to check on them quickly. On ordinary days, it lets the family know their parent's day has started, based on the first water or electricity use of the morning, and helps the resident meet people nearby.
 
 > Built by team **Albert & Einstein** (Universiti Malaya) for the **Sime Darby Property Township of Tomorrow 2026** hackathon.
 >
