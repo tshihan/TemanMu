@@ -4,6 +4,7 @@ import { startScene } from '../landing/scene'
 import './slides.css'
 
 const PAGE_COUNT = 13
+const SLIDE_CANVAS_WIDTH = 1600 // matches .slides-fixed .slides-page in slides.css
 
 const members = [
   { name: 'TAN SHIHAN', role: 'Team Leader & Project Manager', photo: '/images/team-tan-shi-han.jpeg', email: 'bryantan7837@gmail.com', phone: '01111651882' },
@@ -68,7 +69,8 @@ function useHowFlowDot() {
       const rowEls = rowRefs.map(r => r.current)
       if (!wrap || !box2 || !feed || !dot || rowEls.some(r => !r)) return
       const wr = wrap.getBoundingClientRect()
-      const rel = (el: Element) => { const r = el.getBoundingClientRect(); return { x: r.left - wr.left, y: r.top - wr.top, w: r.width, h: r.height } }
+      const z = wr.width / wrap.offsetWidth || 1 // rects are zoomed; inline left/top are not
+      const rel = (el: Element) => { const r = el.getBoundingClientRect(); return { x: (r.left - wr.left) / z, y: (r.top - wr.top) / z, w: r.width / z, h: r.height / z } }
       const b = rel(box2)
       const fy = b.y + b.h / 2
       feed.style.top = `${fy}px`
@@ -117,6 +119,23 @@ export function Slides() {
       setPptxExporting(false)
     }
   }
+  useEffect(() => {
+    const root = rootRef.current
+    if (!root) return
+    const fit = () => root.style.setProperty('--slides-zoom', String(root.clientWidth / SLIDE_CANVAS_WIDTH))
+    const resize = new ResizeObserver(fit)
+    resize.observe(root)
+    fit()
+    const freeze = () => root.classList.add('slides-exporting')
+    const unfreeze = () => root.classList.remove('slides-exporting')
+    window.addEventListener('beforeprint', freeze)
+    window.addEventListener('afterprint', unfreeze)
+    return () => {
+      resize.disconnect()
+      window.removeEventListener('beforeprint', freeze)
+      window.removeEventListener('afterprint', unfreeze)
+    }
+  }, [])
   useEffect(() => startScene(sceneRef.current!, 'presentation'), [])
   useEffect(() => startScene(thanksSceneRef.current!, 'presentation'), [])
   useEffect(() => {
@@ -135,7 +154,7 @@ export function Slides() {
     root.classList.add('slides-motion-ready')
     return () => observer.disconnect()
   }, [])
-  return <main ref={rootRef} className="slides-root">
+  return <main ref={rootRef} className="slides-root slides-fixed">
     <div className="slides-toolbar">
       <a href="/">← TemanMu</a>
       <span>Albert & Einstein · {PAGE_COUNT} of {PAGE_COUNT} sections drafted</span>
