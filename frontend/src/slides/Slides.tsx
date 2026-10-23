@@ -3,7 +3,7 @@ import { Brain, Camera, DoorOpen, Droplets, Faucet, HeartHandshake, Home, Layers
 import { startScene } from '../landing/scene'
 import './slides.css'
 
-const PAGE_COUNT = 12
+const PAGE_COUNT = 13
 
 const members = [
   { name: 'TAN SHIHAN', role: 'Team Leader & Project Manager', photo: '/images/team-tan-shi-han.jpeg', email: 'bryantan7837@gmail.com', phone: '01111651882' },
@@ -474,7 +474,7 @@ export function Slides() {
         </div>
         <div className="slides-feasibility-detail-grid">
 <article><h3><Lightbulb aria-hidden="true" />1. Technical Readiness</h3><div className="slides-feasibility-tiles"><div><Layers aria-hidden="true" /><span>React PWA</span></div><div><Zap aria-hidden="true" /><span>FastAPI</span></div><div><Droplets aria-hidden="true" /><span>Supabase</span></div></div><p className="slides-feasibility-card-body">Built using established, open-source technologies with no need to develop proprietary hardware or train complex AI models for the initial deployment.</p><p className="slides-feasibility-card-note">Existing prototype interfaces and APIs can be extended to compatible IoT gateways.</p></article>
-<article><h3><Layers aria-hidden="true" />2. Infrastructure &amp; Resources</h3><div className="slides-feasibility-tiles"><div><Zap aria-hidden="true" /><span>Meters &amp; IoT</span></div><div><Layers aria-hidden="true" /><span>Cloud Hosting</span></div><div><Home aria-hidden="true" /><span>Township Assets</span></div></div><p className="slides-feasibility-card-body">Uses existing township facilities and cloud services, with compatible meter-data access and additional door sensors or gateways where required.</p><p className="slides-feasibility-card-note">Key resources: sensor integration, connectivity, installation, software maintenance and secure hosting.</p></article>
+<article><h3><Layers aria-hidden="true" />2. Infrastructure &amp; Resources</h3><div className="slides-feasibility-tiles"><div><Zap aria-hidden="true" /><span>Meters &amp; IoT</span></div><div><Layers aria-hidden="true" /><span>Cloud Hosting</span></div><div><Home aria-hidden="true" /><span>Installation &amp; Support</span></div></div><p className="slides-feasibility-card-body">Assess each pilot home and arrange installation of compatible smart water/electricity meters, door sensors and gateways where needed. Provide connectivity and cloud hosting for the service.</p><p className="slides-feasibility-card-note">Key resources: hardware procurement, qualified installers, IoT integration, connectivity, maintenance and secure hosting.</p></article>
 <article><h3><Users aria-hidden="true" />3. Stakeholder &amp; Operational Support</h3><div className="slides-feasibility-tiles"><div><Home aria-hidden="true" /><span>Management</span></div><div><ShieldCheck aria-hidden="true" /><span>Security</span></div><div><HeartHandshake aria-hidden="true" /><span>Community</span></div></div><p className="slides-feasibility-card-body">Builds on township management and security operations instead of creating an entirely separate response organisation.</p><p className="slides-feasibility-card-note">Utility/IoT partners support data integration; caregivers verify concerns; coordinators and volunteers facilitate companionship.</p></article>
 <article><h3><ShieldCheck aria-hidden="true" />4. Adoption &amp; Privacy Feasibility</h3><div className="slides-feasibility-tiles"><div><Camera aria-hidden="true" /><span>No Cameras</span></div><div><Watch aria-hidden="true" /><span>No Wearables</span></div><div><Users aria-hidden="true" /><span>Opt-in Consent</span></div></div><p className="slides-feasibility-card-body">Elderly residents are not required to operate an app or charge wearable devices, reducing participation barriers.</p><p className="slides-feasibility-card-note">Consent-based enrolment, restricted data access and secure storage are necessary before real deployment.</p></article>
         </div>
@@ -497,8 +497,29 @@ export function Slides() {
         <p className="slides-feasibility-note">Home counts are planning assumptions, not programme commitments. Expansion depends on evidence from the preceding phase.</p>
       </PageFrame>
 
-      <PageFrame number={11} className="slides-close">
-        <div className="slides-section-top"><TemanMuWordmark /><span>11 · Why TemanMu should win</span></div>
+      <PageFrame number={11} className="slides-visual-concept">
+        <div className="slides-section-top"><TemanMuWordmark /><span>11 · Visual concept</span></div>
+        <div className="slides-impact-heading">
+          <p className="slides-eyebrow">Visual concept</p>
+          <h2>One shared view of care. <em>Two connected interfaces.</em></h2>
+        </div>
+        <div className="slides-concept-layout">
+          <figure className="slides-concept-desktop">
+            <a href="/dashboard" target="_blank" rel="noreferrer" aria-label="Open township dashboard"><div className="slides-concept-laptop"><img src="/images/visual-concept/dashboard.png" alt="Prototype township dashboard showing the block map, unit A-105 and homes needing attention" /></div></a>
+            <figcaption><strong>Township dashboard</strong><span>See which homes need attention and coordinate nearby checks.</span></figcaption>
+          </figure>
+
+          <div className="slides-concept-link"><span>↔</span><strong>Shared live updates</strong><small>Water · power · door</small></div>
+          <figure className="slides-concept-mobile">
+            <a href="/caregiver" target="_blank" rel="noreferrer" aria-label="Open caregiver app"><div className="slides-concept-phone"><img src="/images/visual-concept/caregiver.png" alt="Prototype caregiver app showing Madam Lee in unit A-105, routine status and household activity timeline" /></div></a>
+            <figcaption><strong>Caregiver app</strong><span>See Mum’s day and check in when something changes.</span></figcaption>
+          </figure>
+        </div>
+        <p className="slides-concept-note">Prototype screenshots · Simulated household data · Select either screen to open the interface</p>
+      </PageFrame>
+
+      <PageFrame number={12} className="slides-close">
+        <div className="slides-section-top"><TemanMuWordmark /><span>12 · Why TemanMu should win</span></div>
         <div className="slides-close-heading" data-slide-reveal>
           <p className="slides-eyebrow">Why our team should win</p>
           <h2>Care for people. <em>Value for the township.</em></h2>
@@ -509,7 +530,7 @@ export function Slides() {
         </div>
       </PageFrame>
 
-      <PageFrame number={12} className="slides-cover slides-thanks">
+      <PageFrame number={13} className="slides-cover slides-thanks">
         <div ref={thanksSceneRef} className="slides-live-scene" aria-hidden="true"><canvas data-lp="canvas" /></div>
         <div className="slides-cover-top"><TemanMuWordmark /></div>
         <div className="slides-cover-main">

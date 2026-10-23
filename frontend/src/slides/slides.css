@@ -701,3 +701,29 @@
  .slides-feasibility-card-body { font-size: 10pt; }
  .slides-feasibility-card-note { font-size: 9pt; margin-top: .07in; }
 }
+
+.slides-visual-concept { background: #fef9ef; }
+.slides-concept-layout { display: grid; grid-template-columns: minmax(0, 1fr) 130px 260px; gap: 26px; align-items: center; flex: 1; padding: 8px 0 20px; }
+.slides-concept-layout figure { margin: 0; min-width: 0; }
+.slides-concept-layout a { display: block; text-decoration: none; }
+.slides-concept-laptop { padding: 9px; border: 1px solid #55504a; border-bottom-width: 17px; border-radius: 16px 16px 8px 8px; background: #302d29; box-shadow: 0 14px 30px #6b432418; }
+.slides-concept-laptop img { display: block; width: 100%; border-radius: 7px; }
+.slides-concept-phone { width: 210px; margin: 0 auto; padding: 7px; border-radius: 30px; background: #302d29; box-shadow: 0 14px 30px #6b432422; }
+.slides-concept-phone img { display: block; width: 100%; border-radius: 24px; }
+.slides-concept-layout figcaption { margin-top: 18px; color: #4e4a45; font-size: 14px; line-height: 1.4; }
+.slides-concept-layout figcaption strong { display: block; margin-bottom: 5px; color: #8b4429; font-size: 19px; }
+.slides-concept-layout figcaption span { display: block; }
+.slides-concept-link { text-align: center; color: #8b4429; }
+.slides-concept-link > span { display: block; font-size: 42px; }
+.slides-concept-link strong { display: block; font-size: 13px; }
+.slides-concept-link small { display: block; margin-top: 7px; color: #756d64; font-size: 11px; }
+.slides-concept-note { margin: 0 0 18px; color: #756d64; font-size: 11px; }
+@media screen and (max-width: 850px) { .slides-concept-layout { grid-template-columns: 1fr; } .slides-concept-link > span { transform: rotate(90deg); } .slides-concept-mobile { text-align: center; } }
+@media print {
+ .slides-concept-layout { grid-template-columns: minmax(0, 1fr) 1.05in 2.3in; gap: .2in; padding-bottom: .1in; }
+ .slides-concept-phone { width: 1.9in; padding: .05in; }
+ .slides-concept-layout figcaption { font-size: 9pt; margin-top: .1in; }
+ .slides-concept-layout figcaption strong { font-size: 12pt; }
+ .slides-concept-link strong { font-size: 9pt; }
+ .slides-concept-link small, .slides-concept-note { font-size: 7pt; }
+}

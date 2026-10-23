@@ -97,7 +97,6 @@ h1, h2, h3, p { margin-top: 0; }
 .notification-row strong { font-size: 12px; text-transform: capitalize; }
 .notification-row p { margin: 5px 0 0; font-size: 12px; color: #5a6861; }
 .empty-state, .loading-state { padding: 30px 20px; border: 1px dashed #ccd8d0; border-radius: 9px; text-align: center; font-size: 13px; color: #738078; }
-.dashboard-footer { display: flex; justify-content: space-between; gap: 15px; padding: 14px 24px; flex: none; border-top: 1px solid #e6ece9; font-size: 11px; color: #758078; }
 
 /* Township navigation: floors, illustrated homes, then unit detail. */
 .township-screen { width: 100%; }
@@ -263,7 +262,6 @@ h1, h2, h3, p { margin-top: 0; }
   .brand-caption, .environment-label { display: none; }
   .workspace { padding: 9px; }
   .meter-strip { grid-template-columns: 1fr; }
-  .dashboard-footer { flex-wrap: wrap; }
   .caregiver-status { padding: 18px; }
   .caregiver-status-top { grid-template-columns: 1fr; gap: 12px; }
   .caregiver-portrait { width: min(65%, 190px); justify-self: start; }

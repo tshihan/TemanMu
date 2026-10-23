@@ -20,12 +20,10 @@ const legacy = window.location.pathname === '/' ? window.location.hash.slice(1) 
 if (PAGES['/' + legacy]) window.history.replaceState(null, '', '/' + legacy)
 
 export default function App() {
-  const { connected, loaded, notifications, config } = useAppState()
+  const { connected, loaded, notifications } = useAppState()
   const [page] = useState<Page>(pageFromPath)
   const [role] = useState<Role>('township')
   const activeUnread = notifications.filter(item => item.role === role && !item.read).length
-  const inactiveRole: Role = role === 'township' ? 'caregiver' : 'township'
-  const inactiveUnread = notifications.filter(item => item.role === inactiveRole && !item.read).length
 
   useEffect(() => {
     if (page === 'slides' || page === 'present') return
@@ -111,10 +109,6 @@ export default function App() {
         <div className="dashboard-content">
           {!loaded ? <p className="loading-state" role="status">Waiting for the first snapshot…</p> : role === 'caregiver' ? <CaregiverApp /> : <TownshipView />}
         </div>
-        {role === 'township' && <div className="dashboard-footer">
-          <span>{inactiveUnread ? `${inactiveUnread} unread for ${inactiveRole}` : 'Both roles are up to date'} · Floors 2–24 use sample data</span>
-          <span>Grace {config?.grace_period_seconds ?? '—'}s · Reminder {config?.reminder_interval_seconds ?? '—'}s</span>
-        </div>}
       </section>
     </main>
   </div>
