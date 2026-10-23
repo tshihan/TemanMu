@@ -161,8 +161,11 @@
 @keyframes slides-buddy-photo { 0%, 43% { opacity: 0; transform: scale(1.04); } 58%, 90% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.04); } }
 @keyframes slides-buddy-tap { 0%, 10% { transform: translate(30px, 14px); opacity: 0; } 22% { transform: translate(0, 0); opacity: 1; } 27% { transform: translate(0, 3px) scale(.82); opacity: 1; } 34%, 100% { transform: translate(0, 3px); opacity: 0; } }
 @keyframes slides-buddy-pending { 0%, 29% { opacity: 0; } 33%, 53% { opacity: 1; } 62%, 100% { opacity: 0; } }
-.slides-solution-companion > p { margin: 0; color: #4e4a45; font-size: clamp(17px, 1.45vw, 20px); line-height: 1.48; }
-.slides-solution-companion > p strong { color: #8b4429; }
+.slides-connection-points { margin: 0; padding: 0; list-style: none; color: #4e4a45; font-size: clamp(17px, 1.45vw, 20px); line-height: 1.48; }
+.slides-connection-points li { position: relative; padding-left: 1.1em; }
+.slides-connection-points li::before { content: ''; position: absolute; left: 0; top: .58em; width: .3em; height: .3em; border-radius: 50%; background: #8b4429; }
+.slides-connection-points li + li { margin-top: 12px; }
+.slides-connection-points strong { color: #8b4429; }
 .slides-buddy-note { margin-top: 18px; color: #8b4429; font-size: clamp(12px, 1vw, 14px); font-weight: 700; }
 .slides-innovation { background: #fef9ef; }
 .slides-innovation-heading { margin: clamp(25px, 3vw, 42px) 0 clamp(20px, 2.4vw, 34px); }
@@ -242,6 +245,11 @@
 .slides-feasibility-requirements svg { flex: none; width: 30px; height: 30px; color: #a95130; stroke-width: 1.7; }
 .slides-feasibility-requirements h3 { margin: 0 0 6px; color: #8b4429; font-size: clamp(16px, 1.3vw, 19px); font-weight: 750; line-height: 1.2; }
 .slides-feasibility-requirements p { margin: 0; color: #4e4a45; font-size: clamp(13px, 1.08vw, 16px); line-height: 1.38; }
+.slides-feasibility-points { margin: 0; padding: 0; list-style: none; color: #4e4a45; font-size: clamp(13px, 1.05vw, 15px); line-height: 1.38; }
+.slides-feasibility-points li { position: relative; padding-left: 12px; }
+.slides-feasibility-points li + li { margin-top: 7px; }
+.slides-feasibility-points li::before { content: ''; position: absolute; left: 0; top: .52em; width: 4px; height: 4px; border-radius: 50%; background: #a95130; }
+.slides-feasibility-points strong { font-weight: 700; }
 .slides-feasibility-timeline-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 20px; margin: clamp(24px, 3vw, 42px) 0 16px; }
 .slides-feasibility-timeline-heading .slides-eyebrow { margin: 0; }
 .slides-feasibility-timeline-heading > span:last-child { color: #756d64; font-size: 13px; font-weight: 600; }
@@ -370,7 +378,7 @@
   .slides-solution-heading h2 { font-size: 32pt; }
   .slides-solution-columns { grid-template-columns: 6.8in minmax(0, 1fr); gap: .35in; padding-bottom: .1in; }
   .slides-solution-columns h3 { font-size: 28pt; }
-  .slides-solution-lead, .slides-solution-companion > p { font-size: 14pt; }
+  .slides-solution-lead, .slides-connection-points { font-size: 14pt; }
   .slides-sensor-demos { gap: .1in; margin: .16in 0 .15in; }
   .slides-sensor-demo { padding: .1in; border-radius: .12in; }
   .slides-sensor-visual { height: 1.05in; margin-bottom: .08in; }
@@ -421,6 +429,8 @@
   .slides-feasibility-requirements svg { width: .25in; height: .25in; }
   .slides-feasibility-requirements h3 { font-size: 12pt; }
   .slides-feasibility-requirements p { font-size: 9pt; }
+  .slides-feasibility-points { font-size: 9pt; }
+  .slides-feasibility-points li + li { margin-top: 4px; }
   .slides-feasibility-timeline-heading { margin: .3in 0 .12in; }
   .slides-feasibility-timeline { gap: .15in; margin-bottom: .1in; }
   .slides-feasibility-timeline::before { top: .27in; }
@@ -565,6 +575,16 @@
 .slides-users-ring-township { inset: 0; background: #f9ebdd; border: 1px solid #ecd6c2; }
 .slides-users-ring-family { inset: 82px; background: #ecc8ae; border: 1px solid #dfb293; }
 .slides-users-ring-resident { inset: 164px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; background: #a95130; color: #fef9ef; text-align: center; }
+@media screen and (prefers-reduced-motion: no-preference) {
+  .slides-users-ring::after { content: ''; position: absolute; inset: 0; border: 2px solid #b4734f; border-radius: inherit; pointer-events: none; animation: slides-care-pulse 4.8s ease-out infinite; }
+  .slides-users-ring-family::after { animation-delay: -3.2s; }
+  .slides-users-ring-township::after { animation-delay: -1.6s; }
+}
+@keyframes slides-care-pulse {
+  0%, 15% { transform: scale(1); opacity: 0; }
+  30% { opacity: .4; }
+  85%, 100% { transform: scale(1.07); opacity: 0; }
+}
 .slides-users-ring-resident span, .slides-users-ring-label span { display: block; font-size: 11px; font-weight: 750; letter-spacing: .09em; }
 .slides-users-ring-resident strong, .slides-users-ring-label strong { font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-weight: 400; line-height: 1.05; }
 .slides-users-ring-resident strong { font-size: 24px; }
@@ -592,6 +612,11 @@
 .slides-users-row-resident i { background: #a95130; }
 .slides-users-row-family i { background: #2a2b2f; }
 .slides-users-row-township i { background: #b4734f; }
+.slides-users-support { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 20px; padding-top: 16px; }
+.slides-users-support > strong { display: flex; align-items: baseline; gap: 10px; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: 21px; font-weight: 400; }
+.slides-users-support > strong::before { content: ''; width: 12px; height: 12px; flex: none; border-radius: 50%; background: #b4734f; }
+.slides-users-support span { display: block; margin-bottom: 5px; color: #8b4429; font-size: 11px; font-weight: 750; letter-spacing: .09em; text-transform: uppercase; }
+.slides-users-support p { margin: 0; color: #4e4a45; font-size: 15px; line-height: 1.4; }
 
 @media screen and (max-width: 1100px) {
   .slides-users-layout { grid-template-columns: 1fr; gap: 28px; }
@@ -601,6 +626,7 @@
   .slides-users-rings { transform: scale(.7); margin: -72px auto; }
   .slides-users-table-head { display: none; }
   .slides-users-row { grid-template-columns: 1fr; row-gap: 6px; }
+  .slides-users-support { grid-template-columns: 1fr; gap: 6px; }
 }
 @media print {
   .slides-users-layout { grid-template-columns: 4.6in minmax(0, 1fr); gap: .5in; margin-bottom: .1in; }
@@ -609,4 +635,69 @@
   .slides-users-row { padding: .1in 0; }
   .slides-users-row p { font-size: 11pt; }
   .slides-users-row strong { font-size: 15pt; }
+  .slides-users-support p { font-size: 11pt; }
+  .slides-users-support > strong { font-size: 15pt; }
+}
+
+.slides-feasibility-detail .slides-feasibility-heading { margin: 20px 0; }
+.slides-feasibility-detail .slides-feasibility-heading h2 { font-size: clamp(30px, 3vw, 42px); }
+.slides-feasibility-intro { margin: 10px 0 0; color: #4e4a45; font-size: 16px; }
+.slides-feasibility-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.slides-feasibility-detail-grid article { padding: 18px 22px; border: 1px solid #ddcfc0; border-radius: 16px; background: #f5eee1; }
+.slides-feasibility-detail-grid h3 { margin: 0 0 10px; color: #8b4429; font-size: 17px; font-weight: 750; }
+.slides-feasibility-detail-grid .slides-feasibility-points { font-size: 14px; line-height: 1.35; }
+.slides-feasibility-dependencies { margin: 16px 0 20px; padding-left: 14px; border-left: 3px solid #a95130; color: #4e4a45; font-size: 13px; line-height: 1.4; }
+.slides-feasibility-dependencies strong { color: #8b4429; }
+.slides-feasibility-dependencies p { margin: 4px 0 0; }
+.slides-roadmap .slides-feasibility-timeline { margin-top: 30px; margin-bottom: 32px; }
+@media screen and (max-width: 700px) { .slides-feasibility-detail-grid { grid-template-columns: 1fr; } }
+@media print {
+  .slides-feasibility-detail .slides-feasibility-heading { margin: .14in 0; }
+  .slides-feasibility-detail .slides-feasibility-heading h2 { font-size: 27pt; }
+  .slides-feasibility-intro { font-size: 10pt; }
+  .slides-feasibility-detail-grid { gap: .12in; }
+  .slides-feasibility-detail-grid article { padding: .12in .16in; }
+  .slides-feasibility-detail-grid h3 { font-size: 11pt; margin-bottom: .06in; }
+  .slides-feasibility-detail-grid .slides-feasibility-points { font-size: 9pt; }
+  .slides-feasibility-dependencies { margin: .12in 0; font-size: 8.5pt; }
+}
+
+.slides-roadmap .slides-feasibility-timeline article { display: flex; flex-direction: column; align-items: flex-start; }
+.slides-roadmap-icon { display: grid; place-items: center; width: 66px; height: 66px; margin: 4px 0 14px; border-radius: 18px; background: #ecc8ae; color: #8b4429; }
+.slides-roadmap-icon svg { width: 34px; height: 34px; stroke-width: 1.6; }
+.slides-roadmap-scope { margin-bottom: 8px; color: #8b4429; font-size: 12px; font-weight: 750; letter-spacing: .03em; }
+.slides-roadmap .slides-feasibility-timeline h3 { min-height: 2.15em; }
+.slides-roadmap-deliverable { width: 100%; margin-top: auto; padding-top: 18px; }
+.slides-roadmap-deliverable span { display: block; padding-top: 10px; border-top: 1px solid #d1c9bf; color: #756d64; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; }
+.slides-roadmap-deliverable strong { display: block; margin-top: 5px; color: #8b4429; font-size: 13px; line-height: 1.35; }
+@media screen and (max-width: 700px) { .slides-roadmap .slides-feasibility-timeline h3 { min-height: 0; } }
+@media print {
+  .slides-roadmap .slides-feasibility-timeline { margin-top: .1in; margin-bottom: .2in; }
+  .slides-roadmap-icon { width: .5in; height: .5in; margin: .03in 0 .1in; border-radius: .12in; }
+  .slides-roadmap-icon svg { width: .28in; height: .28in; }
+  .slides-roadmap-scope { font-size: 9pt; }
+  .slides-roadmap-deliverable { padding-top: .12in; }
+  .slides-roadmap-deliverable span { font-size: 7pt; }
+  .slides-roadmap-deliverable strong { font-size: 9pt; }
+}
+
+.slides-feasibility-detail .slides-feasibility-heading h2 { font-size: clamp(27px, 2.8vw, 39px); }
+.slides-feasibility-detail-grid article { background: #f1e7da; }
+.slides-feasibility-detail-grid h3 { display: flex; align-items: center; gap: 8px; font-size: 16px; }
+.slides-feasibility-detail-grid h3 svg { width: 21px; height: 21px; flex: none; stroke-width: 1.7; }
+.slides-feasibility-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; margin: 12px 0; }
+.slides-feasibility-tiles > div { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 9px 4px; background: #fffdf9; border-radius: 12px; text-align: center; }
+.slides-feasibility-tiles svg { width: 21px; height: 21px; color: #a95130; stroke-width: 1.6; }
+.slides-feasibility-tiles span { font-size: 11px; color: #4e4a45; }
+.slides-feasibility-card-body { margin: 0; color: #4e4a45; font-size: 14px; line-height: 1.4; }
+.slides-feasibility-card-note { margin: 10px 0 0; color: #756d64; font-size: 13px; line-height: 1.35; }
+@media print {
+ .slides-feasibility-detail .slides-feasibility-heading h2 { font-size: 25pt; }
+ .slides-feasibility-detail-grid h3 { font-size: 11pt; }
+ .slides-feasibility-tiles { margin: .07in 0; }
+ .slides-feasibility-tiles > div { padding: .06in; gap: .03in; }
+ .slides-feasibility-tiles svg { width: .17in; height: .17in; }
+ .slides-feasibility-tiles span { font-size: 8pt; }
+ .slides-feasibility-card-body { font-size: 10pt; }
+ .slides-feasibility-card-note { font-size: 9pt; margin-top: .07in; }
 }

@@ -3,7 +3,7 @@ import { Brain, Camera, DoorOpen, Droplets, Faucet, HeartHandshake, Home, Layers
 import { startScene } from '../landing/scene'
 import './slides.css'
 
-const PAGE_COUNT = 10
+const PAGE_COUNT = 12
 
 const members = [
   { name: 'TAN SHIHAN', role: 'Team Leader & Project Manager', photo: '/images/team-tan-shi-han.jpeg', email: 'bryantan7837@gmail.com', phone: '01111651882' },
@@ -98,6 +98,7 @@ function useHowFlowDot() {
 export function Slides() {
   const howFlow = useHowFlowDot()
   const sceneRef = useRef<HTMLDivElement>(null)
+  const thanksSceneRef = useRef<HTMLDivElement>(null)
   const rootRef = useRef<HTMLElement>(null)
   const [pptxStatus, setPptxStatus] = useState('')
   const [pptxExporting, setPptxExporting] = useState(false)
@@ -117,6 +118,7 @@ export function Slides() {
     }
   }
   useEffect(() => startScene(sceneRef.current!, 'presentation'), [])
+  useEffect(() => startScene(thanksSceneRef.current!, 'presentation'), [])
   useEffect(() => {
     const root = rootRef.current
     if (!root || !('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
@@ -238,31 +240,33 @@ export function Slides() {
             <div className="slides-users-ring slides-users-ring-resident"><span>01</span><strong>Older<br />resident</strong></div>
             <div className="slides-users-ring-label slides-users-ring-label-family"><span>02</span><strong>Family</strong></div>
             <div className="slides-users-ring-label slides-users-ring-label-township"><span>03</span><strong>Township</strong></div>
-            <div className="slides-users-ring-note slides-users-ring-note-family">checks in from afar</div>
-            <div className="slides-users-ring-note slides-users-ring-note-township">responds nearby</div>
+            <div className="slides-users-ring-note slides-users-ring-note-family">family living elsewhere</div>
+            <div className="slides-users-ring-note slides-users-ring-note-township">nearby community support</div>
           </div>
 
           <div className="slides-users-copy" data-slide-reveal>
             <p className="slides-eyebrow">Target users</p>
             <h2>One person at home. <em>Two circles of care.</em></h2>
             <div className="slides-users-table">
-              <div className="slides-users-table-head"><span /><span>Their worry</span><span>TemanMu gives</span></div>
+              <div className="slides-users-table-head"><span>Who they are</span><span>Their challenge</span><span>What they need</span></div>
               <div className="slides-users-row slides-users-row-resident">
-                <div><i /><strong>Residents</strong></div>
-                <p>A fall or change in routine may go unnoticed, and cameras feel intrusive.</p>
-                <p>Nothing to wear or watch her, and a buddy nearby.</p>
+                <div><i /><strong>Older residents</strong></div>
+                <p>Living alone can mean help is delayed, while monitoring can feel intrusive.</p>
+                <p>Independence, privacy, and someone nearby to turn to.</p>
               </div>
               <div className="slides-users-row slides-users-row-family">
                 <div><i /><strong>Families</strong></div>
-                <p>Silence could mean asleep, out, or needing help.</p>
-                <p>A daily status, and a clear next step when something changes.</p>
-              </div>
-              <div className="slides-users-row slides-users-row-township">
-                <div><i /><strong>Township</strong></div>
-                <p>No clear signal of which home needs a check first.</p>
-                <p>Prioritised alerts, and a record of every outcome.</p>
+                <p>From a distance, it is hard to know whether silence means rest or a need for help.</p>
+                <p>Reassurance about their loved one, and clarity on when to act.</p>
               </div>
             </div>
+            <aside className="slides-users-support">
+              <strong>Township teams</strong>
+              <div>
+                <span>Nearby support</span>
+                <p>An additional safeguard close to home when family cannot reach the resident quickly.</p>
+              </div>
+            </aside>
           </div>
         </div>
       </PageFrame>
@@ -315,7 +319,11 @@ export function Slides() {
               </div>
               <img className="slides-buddy-art" src="/images/community-buddy.png" alt="An older resident walking and chatting with a Community Buddy" />
             </div>
-            <p><strong>Two ways to connect.</strong> A <strong>Community Buddy</strong> (a township volunteer) joins a resident for nearby activities. <strong>Neighbour matching</strong> introduces residents with similar routines, such as two early walkers on the same street.</p>          </section>
+            <ul className="slides-connection-points">
+              <li><strong>Community Buddy:</strong> A township volunteer joins a resident for nearby activities.</li>
+              <li><strong>Neighbour matching:</strong> Connects residents with similar routines, such as two early walkers on the same street.</li>
+            </ul>
+          </section>
         </div>
       </PageFrame>
 
@@ -429,7 +437,7 @@ export function Slides() {
               <li><strong>Stronger privacy</strong> without cameras or wearables</li>
               <li><strong>Closer connection</strong> through buddies and local activities</li>
             </ul>
-            <div className="slides-impact-target"><strong>1+</strong><span>buddy or community activity each month for residents who opt in</span></div>
+            <div className="slides-impact-target"><strong>70%</strong><span>of residents expected to report greater confidence living independently after the pilot</span></div>
           </article>
           <article className="slides-impact-card slides-impact-caregivers" data-slide-reveal>
             <div className="slides-impact-art slides-impact-art-family" aria-hidden="true"><Home /><span className="slides-impact-connection" /><PhoneCall /></div>
@@ -447,40 +455,50 @@ export function Slides() {
             <span className="slides-impact-who">Who benefits · 03</span>
             <h3>Township</h3>
             <ul className="slides-impact-benefits">
-              <li><strong>Clearer priorities</strong> for unresolved concerns</li>
-              <li><strong>Faster follow-up</strong> by a nearby responder</li>
-              <li><strong>Stronger accountability</strong> with recorded outcomes</li>
+              <li><strong>Better coordinated care</strong> with clear priorities and nearby follow-up</li>
+              <li><strong>Stronger accountability</strong> through recorded actions and outcomes</li>
+              <li><strong>Stronger township reputation</strong> as a caring, age-friendly community</li>
+              <li><strong>Potential sales growth</strong> through greater appeal to families planning for ageing parents</li>
             </ul>
-            <div className="slides-impact-target"><strong>90%</strong><span>of alerts acknowledged within 10 minutes</span></div>
+            <div className="slides-impact-target"><strong>70%</strong><span>of surveyed prospective buyers expected to view the township more positively after learning about TemanMu</span></div>
           </article>
         </div>
-        <p className="slides-impact-caveat">Proposed pilot targets, not achieved results · Track opt-in participation, caregiver surveys, and alert timestamps.</p>
+        <p className="slides-impact-caveat">Proposed pilot targets, not achieved results · Measure resident confidence, caregiver reassurance, and prospective buyer perceptions through surveys.</p>
       </PageFrame>
 
-      <PageFrame number={9} className="slides-feasibility">
-        <div className="slides-section-top"><TemanMuWordmark /><span>09 · Feasibility & implementation</span></div>
+      <PageFrame number={9} className="slides-feasibility slides-feasibility-detail">
+        <div className="slides-section-top"><TemanMuWordmark /><span>09 · Implementation feasibility</span></div>
+        <div className="slides-feasibility-heading">
+          <h2>Turning TemanMu Into a Deployable Township Service</h2>
+          <p className="slides-feasibility-intro">Technically achievable · Resource-efficient · Operationally practical · Privacy-conscious</p>
+        </div>
+        <div className="slides-feasibility-detail-grid">
+<article><h3><Lightbulb aria-hidden="true" />1. Technical Readiness</h3><div className="slides-feasibility-tiles"><div><Layers aria-hidden="true" /><span>React PWA</span></div><div><Zap aria-hidden="true" /><span>FastAPI</span></div><div><Droplets aria-hidden="true" /><span>Supabase</span></div></div><p className="slides-feasibility-card-body">Built using established, open-source technologies with no need to develop proprietary hardware or train complex AI models for the initial deployment.</p><p className="slides-feasibility-card-note">Existing prototype interfaces and APIs can be extended to compatible IoT gateways.</p></article>
+<article><h3><Layers aria-hidden="true" />2. Infrastructure &amp; Resources</h3><div className="slides-feasibility-tiles"><div><Zap aria-hidden="true" /><span>Meters &amp; IoT</span></div><div><Layers aria-hidden="true" /><span>Cloud Hosting</span></div><div><Home aria-hidden="true" /><span>Township Assets</span></div></div><p className="slides-feasibility-card-body">Uses existing township facilities and cloud services, with compatible meter-data access and additional door sensors or gateways where required.</p><p className="slides-feasibility-card-note">Key resources: sensor integration, connectivity, installation, software maintenance and secure hosting.</p></article>
+<article><h3><Users aria-hidden="true" />3. Stakeholder &amp; Operational Support</h3><div className="slides-feasibility-tiles"><div><Home aria-hidden="true" /><span>Management</span></div><div><ShieldCheck aria-hidden="true" /><span>Security</span></div><div><HeartHandshake aria-hidden="true" /><span>Community</span></div></div><p className="slides-feasibility-card-body">Builds on township management and security operations instead of creating an entirely separate response organisation.</p><p className="slides-feasibility-card-note">Utility/IoT partners support data integration; caregivers verify concerns; coordinators and volunteers facilitate companionship.</p></article>
+<article><h3><ShieldCheck aria-hidden="true" />4. Adoption &amp; Privacy Feasibility</h3><div className="slides-feasibility-tiles"><div><Camera aria-hidden="true" /><span>No Cameras</span></div><div><Watch aria-hidden="true" /><span>No Wearables</span></div><div><Users aria-hidden="true" /><span>Opt-in Consent</span></div></div><p className="slides-feasibility-card-body">Elderly residents are not required to operate an app or charge wearable devices, reducing participation barriers.</p><p className="slides-feasibility-card-note">Consent-based enrolment, restricted data access and secure storage are necessary before real deployment.</p></article>
+        </div>
+        <div className="slides-feasibility-dependencies"><strong>Key conditions for implementation</strong><p>Validate real meter-data availability, alert reliability, false-positive rates and township response capacity in the Q1 2027 pilot.</p></div>
+      </PageFrame>
+
+      <PageFrame number={10} className="slides-feasibility slides-roadmap">
+        <div className="slides-section-top"><TemanMuWordmark /><span>10 · Implementation roadmap</span></div>
         <div className="slides-feasibility-heading" data-slide-reveal>
-          <p className="slides-eyebrow">Feasibility & implementation</p>
-          <h2>Start with one township. <em>Scale what works.</em></h2>
+          <p className="slides-eyebrow">Proposed rollout · 2027–2028</p>
+          <h2>Implementation Roadmap</h2>
         </div>
-        <div className="slides-feasibility-requirements" aria-label="How the pilot can be implemented">
-          <article data-slide-reveal><Droplets aria-hidden="true" /><div><h3>Obtain meter signals</h3><p>Work with Sime Darby Property and meter providers on approved water and electricity data, or suitable pilot meters.</p></div></article>
-          <article data-slide-reveal><DoorOpen aria-hidden="true" /><div><h3>Add door sensing</h3><p>Install a door contact and gateway in consenting homes; send its events into the TemanMu backend.</p></div></article>
-          <article data-slide-reveal><Users aria-hidden="true" /><div><h3>Staff the care pathway</h3><p>Train caregivers and township responders; appoint a coordinator for Community Buddy activities.</p></div></article>
+        <div className="slides-feasibility-timeline" aria-label="Five-phase proposed rollout for 2027–2028">
+          <article><span className="slides-feasibility-time">Q1 2027</span><span className="slides-feasibility-dot" aria-hidden="true" /><div className="slides-roadmap-icon" aria-hidden="true"><Home /></div><span className="slides-roadmap-scope">10–20 homes</span><h3>Pilot deployment</h3><ul className="slides-feasibility-points"><li>Install compatible meters, gateways and door sensors; connect live readings.</li><li>Assign caregivers and responders; rehearse alerts and emergency handoff.</li></ul><div className="slides-roadmap-deliverable"><span>Phase 1 deliverable</span><strong>Supervised live-sensor pilot</strong></div></article>
+          <article><span className="slides-feasibility-time">Q2 2027</span><span className="slides-feasibility-dot" aria-hidden="true" /><div className="slides-roadmap-icon" aria-hidden="true"><ShieldCheck /></div><span className="slides-roadmap-scope">Validation</span><h3>Test &amp; optimise</h3><ul className="slides-feasibility-points"><li>Establish household baselines; validate rules with annotated test scenarios.</li><li>Test outages and missed alerts; gather feedback and review privacy controls.</li></ul><div className="slides-roadmap-deliverable"><span>Phase 2 deliverable</span><strong>Refined rules &amp; response protocol</strong></div></article>
+          <article><span className="slides-feasibility-time">Q3 2027</span><span className="slides-feasibility-dot" aria-hidden="true" /><div className="slides-roadmap-icon" aria-hidden="true"><Layers /></div><span className="slides-roadmap-scope">50–100 homes</span><h3>Township integration</h3><ul className="slides-feasibility-points"><li>Expand only if pilot safety and reliability criteria are met.</li><li>Embed dashboard, shift handovers and incident ownership; strengthen access control and service reliability.</li></ul><div className="slides-roadmap-deliverable"><span>Phase 3 deliverable</span><strong>Service across multiple blocks</strong></div></article>
+          <article><span className="slides-feasibility-time">Q4 2027</span><span className="slides-feasibility-dot" aria-hidden="true" /><div className="slides-roadmap-icon" aria-hidden="true"><HeartHandshake /></div><span className="slides-roadmap-scope">Community</span><h3>Activate companionship</h3><ul className="slides-feasibility-points"><li>Launch interest-based Community Buddies and activities in existing spaces.</li><li>Screen volunteers; arrange consent-based neighbour introductions without sharing routines or unit details.</li></ul><div className="slides-roadmap-deliverable"><span>Phase 4 deliverable</span><strong>Operational companionship programme</strong></div></article>
+          <article><span className="slides-feasibility-time">2028</span><span className="slides-feasibility-dot" aria-hidden="true" /><div className="slides-roadmap-icon" aria-hidden="true"><Users /></div><span className="slides-roadmap-scope">Scale-up</span><h3>Expand to townships</h3><ul className="slides-feasibility-points"><li>Standardise procurement, installation, APIs and responder training.</li><li>Separate township data; assess funding and staffing. Explore adaptive models only with sufficient consented data.</li></ul><div className="slides-roadmap-deliverable"><span>Phase 5 deliverable</span><strong>Repeatable deployment package</strong></div></article>
         </div>
-        <div className="slides-feasibility-timeline-heading" data-slide-reveal><span className="slides-eyebrow">Implementation timeline</span><span>Proposed rollout · 2027–2028</span></div>
-        <div className="slides-feasibility-timeline" aria-label="Proposed implementation timeline starting in Q1 2027">
-          <article data-slide-reveal><span className="slides-feasibility-time">Q1 2027</span><span className="slides-feasibility-dot" aria-hidden="true" /><h3>Pilot launch</h3><p>Select one Sime Darby Property township, secure approvals and resident consent, then connect meters and door sensors.</p></article>
-          <article data-slide-reveal><span className="slides-feasibility-time">Q2 2027</span><span className="slides-feasibility-dot" aria-hidden="true" /><h3>Test daily care</h3><p>Learn household routines, test human response, and start opt-in Community Buddy matching.</p></article>
-          <article data-slide-reveal><span className="slides-feasibility-time">Q3 2027</span><span className="slides-feasibility-dot" aria-hidden="true" /><h3>Refine alerts</h3><p>Use pilot feedback to reduce false alerts and assess the planned learning layer.</p></article>
-          <article data-slide-reveal><span className="slides-feasibility-time">Q4 2027</span><span className="slides-feasibility-dot" aria-hidden="true" /><h3>Evaluate</h3><p>Review accuracy, response time, resident acceptance and costs before wider rollout.</p></article>
-          <article data-slide-reveal><span className="slides-feasibility-time">2028 onward</span><span className="slides-feasibility-dot" aria-hidden="true" /><h3>Expand</h3><p>Deploy in stages to other suitable townships with local training and onboarding.</p></article>
-        </div>
-        <p className="slides-feasibility-note">Meter access and update speed must be verified before relying on the signals for timely alerts.</p>
+        <p className="slides-feasibility-note">Home counts are planning assumptions, not programme commitments. Expansion depends on evidence from the preceding phase.</p>
       </PageFrame>
 
-      <PageFrame number={10} className="slides-close">
-        <div className="slides-section-top"><TemanMuWordmark /><span>10 · Why TemanMu should win</span></div>
+      <PageFrame number={11} className="slides-close">
+        <div className="slides-section-top"><TemanMuWordmark /><span>11 · Why TemanMu should win</span></div>
         <div className="slides-close-heading" data-slide-reveal>
           <p className="slides-eyebrow">Why our team should win</p>
           <h2>Care for people. <em>Value for the township.</em></h2>
@@ -488,6 +506,18 @@ export function Slides() {
         <div className="slides-close-statement" data-slide-reveal>
           <span className="slides-close-quote" aria-hidden="true">“</span>
           <p>TemanMu helps older residents live independently while giving caregivers a clearer view when daily routines change. Water, electricity and door signals offer privacy-conscious clues without cameras or wearables, while Community Buddies add companionship beyond safety. For Sime Darby Property, this could strengthen township appeal to multigenerational families, deepen resident engagement and create a care service that could expand across future developments. Our team has built a working prototype and planned a consent-based pilot with clear human response roles. Winning would help us test the idea in a real township, measure its impact and improve it with residents.</p>
+        </div>
+      </PageFrame>
+
+      <PageFrame number={12} className="slides-cover slides-thanks">
+        <div ref={thanksSceneRef} className="slides-live-scene" aria-hidden="true"><canvas data-lp="canvas" /></div>
+        <div className="slides-cover-top"><TemanMuWordmark /></div>
+        <div className="slides-cover-main">
+          <div className="slides-cover-copy">
+            <p className="slides-eyebrow">Albert &amp; Einstein · Universiti Malaya</p>
+            <h1>Thank you</h1>
+            <p className="slides-cover-tagline">Reassurance at home.<br /><em>Connection in the community.</em></p>
+          </div>
         </div>
       </PageFrame>
     </div>
