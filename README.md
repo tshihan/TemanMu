@@ -11,8 +11,13 @@ TemanMu looks after older people who live alone, using only the water, electrici
 If their usual routine suddenly stops, TemanMu gets a real person to check on them quickly. On ordinary days, it sends the family a calm "Mum's day has started" message and helps the resident meet people nearby.
 
 > Built by team **Albert & Einstein** (Universiti Malaya) for the **Sime Darby Property Township of Tomorrow 2026** hackathon.
+>
+> **Challenge Track:** People
 
-🌐 **[Live demo](https://temanmu-nine.vercel.app/)** · 🎬 [Pitch slides](https://temanmu-nine.vercel.app/slides)
+🌐 **[Live site](https://temanmu-nine.vercel.app/)**\
+📊 [Pitch slides](https://temanmu-nine.vercel.app/slides)\
+🎬 Pitch video: [YouTube](https://youtu.be/EnIQGYx4cZQ) / [Google Drive](https://drive.google.com/file/d/1-JXwXZXBH4tyZYcfinDL7gwo8wbGocoB/view?usp=share_link)
+
 ---
 
 ## The problem
@@ -56,7 +61,47 @@ The resident stays tech-free: the family acts on their behalf, and anything that
 
 ### Privacy
 
-TemanMu TemanMu only sees *how much* water and electricity is used and *whether* the front door opened. Nothing is tracked room by room.
+TemanMu only sees *how much* water and electricity is used and *whether* the front door opened. Nothing is tracked room by room.
+
+---
+
+## How TemanMu meets the judging criteria
+
+### Impact & Sustainability Value
+
+- **Residents** keep living independently in a familiar home, with no cameras or wearables, and meet people through Community Buddies and local activities.
+- **Families** get a calm daily reassurance and hear early when something changes.
+- **The township** gets coordinated responses, with every alert ending in a recorded outcome.
+- **Measurable pilot targets:** 70% of residents report more confidence living independently, 80% of caregivers report more reassurance, false alert rate below 20%, median response under 15 minutes, and no missed critical events. These are proposed targets, not achieved results.
+
+### Innovation & Differentiation
+
+- **Personal, not one-size-fits-all.** Alerts compare against each resident's own usual quiet gap, not a fixed number of hours.
+- **Three signals cross-check.** Water, electricity and the door together tell an outing apart from a worrying silence, unlike single-meter alerts.
+- **Asks the resident first.** A check-in call and any sign of activity cancel the alert before anyone is bothered.
+- **A clear human response.** Family and township guard are alerted together, and the case stays open until someone takes it and records the outcome.
+- **Safety and companionship in one service,** not just an alarm.
+
+### Feasibility & Deliverability
+
+- **Working prototype** today: rules engine, timers, township dashboard and family app all run live. Only the sensors are simulated.
+- **Off-the-shelf hardware.** Door sensor, electricity monitor, water monitor and gateway, about RM 840 – 1,640 per home. TNB smart meters could cut this further.
+- **Uses existing staff.** Township security and management handle responses, so no new team is needed.
+- **Phased plan:** a 10–20 home pilot in Q1 2027, expanding to 50–100 homes only if safety and reliability targets are met.
+
+### Strategic Fit & Theme Relevance
+
+- **People challenge:** more older Malaysians live alone (6.3% in 2018 to 18.8% in 2025), and 14.1% had a fall in the past year.
+- **Township priority:** supports safe, caring, age-friendly communities where residents can grow old in place, and builds neighbourly ties through buddies and shared activities.
+- **Built on township infrastructure:** utility meters, access control and on-site security that townships already have.
+
+### Commercial & Value Multiplication
+
+- **Who pays:** bundled into selected new launches, a family subscription (indicatively RM 39 – 59/month) for existing homes, or a value-added township service.
+- **Running cost:** about RM 16 – 43 per home per month.
+- **Value to Sime Darby Property:** appeal to buyers planning for ageing parents, residents staying longer, and a caring, age-friendly brand.
+- **Value to local businesses and residents:** community activities and volunteer buddies bring residents into shared township spaces.
+- **Scales** as a repeatable package (standard hardware, installation and responder training) across future developments from 2028.
 
 ---
 
@@ -73,7 +118,6 @@ Real meters are not installed yet, so a **3D simulated home** stands in for one.
 | Pitch slides | `/slides` | Our presentation |
 
 Try it at **https://temanmu-nine.vercel.app/**. All pages share one live state, so open them side by side. The 3D view has four one-click scenarios: **Normal Morning**, **Going Out**, **Unusual Inactivity** and **False Alarm Recovery** (timings shortened from hours to seconds).
-
 
 ---
 
@@ -95,7 +139,7 @@ Open http://localhost:5173.
 
 Needs Python 3.11+, Node.js 20+ and a Supabase connection string (team members: ask the team lead).
 
-After copying `.env.example` to `.env`, set `DATABASE_URL` in `backend/.env` (use the Supabase session pooler, port 5432).
+The backend reads `DATABASE_URL` from `backend/.env` (created from `.env.example` below). Use the Supabase session pooler, port 5432.
 
 #### macOS / Linux
 
