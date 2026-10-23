@@ -97,6 +97,9 @@ function useHowFlowDot() {
   return { wrapRef, box2Ref, feedRef, dotRef, rowRefs }
 }
 
+// Temporarily hidden while the repo is public; flip to true to restore PDF/PPTX export.
+const EXPORT_ENABLED = false
+
 export function Slides() {
   const howFlow = useHowFlowDot()
   const sceneRef = useRef<HTMLDivElement>(null)
@@ -158,11 +161,11 @@ export function Slides() {
     <div className="slides-toolbar">
       <a href="/">← TemanMu</a>
       <span>Albert & Einstein · {PAGE_COUNT} of {PAGE_COUNT} sections drafted</span>
-      <div className="slides-toolbar-actions">
+      {EXPORT_ENABLED && <div className="slides-toolbar-actions">
         <span className="slides-export-status" role="status">{pptxStatus}</span>
         <button type="button" onClick={() => window.print()}>Save as PDF</button>
         <button type="button" onClick={onExportPptx} disabled={pptxExporting}>{pptxExporting ? 'Exporting…' : 'Export PPTX'}</button>
-      </div>
+      </div>}
     </div>
     <div className="slides-deck" aria-label="TemanMu presentation">
       <PageFrame number={1} className="slides-cover">
