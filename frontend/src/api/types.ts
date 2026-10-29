@@ -21,6 +21,18 @@ export interface Baseline {
   source: 'simulated_history'
 }
 
+/** A caregiver-declared time when the resident is not at home. Every screen (township
+ *  included) receives these on Unit, so there is no reason here. */
+export interface AwayPeriod {
+  period_id: string
+  starts_at: string
+  ends_at: string
+  created_at: string
+}
+
+/** Caregiver-only: the period with its optional private reason. */
+export interface AwayPeriodDetail extends AwayPeriod { reason: string | null }
+
 export interface Unit {
   unit_id: UnitId
   resident_name: string
@@ -43,6 +55,8 @@ export interface Unit {
   }
   baseline: Baseline
   active_incident_id: string | null
+  /** Current and upcoming away periods, earliest first. */
+  away_periods: AwayPeriod[]
 }
 
 export type IncidentEventType =
@@ -74,7 +88,7 @@ export interface Incident {
 export type NotificationKind =
   | 'morning_reassurance' | 'alert' | 'reminder' | 'acknowledged' | 'closed'
   | 'caregiver_checking_in' | 'township_requested' | 'unable_to_verify' | 'emergency_called' | 'auto_resolved' | 'message_delivered' | 'buddy_matched'
-  | 'neighbour_introduced'
+  | 'neighbour_introduced' | 'away_activity'
 
 export interface Notification {
   notification_id: string
@@ -177,6 +191,9 @@ export interface Api {
   acknowledgeIncident(id: string, actor: { role: Role; name: string }): Promise<Incident>
   caregiverResponse(id: string, actor: { role: 'caregiver'; name: string; action: 'caregiver_checking_in' | 'township_requested' | 'resident_confirmed_safe' }): Promise<Incident>
   confirmHome(id: UnitId, actor: { role: 'caregiver'; name: string }): Promise<Unit>
+  getAwayPeriods(id: UnitId): Promise<AwayPeriodDetail[]>
+  addAwayPeriod(id: UnitId, body: { role: 'caregiver'; name: string; starts_at: string; ends_at: string; reason?: string | null }): Promise<Unit>
+  cancelAwayPeriod(id: UnitId, periodId: string, actor: { role: 'caregiver'; name: string }): Promise<Unit>
   escalateIncident(id: string, actor: { role: Role; name: string; action: 'unable_to_verify' | 'emergency_called' }): Promise<Incident>
   closeIncident(id: string, actor: { role: Role; name: string; outcome: Exclude<Outcome, 'resident_activity_detected'>; report?: string }): Promise<Incident>
   markNotificationsRead(role: Role): Promise<void>

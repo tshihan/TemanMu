@@ -1,7 +1,7 @@
 import type { LucideIcon } from 'lucide-react'
-import { Bell, BellRing, CircleCheck, DoorOpen, Droplets, Heart, Info, PhoneMissed, PhoneOff, PhoneOutgoing, ShieldCheck, Sunrise, TriangleAlert, Users } from 'lucide-react'
+import { Bell, BellRing, CircleCheck, DoorOpen, Droplets, Heart, Info, Luggage, PhoneMissed, PhoneOff, PhoneOutgoing, ShieldCheck, Sunrise, TriangleAlert, Users } from 'lucide-react'
 import seed from '../../../shared/seed.json'
-import type { Incident, IncidentEvent, Notification, Outcome, Status, Unit } from '../api/types'
+import type { AwayPeriod, Incident, IncidentEvent, Notification, Outcome, Status, Unit } from '../api/types'
 
 export type Tone = 'alarm' | 'calm' | 'warm' | 'info'
 export interface Copy { title: string; body: string; Icon: LucideIcon; tone: Tone }
@@ -24,6 +24,15 @@ export const STATUS_LABELS: Record<Status, string> = {
 /** What the caregiver app needs to phrase things: who "Mum" is and who "you" are. */
 export interface Ctx { R: string; me: string }
 export const ctxFor = (unit: Unit): Ctx => ({ R: unit.caregiver_relationship, me: unit.caregiver_name })
+
+/** Whether an away period has begun. One that started when it was saved counts at once,
+ *  even if this screen's once-a-second clock hasn't reached the server's time yet. */
+export const awayStarted = (period: AwayPeriod, now: number) =>
+  Date.parse(period.starts_at) <= Math.max(now, Date.parse(period.created_at))
+
+/** The away period covering `now`, if any. */
+export const currentAway = (unit: Unit, now: number) =>
+  unit.away_periods.find(period => awayStarted(period, now) && now < Date.parse(period.ends_at)) || null
 
 const isMe = (ctx: Ctx, actor: { role: string; name: string } | null | undefined) => actor?.role === 'caregiver' && actor.name === ctx.me
 export const actorName = (ctx: Ctx, actor: { role: string; name: string } | null | undefined, capital = true) =>
@@ -79,6 +88,8 @@ export function notificationCopy(n: Notification, ctx: Ctx, incident: Incident |
       const name = n.message.match(/to meet (.+)\.$/)?.[1]
       return { title: 'Introduction requested', body: name ? `The community coordinator will arrange for ${R} to meet ${name} (recorded only).` : n.message, Icon: Users, tone: 'warm' }
     }
+    case 'away_activity':
+      return { title: `Activity while ${R} is away`, body: n.message, Icon: Luggage, tone: 'info' }
   }
   return { title: 'Update', body: n.message, Icon: Bell, tone: 'info' }
 }
@@ -115,5 +126,5 @@ export function eventCopy(event: IncidentEvent, ctx: Ctx, incident: Incident): C
 export const NOTIFICATION_TARGET: Record<Notification['kind'], 'incident' | 'home' | 'together'> = {
   alert: 'incident', reminder: 'incident', acknowledged: 'incident', caregiver_checking_in: 'incident', township_requested: 'incident', unable_to_verify: 'incident', emergency_called: 'incident', closed: 'incident', auto_resolved: 'incident',
   morning_reassurance: 'home', message_delivered: 'together', buddy_matched: 'together',
-  neighbour_introduced: 'together',
+  neighbour_introduced: 'together', away_activity: 'home',
 }

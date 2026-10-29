@@ -296,6 +296,61 @@ def test_next_check_at():
     assert next_check_at(facts(status="possible_away", incident_state="acknowledged")) is None
 
 
+# --- away periods ------------------------------------------------------------------------
+
+
+def window(start: int, end: int) -> tuple[datetime, datetime]:
+    return (T0 + timedelta(seconds=start), T0 + timedelta(seconds=end))
+
+
+def test_away_period_restarts_quiet_gap_at_its_end():
+    # Starts before the 30 s gap would run out: the clock restarts at the end of the period.
+    assert next_check_at(facts(away_windows=(window(10, 500),))) == T0 + timedelta(seconds=530)
+    # Already running when the clock started (e.g. a visitor used water mid-trip): same.
+    assert next_check_at(facts(last_water_activity_at=T0 + timedelta(seconds=100), away_windows=(window(0, 500),))) == T0 + timedelta(seconds=530)
+
+
+def test_away_period_outside_the_gap_changes_nothing():
+    assert next_check_at(facts(away_windows=(window(-500, -10),))) == T0 + timedelta(seconds=30)
+    assert next_check_at(facts(away_windows=(window(31, 500),))) == T0 + timedelta(seconds=30)
+
+
+def test_back_to_back_away_periods_chain():
+    windows = (window(10, 100), window(120, 200))
+    assert next_check_at(facts(away_windows=windows)) == T0 + timedelta(seconds=230)
+
+
+def test_away_period_pauses_outing_timer():
+    f = facts(status="possible_away", status_since=T0, away_windows=(window(20, 300),))
+    assert next_check_at(f) == T0 + timedelta(seconds=345)
+
+
+def test_no_alert_during_away_then_alert_after_it_ends():
+    f = facts(away_windows=(window(10, 500),))
+    assert on_tick(f, T0 + timedelta(seconds=400), clock) is None
+    assert on_tick(f, T0 + timedelta(seconds=529), clock) is None
+    decision = on_tick(f, T0 + timedelta(seconds=530), clock)
+    assert decision is not None
+    assert decision.kind == "quiet_gap"
+    assert decision.detected_detail == reasons.DETECTED_AFTER_AWAY
+    assert decision.reason == "Away period ended at 00:08, then no activity at home for 0:30. Mum may not be back yet."
+
+
+def test_outing_after_away_keeps_outing_detail():
+    f = facts(status="possible_away", status_since=T0, away_windows=(window(20, 300),))
+    decision = on_tick(f, T0 + timedelta(seconds=345), clock)
+    assert decision is not None
+    assert decision.kind == "outing_timeout"
+    assert decision.detected_detail == reasons.DETECTED_OUTING
+
+
+def test_away_activity_message():
+    assert reasons.away_activity_message("Mum", "door", "15:42") == (
+        "Front door opened at 15:42 while Mum is marked away. If this is expected, no action is needed."
+    )
+    assert reasons.away_activity_message("Mum", "water", "08:00").startswith("Water used at 08:00")
+
+
 # --- text --------------------------------------------------------------------------------
 
 

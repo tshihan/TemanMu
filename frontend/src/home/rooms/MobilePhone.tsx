@@ -42,7 +42,8 @@ function MobilePhone({ state, paused }: { state: TelephoneState; paused?: boolea
 export function PhoneOnSurface({ interaction, at, rotation = 0 }: { interaction?: InteractionBindings; at: [number, number, number]; rotation?: number }) {
   return <group position={at} rotation={[0, rotation, 0]}>
     {interaction ? <InteractiveObject id="telephone" label={interactionPrompt('telephone', interaction.states)}
-      selected={interaction.selected === 'telephone'} hovered={interaction.hovered === 'telephone'} disabled={interaction.disabled}
+      selected={interaction.selected === 'telephone'} hovered={interaction.hovered === 'telephone'} disabled={interaction.disabled || !!interaction.phoneDisabledReason}
+      disabledReason={interaction.phoneDisabledReason ?? undefined}
       onSelect={interaction.onSelect} onHover={interaction.onHover}
       hitbox={[0, .03, 0]} hitboxSize={[.3, .12, .44]} tooltip={[0, .51, 0]}>
       <MobilePhone state={interaction.states.telephone} paused={interaction.paused} />

@@ -11,6 +11,7 @@ import { SettingsTab, type Theme } from './SettingsTab'
 import { playTone, unlockAudio, type ToneKind } from './sound'
 import { TogetherTab } from './TogetherTab'
 import { UpdatesTab } from './UpdatesTab'
+import { useAwayReasons } from './useAwayReasons'
 import { useCompanion } from './useCompanion'
 import './caregiver.css'
 
@@ -56,6 +57,7 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
   const [now, setNow] = useState(() => Date.now())
   const [scrolled, setScrolled] = useState(false)
   const companion = useCompanion(unitId, snapshotRevision)
+  const awayReasons = useAwayReasons(unit)
   const scrollRef = useRef<HTMLDivElement>(null)
   const mutedRef = useRef(muted)
   const timers = useRef<Record<'push' | 'toast' | 'call', number | undefined>>({ push: undefined, toast: undefined, call: undefined })
@@ -246,14 +248,14 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
           <div /><div /><div /><div />
           <p>{connectionTimedOut ? 'Cannot reach TemanMu. Check the backend connection and retry.' : 'Connecting to TemanMu…'}</p>
         </div> : !unit || !ctx ? <p className="cg-card-lead cg-pad">The resident’s home is unavailable.</p>
-          : tab === 'home' ? <HomeTab unit={unit} ctx={ctx} incident={incident} readings={readingsByUnit[unit.unit_id] || []} now={now}
+          : tab === 'home' ? <HomeTab unit={unit} ctx={ctx} incident={incident} readings={readingsByUnit[unit.unit_id] || []} now={now} awayReasons={awayReasons}
             ackBusy={ackBusy} responseError={ackError?.kind === 'failed'} confirmBusy={confirmBusy} confirmError={confirmError}
             onCheckIn={() => void respond('caregiver_checking_in')}
             onRequestVisit={() => void respond('township_requested')} onOpenIncident={openIncident} onCall={startCall} onConfirmHome={() => void confirmHome()} />
           : tab === 'updates' ? <UpdatesTab feed={feed} ctx={ctx} now={now} incidentFor={incidentFor} isUnread={isUnread} ackTargetId={ackTargetId}
             ackBusy={ackBusy} onOpen={open} onMarkAllRead={markAllRead} onAck={openIncident} />
           : tab === 'together' ? <TogetherTab unit={unit} ctx={ctx} companion={companion} onToast={showToast} />
-          : <SettingsTab unit={unit} ctx={ctx} theme={theme} onTheme={setTheme} />}
+          : <SettingsTab unit={unit} ctx={ctx} now={now} awayReasons={awayReasons} theme={theme} onTheme={setTheme} onToast={showToast} />}
       </div>
 
       <nav className="cg-nav" aria-label="Main" style={{ '--tab': TABS.findIndex(item => item.id === tab) } as CSSProperties}>

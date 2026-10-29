@@ -30,6 +30,7 @@ const responder = seed.responders.township
 interface Row {
   id: string; floor: number; short: string
   status: Shown; usual: number; elapsed: number
+  away?: boolean
   unit?: Unit
 }
 
@@ -67,11 +68,14 @@ function liveRow(unit: Unit, now: number): Row {
   const usual = unit.quiet_gap.usual_max_seconds
   const raw = anchor ? Math.max(0, (now - new Date(anchor).getTime()) / 1000) : 0
   const alert = isAlert(unit.status)
+  // A caregiver-declared away period: the quiet-gap bar means nothing until the resident is back.
+  const away = unit.away_periods.some(period => Date.parse(period.starts_at) <= now && now < Date.parse(period.ends_at))
   return {
+    away,
     id: unit.unit_id, floor: 1, short: shortName(unit.resident_name),
     // Like the design, only units that need a response stand out; everything else reads as "no action needed".
     status: alert ? unit.status : 'routine',
-    usual, elapsed: alert || unit.controllable ? raw : raw % Math.max(6, usual * 0.85),
+    usual, elapsed: away && !alert ? 0 : alert || unit.controllable ? raw : raw % Math.max(6, usual * 0.85),
     unit,
   }
 }
@@ -249,7 +253,7 @@ export function TownshipView() {
                   const alert = isAlert(row.status)
                   return <button key={row.id} type="button" onClick={() => select(row)}
                     className={`tm-unit ${selected === row.id ? 'is-selected' : ''}`} aria-pressed={selected === row.id}
-                    aria-label={`Unit ${row.id}, ${st.label}`}
+                    aria-label={`Unit ${row.id}, ${st.label}${row.away ? ', resident away' : ''}`}
                     style={{ borderColor: st.border, background: st.tileBg, opacity: dim(row) }}>
                     {alert && <span className="tm-unit-pulse" style={{ borderColor: st.bar }} aria-hidden="true" />}
                     <span className="tm-pane" style={{ background: st.pane, boxShadow: st.glow, ['--mull' as string]: st.mull }}>
@@ -257,7 +261,7 @@ export function TownshipView() {
                       <span className="tm-pane-glyph" style={{ color: st.glyphColor }} aria-hidden="true">{st.glyph}</span>
                     </span>
                     <span className="tm-unit-id">{row.id}</span>
-                    <span className={`tm-unit-tag ${alert ? 'is-alert' : ''}`}>{row.status === 'unusual_inactivity' ? `⏱ ${duration(row.elapsed)}` : alert ? 'Check' : ''}</span>
+                    <span className={`tm-unit-tag ${alert ? 'is-alert' : ''}`}>{row.status === 'unusual_inactivity' ? `⏱ ${duration(row.elapsed)}` : alert ? 'Check' : row.away ? 'Away' : ''}</span>
                     <span className="tm-unit-bar"><span style={{ width: `${Math.min(100, row.elapsed / Math.max(row.usual, 1) * 100)}%`, background: st.bar }} /></span>
                   </button>
                 })}

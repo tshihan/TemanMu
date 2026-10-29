@@ -31,6 +31,8 @@ class UnitFacts:
     last_door_event_at: datetime | None
     baseline: Baseline
     incident_state: IncidentState | None  # active incident only; None if none
+    # (starts_at, ends_at) of caregiver-declared away periods, past ones included.
+    away_windows: tuple[tuple[datetime, datetime], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -171,21 +173,53 @@ def _quiet_anchor(facts: UnitFacts) -> datetime:
     )
 
 
-def next_check_at(facts: UnitFacts) -> datetime | None:
-    """When T1 or T2 would fire; None while an incident is active or in any other status."""
+def _after_away(facts: UnitFacts, anchor: datetime, seconds: int) -> tuple[datetime, bool]:
+    """Restart a T1/T2 clock at the end of any away period that begins before it would fire.
+
+    Returns the clock's start and whether an away period moved it.
+    """
+    moved = False
+    for start, end in sorted(facts.away_windows):
+        if end > anchor and start <= anchor + timedelta(seconds=seconds):
+            anchor, moved = end, True
+    return anchor, moved
+
+
+def _clock(facts: UnitFacts) -> tuple[datetime, int, bool] | None:
+    """(start, length in seconds, moved by an away period) of the T1 or T2 clock now running."""
     if _has_active_incident(facts):
         return None
     if facts.status == "routine":
-        return _quiet_anchor(facts) + timedelta(seconds=facts.baseline.usual_quiet_gap_seconds)
-    if facts.status == "possible_away":
-        return facts.status_since + timedelta(seconds=facts.baseline.usual_outing_seconds)
-    return None
+        seconds, anchor = facts.baseline.usual_quiet_gap_seconds, _quiet_anchor(facts)
+    elif facts.status == "possible_away":
+        seconds, anchor = facts.baseline.usual_outing_seconds, facts.status_since
+    else:
+        return None
+    start, moved = _after_away(facts, anchor, seconds)
+    return start, seconds, moved
+
+
+def next_check_at(facts: UnitFacts) -> datetime | None:
+    """When T1 or T2 would fire; None while an incident is active or in any other status.
+
+    Away periods pause both: the clock restarts when the period ends.
+    """
+    clock = _clock(facts)
+    return None if clock is None else clock[0] + timedelta(seconds=clock[1])
 
 
 def on_tick(facts: UnitFacts, now: datetime, clock_text: ClockText = utc_hhmm) -> TickDecision | None:
-    due = next_check_at(facts)
-    if due is None or now < due:
+    clock = _clock(facts)
+    if clock is None or now < clock[0] + timedelta(seconds=clock[1]):
         return None
+    start, _, after_away = clock
+
+    if after_away:  # T1 or T2, counted from the end of an away period
+        return TickDecision(
+            kind="quiet_gap" if facts.status == "routine" else "outing_timeout",
+            reason=reasons.after_away_reason(facts.caregiver_relationship, clock_text(start), (now - start).total_seconds()),
+            detected_detail=reasons.DETECTED_AFTER_AWAY if facts.status == "routine" else reasons.DETECTED_OUTING,
+        )
 
     if facts.status == "routine":  # T1
         anchor = _quiet_anchor(facts)
@@ -226,7 +260,11 @@ def unresolved_reason(current_reason: str, relationship: str) -> str:
     return reasons.unresolved_reason(current_reason, relationship)
 
 
-def facts_from(unit: Unit, incident_state: IncidentState | None) -> UnitFacts:
+def facts_from(
+    unit: Unit,
+    incident_state: IncidentState | None,
+    away_windows: tuple[tuple[datetime, datetime], ...] = (),
+) -> UnitFacts:
     return UnitFacts(
         unit_id=unit.unit_id,
         caregiver_relationship=unit.caregiver_relationship,
@@ -240,4 +278,5 @@ def facts_from(unit: Unit, incident_state: IncidentState | None) -> UnitFacts:
         last_door_event_at=unit.latest.last_door_event_at,
         baseline=unit.baseline,
         incident_state=incident_state if incident_state in ACTIVE_INCIDENT_STATES else None,
+        away_windows=away_windows,
     )

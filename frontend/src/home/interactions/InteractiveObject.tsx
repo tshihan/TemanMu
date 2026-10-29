@@ -5,8 +5,8 @@ import type { InteractionId } from './registry'
 type V3 = [number, number, number]
 
 /** One hit target and one hover treatment for all four existing props. */
-export function InteractiveObject({ id, label, selected, hovered, disabled, onSelect, onHover, hitbox, hitboxSize, tooltip, children }: {
-  id: InteractionId; label: string; selected: boolean; hovered: boolean; disabled?: boolean
+export function InteractiveObject({ id, label, selected, hovered, disabled, disabledReason = 'Scenario playing', onSelect, onHover, hitbox, hitboxSize, tooltip, children }: {
+  id: InteractionId; label: string; selected: boolean; hovered: boolean; disabled?: boolean; disabledReason?: string
   onSelect: (id: InteractionId) => void; onHover: (id: InteractionId | null) => void
   hitbox: V3; hitboxSize: V3; tooltip: V3; children: ReactNode
 }) {
@@ -24,7 +24,7 @@ export function InteractiveObject({ id, label, selected, hovered, disabled, onSe
         <meshBasicMaterial color={selected ? '#d99d4d' : '#92b484'} transparent opacity={.78} depthWrite={false} />
       </mesh>
       <Html position={tooltip} center style={{ pointerEvents: 'none' }}>
-        <span className={`home-object-tip${selected ? ' is-selected' : ''}`}>{disabled ? 'Scenario playing' : selected ? 'Selected · ' + label : label}</span>
+        <span className={`home-object-tip${selected ? ' is-selected' : ''}`}>{disabled ? disabledReason : selected ? 'Selected · ' + label : label}</span>
       </Html>
     </>}
   </group>

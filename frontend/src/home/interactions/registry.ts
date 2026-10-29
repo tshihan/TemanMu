@@ -14,6 +14,8 @@ export type InteractionBindings = {
   /** Shown over the mobile phone after Unusual Inactivity's call goes unanswered. */
   phoneTag?: string | null
   phoneSpot?: PhoneSpot
+  /** Set while the resident is away: nobody is home to answer, so only the phone is locked. */
+  phoneDisabledReason?: string | null
   onSelect: (id: InteractionId) => void; onHover: (id: InteractionId | null) => void
 }
 export const INITIAL_OBJECT_STATES: ObjectStates = {

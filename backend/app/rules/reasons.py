@@ -93,6 +93,13 @@ def outing_reason(door_clock: str, away_seconds: float, usual_outing_seconds: in
     )
 
 
+def after_away_reason(relationship: str, ended_clock: str, quiet_seconds: float) -> str:  # U3
+    return (
+        f"Away period ended at {ended_clock}, then no activity at home for {format_duration(quiet_seconds)}. "
+        f"{relationship} may not be back yet."
+    )
+
+
 def activity_signal(sensor: Sensor, value: float | str) -> str:
     if sensor == "water":
         return "water use"
@@ -122,6 +129,7 @@ def closed_reason(name: str, outcome: str) -> str:
 
 DETECTED_QUIET_GAP = "Water quiet gap exceeded"
 DETECTED_OUTING = "Outing longer than usual"
+DETECTED_AFTER_AWAY = "No water activity since away period ended"
 DETECTED_CONTINUOUS_WATER = "Continuous water flow longer than expected"
 DETECTED_SUSTAINED_POWER = "Sustained high electricity use"
 VOICE_NO_ANSWER = "No answer (simulated)"
@@ -148,6 +156,11 @@ def morning_message(relationship: str, sensor: Sensor) -> str:
         "electricity": "Electricity used at home.",
     }[sensor]
     return f"{relationship}'s day has started. {action}"
+
+
+def away_activity_message(relationship: str, sensor: Sensor, clock: str) -> str:
+    signal = "Front door opened" if sensor == "door" else "Water used"
+    return f"{signal} at {clock} while {relationship} is marked away. If this is expected, no action is needed."
 
 
 def alert_message(unit_id: str, resident_name: str) -> str:

@@ -56,6 +56,19 @@ export function dayFraction(time: string | number): number {
   return (part('hour') * 60 + part('minute')) / 1440
 }
 
+/** "Sat 1 Nov, 9:00 AM". */
+export const dateTime = (time: string | number) => `${dayLabel(time)}, ${clock(time)}`
+
+/** "2026-11-01T09:00" in Malaysia time, for a datetime-local input. */
+export function localInput(time: number): string {
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(time))
+  const part = (type: string) => parts.find(item => item.type === type)?.value || ''
+  return `${part('year')}-${part('month')}-${part('day')}T${part('hour')}:${part('minute')}`
+}
+
+/** A datetime-local value read as Malaysia time (UTC+8, no daylight saving). */
+export const fromLocalInput = (value: string) => new Date(`${value}:00+08:00`).getTime()
+
 /** "Mon 19 Oct". */
 export const dayLabel = (time: string | number) =>
   new Intl.DateTimeFormat('en-GB', { timeZone: TZ, weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(ms(time))).replace(',', '')

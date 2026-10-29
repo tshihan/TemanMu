@@ -15,6 +15,7 @@ from zoneinfo import ZoneInfo
 import asyncpg
 
 from app import rules, timers
+from app.db import away_periods as db_away
 from app.db import incidents as db_incidents
 from app.db import notifications as db_notifications
 from app.db import readings as db_readings
@@ -50,6 +51,12 @@ class IncidentConflict(MonitoringError): ...
 class NotAcknowledger(MonitoringError): ...
 
 
+class AwayPeriodNotFound(MonitoringError): ...
+
+
+class InvalidAwayPeriod(MonitoringError): ...
+
+
 # --- locks -------------------------------------------------------------------------------
 
 # Keyed by event loop too: pytest-asyncio uses a new loop per test, and a lock bound to an
@@ -74,8 +81,9 @@ async def _active_incident(unit: Unit, conn: asyncpg.Connection | None = None) -
     return await db_incidents.get_incident(unit.active_incident_id, conn=conn)
 
 
-def _facts(unit: Unit, incident: Incident | None) -> rules.UnitFacts:
-    return rules.facts_from(unit, incident.state if incident else None)
+async def _facts(unit: Unit, incident: Incident | None) -> rules.UnitFacts:
+    windows = tuple(await db_away.list_windows(unit.unit_id))
+    return rules.facts_from(unit, incident.state if incident else None, windows)
 
 
 def _has_event(incident: Incident, event_type: str) -> bool:
@@ -223,7 +231,7 @@ async def _next_watch_check(unit: Unit, incident: Incident | None) -> tuple[date
     checks: list[tuple[datetime, rules.TickDecision | None]] = []
     # A running tap is handled by the continuous-flow rule, not "no water use".
     if unit.latest.water_lpm <= 0 or unit.status == "possible_away":
-        quiet_due = rules.next_check_at(_facts(unit, incident))
+        quiet_due = rules.next_check_at(await _facts(unit, incident))
         if quiet_due is not None:
             checks.append((quiet_due, None))
     checks.extend(await _sustained_load_checks(unit))
@@ -265,7 +273,7 @@ async def check_unit(unit_id: str) -> None:
         if next_check is None or now < next_check[0]:
             await _arm_watch_locked(unit_id)
             return
-        decision = next_check[1] or rules.on_tick(_facts(unit, incident), now, local_hhmm)
+        decision = next_check[1] or rules.on_tick(await _facts(unit, incident), now, local_hhmm)
         if decision is None:
             await _arm_watch_locked(unit_id)  # not due yet (e.g. clock skew): try again later
             return
@@ -465,6 +473,51 @@ async def confirm_home_after_call(unit_id: str, name: str) -> Unit:
         return unit
 
 
+async def add_away_period(unit_id: str, name: str, starts_at: datetime, ends_at: datetime, reason: str | None) -> Unit:
+    """Caregiver declares a time the resident is not at home. Inactivity checks pause for it;
+    the continuous-water and sustained-power checks keep running."""
+    async with _unit_lock(unit_id):
+        now = utc_now()
+        starts_at = max(starts_at, now)
+        if ends_at <= starts_at:
+            raise InvalidAwayPeriod("The away period must end in the future")
+        async with get_pool().acquire() as conn, conn.transaction():
+            unit = await db_units.get_unit(unit_id, conn=conn)
+            if unit is None:
+                raise UnitNotFound(unit_id)
+            if name != unit.caregiver_name:
+                raise IncidentConflict("Only the designated caregiver can add an away period")
+            if await db_away.overlaps(unit_id, starts_at, ends_at, conn=conn):
+                raise IncidentConflict("This overlaps another away period")
+            await db_away.create_away_period(unit_id, starts_at, ends_at, reason, name, now, conn=conn)
+            unit = await db_units.get_unit(unit_id, conn=conn)
+        await _arm_watch_locked(unit_id)
+        await realtime.broadcast("unit.updated", unit)
+        return unit
+
+
+async def cancel_away_period(unit_id: str, period_id: str, name: str) -> Unit:
+    """End a period that has started (the inactivity clock restarts now), or cancel an upcoming one."""
+    async with _unit_lock(unit_id):
+        now = utc_now()
+        async with get_pool().acquire() as conn, conn.transaction():
+            unit = await db_units.get_unit(unit_id, conn=conn)
+            if unit is None:
+                raise UnitNotFound(unit_id)
+            period = await db_away.get_away_period(period_id, conn=conn)
+            if period is None or period["unit_id"] != unit_id:
+                raise AwayPeriodNotFound(period_id)
+            if name != unit.caregiver_name:
+                raise IncidentConflict("Only the designated caregiver can change an away period")
+            if period["cancelled_at"] is not None or period["ends_at"] <= now:
+                raise IncidentConflict("This away period is already over")
+            await db_away.end_away_period(period_id, now, conn=conn)
+            unit = await db_units.get_unit(unit_id, conn=conn)
+        await _arm_watch_locked(unit_id)
+        await realtime.broadcast("unit.updated", unit)
+        return unit
+
+
 async def caregiver_response(incident_id: str, name: str, action: str) -> Incident:
     """Log remote caregiver coordination without claiming the in-person welfare check."""
     unit_id = await _incident_unit_id(incident_id)
@@ -646,7 +699,12 @@ async def ingest_reading(body: ReadingIn) -> Unit:
             value=body.value,
             recorded_at=body.recorded_at or utc_now(),
         )
-        decision = rules.on_reading(_facts(unit, incident), reading, local_hhmm)
+        decision = rules.on_reading(await _facts(unit, incident), reading, local_hhmm)
+        # Door opening or water starting, not a repeat sample of the same state.
+        fresh_activity = (
+            (reading.sensor == "door" and reading.value == "open" and unit.latest.door != "open")
+            or (reading.sensor == "water" and float(reading.value) > 0 and unit.latest.water_lpm <= 0)
+        )
         emergency_open = incident is not None and (
             _has_event(incident, "unable_to_verify") or _has_event(incident, "emergency_called")
         )
@@ -682,6 +740,17 @@ async def ingest_reading(body: ReadingIn) -> Unit:
                     "auto_resolved",
                     reasons.auto_resolved_message(unit.resident_name),
                     resolving.incident_id,
+                )
+        elif await db_away.is_away(unit.unit_id, reading.recorded_at):
+            # Gentle, once per period: the caregiver decides whether it was expected.
+            if fresh_activity and await db_away.claim_activity_notice(unit.unit_id, reading.recorded_at):
+                await create_notification(
+                    "caregiver",
+                    unit.unit_id,
+                    "away_activity",
+                    reasons.away_activity_message(
+                        unit.caregiver_relationship, reading.sensor, local_hhmm(reading.recorded_at)
+                    ),
                 )
         elif incident is None and decision.is_activity and not await _morning_reassurance_sent(unit.unit_id):
             await create_notification(

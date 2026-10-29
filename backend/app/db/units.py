@@ -1,17 +1,24 @@
+import json
 from datetime import datetime
 
 import asyncpg
 
 from app.db import NotFoundError
 from app.db.pool import connection
-from app.models import Baseline, DoorState, QuietGap, Status, Unit, UnitLatest
+from app.models import AwayPeriod, Baseline, DoorState, QuietGap, Status, Unit, UnitLatest
 
 _UNIT_SELECT = """
 select u.*,
        p.usual_quiet_gap_seconds, p.usual_outing_seconds, p.standby_power_kw,
        (select i.incident_id from incidents i
          where i.unit_id = u.unit_id and i.state in ('grace','notified','acknowledged')
-         order by i.opened_at desc limit 1) as active_incident_id
+         order by i.opened_at desc limit 1) as active_incident_id,
+       (select coalesce(json_agg(json_build_object(
+                  'period_id', a.period_id, 'starts_at', a.starts_at, 'ends_at', a.ends_at,
+                  'created_at', a.created_at
+                ) order by a.starts_at), '[]')
+          from away_periods a
+         where a.unit_id = u.unit_id and a.cancelled_at is null and a.ends_at > now()) as away_periods
   from units u
   join resident_profiles p on p.unit_id = u.unit_id
 """
@@ -49,6 +56,7 @@ def _row_to_unit(row: asyncpg.Record) -> Unit:
         ),
         baseline=baseline,
         active_incident_id=row["active_incident_id"],
+        away_periods=[AwayPeriod(**p) for p in json.loads(row["away_periods"])],
     )
 
 

@@ -67,7 +67,7 @@ async def reset_demo() -> list[Unit]:
             await conn.execute(
                 """truncate readings, incident_events, incidents, notifications,
                             community_responses, companion_messages, buddy_matches,
-                            neighbour_introductions, neighbour_consents
+                            neighbour_introductions, neighbour_consents, away_periods
                    restart identity cascade"""
             )
             # 4. Wipe and restore seed tables. Truncating (not upserting) means units removed

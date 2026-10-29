@@ -93,6 +93,68 @@ async def test_caregiver_can_confirm_home_only_during_possible_away(client):
     assert (await client.post(path, json=body)).status_code == 409
 
 
+def away_body(name, start=-60, end=3600, reason="Staying with my sister"):
+    now = utc_now()
+    return {"role": "caregiver", "name": name, "reason": reason,
+            "starts_at": (now + timedelta(seconds=start)).isoformat(), "ends_at": (now + timedelta(seconds=end)).isoformat()}
+
+
+async def test_away_period_pauses_quiet_gap_alert(client):
+    unit = await units.get_unit(UNIT)
+    response = await client.post(f"/api/units/{UNIT}/away-periods", json=away_body(unit.caregiver_name))
+    assert response.status_code == 200
+    [period] = response.json()["away_periods"]
+    # The reason is private: never in Unit (which township receives), only in the caregiver read.
+    assert "reason" not in period
+    path = f"/api/units/{UNIT}/away-periods"
+    assert (await client.get(path, params={"role": "township"})).status_code == 403
+    [detail] = (await client.get(path, params={"role": "caregiver"})).json()
+    assert detail["reason"] == "Staying with my sister"
+    # Silence well past the usual gap opens nothing while the resident is away.
+    await units.update_unit_state(UNIT, last_water_activity_at=utc_now() - timedelta(seconds=120))
+    await monitoring.check_unit(UNIT)
+    assert await incidents.list_active_incidents() == []
+    # Ending it restarts the clock now rather than counting the whole trip as silence.
+    response = await client.post(f"/api/units/{UNIT}/away-periods/{period['period_id']}/cancel",
+                                 json={"role": "caregiver", "name": unit.caregiver_name})
+    assert response.status_code == 200
+    assert response.json()["away_periods"] == []
+    await monitoring.check_unit(UNIT)
+    assert await incidents.list_active_incidents() == []
+
+
+async def test_away_period_validation(client):
+    name = (await units.get_unit(UNIT)).caregiver_name
+    path = f"/api/units/{UNIT}/away-periods"
+    assert (await client.post(path, json=away_body("Someone else"))).status_code == 409
+    assert (await client.post(path, json=away_body(name, start=60, end=30))).status_code == 422
+    assert (await client.post(path, json=away_body(name, start=-120, end=-60))).status_code == 422
+    assert (await client.post(path, json=away_body(name, end=3600 * 24 * 91))).status_code == 422
+    # The reason is optional; a blank one is stored as none.
+    assert (await client.post(path, json=away_body(name, reason="   "))).status_code == 200
+    [detail] = (await client.get(path, params={"role": "caregiver"})).json()
+    assert detail["reason"] is None
+    assert (await client.post(path, json=away_body(name, start=600, end=7200))).status_code == 409
+    upcoming = await client.post(path, json=away_body(name, start=7200, end=9000))
+    assert upcoming.status_code == 200
+    later = upcoming.json()["away_periods"][-1]
+    cancel = f"{path}/{later['period_id']}/cancel"
+    assert (await client.post(cancel, json={"role": "caregiver", "name": name})).status_code == 200
+    assert (await client.post(cancel, json={"role": "caregiver", "name": name})).status_code == 409
+    assert (await client.post(f"{path}/nope/cancel", json={"role": "caregiver", "name": name})).status_code == 404
+
+
+async def test_activity_while_away_notifies_caregiver_once(client):
+    name = (await units.get_unit(UNIT)).caregiver_name
+    assert (await client.post(f"/api/units/{UNIT}/away-periods", json=away_body(name))).status_code == 200
+    for value in ("open", "closed", "open"):
+        assert (await client.post("/api/readings", json={"unit_id": UNIT, "sensor": "door", "value": value})).status_code == 200
+    [note] = await notes("away_activity")
+    assert note.role == "caregiver"
+    assert "while" in note.message and "is marked away" in note.message
+    assert await notes("morning_reassurance") == []
+
+
 async def test_caregiver_coordination_does_not_claim_visit(client):
     iid = await notified_incident()
     assert (await ack(client, iid, {"role": "caregiver", "name": "Sarah Lee"})).status_code == 409

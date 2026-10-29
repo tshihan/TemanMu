@@ -152,3 +152,6 @@
   .live-timeline-ff.is-current, .live-fast-forward-icon { animation: none; }
   .sensor-beacon, .sensor-beacon.is-persistent.is-pulsing { animation: none; }
 }
+.live-away-badge { display: flex; align-items: center; gap: 10px; margin: 0; padding: 6px 14px 6px 6px; border-radius: 999px; background: #fff3ce; box-shadow: 0 8px 22px #80520b26; color: #80520b; font-size: 13px; font-weight: 600; }
+.live-away-badge b { padding: 4px 9px; border-radius: 999px; background: #80520b; color: #fff3ce; font: 700 11px var(--font-fragment-mono); letter-spacing: .06em; text-transform: uppercase; }
+@media (max-width: 720px) { .live-away-badge { font-size: 12px; } }

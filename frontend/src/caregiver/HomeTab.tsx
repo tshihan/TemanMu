@@ -1,14 +1,14 @@
 import type { CSSProperties } from 'react'
 import type { LucideIcon } from 'lucide-react'
-import { ArrowRight, CircleCheck, Clock3, DoorOpen, Droplets, Phone, PhoneOutgoing, ShieldCheck, TriangleAlert, Zap } from 'lucide-react'
-import type { Incident, Reading, Unit } from '../api/types'
-import { actorName, isOuting, outcomeLabel, STATUS_LABELS, type Ctx } from './copy'
+import { ArrowRight, CircleCheck, Clock3, DoorOpen, Droplets, Luggage, Phone, PhoneOutgoing, ShieldCheck, TriangleAlert, Zap } from 'lucide-react'
+import type { AwayPeriod, Incident, Reading, Unit } from '../api/types'
+import { actorName, currentAway, isOuting, outcomeLabel, STATUS_LABELS, type Ctx } from './copy'
 import { clock, dayFraction, dayLabel, greeting, isToday, until, when } from './format'
 
 type Variant = 'alarm' | 'checking' | 'quiet' | 'away' | 'calm' | 'pending'
 interface Card { variant: Variant; Icon: LucideIcon; badge: string; headline: string; reason: string; grace?: string; ack?: boolean; open?: string }
 
-function statusCard(unit: Unit, incident: Incident | null, ctx: Ctx, now: number, hasRoutineEvidence: boolean): Card {
+function statusCard(unit: Unit, incident: Incident | null, ctx: Ctx, now: number, hasRoutineEvidence: boolean, away: AwayPeriod | null, awayReason: string | null): Card {
   const { R } = ctx
   const doorAt = unit.latest.last_door_event_at
   if (incident?.state === 'notified') {
@@ -35,6 +35,8 @@ function statusCard(unit: Unit, incident: Incident | null, ctx: Ctx, now: number
     return { variant: 'quiet', Icon: PhoneOutgoing, badge: STATUS_LABELS.unusual_inactivity, headline: `Checking on ${R} quietly`,
       reason: `${cause} TemanMu is calling ${R} now (simulated).`, grace: incident?.state === 'grace' ? until(incident.grace_ends_at, now) : undefined }
   }
+  if (away) return { variant: 'away', Icon: Luggage, badge: 'Away period', headline: `${R} is away`,
+    reason: `${awayReason ? `${awayReason.replace(/[.!]+$/, '')}. ` : ''}Until ${when(away.ends_at, now)}. Inactivity alerts are paused until then; you’ll still be alerted if water or power is left running.` }
   if (unit.status === 'possible_away') return { variant: 'away', Icon: DoorOpen, badge: STATUS_LABELS.possible_away, headline: `${R} may be out`,
     reason: `${doorAt ? `Door opened at ${clock(doorAt)}` : 'The door opened'}, then the home went quiet. An outing is possible, but not confirmed. You can call ${R} to check.` }
 
@@ -57,12 +59,12 @@ function statusCard(unit: Unit, incident: Incident | null, ctx: Ctx, now: number
 }
 
 interface Props {
-  unit: Unit; ctx: Ctx; incident: Incident | null; readings: Reading[]; now: number
+  unit: Unit; ctx: Ctx; incident: Incident | null; readings: Reading[]; now: number; awayReasons: Record<string, string | null>
   ackBusy: boolean; responseError: boolean; confirmBusy: boolean; confirmError: boolean
   onCheckIn: () => void; onRequestVisit: () => void; onOpenIncident: () => void; onCall: () => void; onConfirmHome: () => void
 }
 
-export function HomeTab({ unit, ctx, incident, readings, now, ackBusy, responseError, confirmBusy, confirmError, onCheckIn, onRequestVisit, onOpenIncident, onCall, onConfirmHome }: Props) {
+export function HomeTab({ unit, ctx, incident, readings, now, awayReasons, ackBusy, responseError, confirmBusy, confirmError, onCheckIn, onRequestVisit, onOpenIncident, onCall, onConfirmHome }: Props) {
   const { R } = ctx
   const today = readings.filter(reading => isToday(reading.recorded_at, now))
   const last = (match: (reading: Reading) => boolean) => [...today].reverse().find(match)
@@ -71,7 +73,8 @@ export function HomeTab({ unit, ctx, incident, readings, now, ackBusy, responseE
     ? unit.quiet_gap.last_water_activity_at : null)
   const power = last(reading => reading.sensor === 'electricity')
   const powerUsed = last(reading => reading.sensor === 'electricity' && Number(reading.value) > unit.baseline.standby_power_kw)
-  const card = statusCard(unit, incident, ctx, now, !!waterAt || !!powerUsed)
+  const away = currentAway(unit, now)
+  const card = statusCard(unit, incident, ctx, now, !!waterAt || !!powerUsed, away, away ? awayReasons[away.period_id] ?? null : null)
   const checkingIn = incident?.events.some(event => event.type === 'caregiver_checking_in') ?? false
   const visitRequested = incident?.events.some(event => event.type === 'township_requested') ?? false
   const lastReadingAt = readings.at(-1)?.recorded_at
@@ -89,7 +92,7 @@ export function HomeTab({ unit, ctx, incident, readings, now, ackBusy, responseE
       marks: waterMarks.length || !waterAt ? waterMarks : [waterAt] },
     { key: 'power', Icon: Zap, label: 'Electricity', value: unit.latest.power_kw > unit.baseline.standby_power_kw ? 'In use' : powerUsed ? 'Used today' : power ? 'Standby' : 'No use yet',
       time: powerUsed ? clock(powerUsed.recorded_at) : power ? clock(power.recorded_at) : null, marks: marks('electricity') },
-    { key: 'door', Icon: DoorOpen, label: 'Front door', value: unit.status === 'possible_away' ? 'Possibly away' : doorMarks.length ? 'Opened today' : 'No outing indicated',
+    { key: 'door', Icon: DoorOpen, label: 'Front door', value: away ? 'Away period' : unit.status === 'possible_away' ? 'Possibly away' : doorMarks.length ? 'Opened today' : 'No outing indicated',
       time: unit.status === 'possible_away' && unit.latest.last_door_event_at ? clock(unit.latest.last_door_event_at) : doorMarks.length ? clock(doorMarks.at(-1)!) : null, marks: doorMarks },
   ]
   const nowAt = dayFraction(now)
@@ -113,7 +116,7 @@ export function HomeTab({ unit, ctx, incident, readings, now, ackBusy, responseE
       </div>
       <h2 className="cg-status-headline">{card.headline}</h2>
       <p className="cg-status-reason">{card.reason}</p>
-      {unit.status === 'possible_away' && <div className="cg-status-actions">
+      {unit.status === 'possible_away' && !away && <div className="cg-status-actions">
         <button type="button" className="cg-btn cg-btn-accent" onClick={onCall}><Phone size={18} aria-hidden="true" />Call {R}</button>
         <button type="button" className="cg-btn cg-btn-outline" onClick={onConfirmHome} disabled={confirmBusy}>
           {confirmBusy ? 'Recording confirmation…' : `I spoke to ${R} — home and okay`}

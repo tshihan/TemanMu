@@ -4,6 +4,7 @@ Shared by Backend 1 and Backend 2. Field names match the API contract exactly; d
 without agreeing with the frontend (their mock layer mirrors §8).
 """
 
+from datetime import timedelta
 from typing import Annotated, Any, Literal, TypeAlias
 
 from pydantic import AwareDatetime, BaseModel, Field, PlainSerializer, model_serializer, model_validator
@@ -50,10 +51,12 @@ NotificationKind: TypeAlias = Literal[
     "message_delivered",
     "buddy_matched",
     "neighbour_introduced",
+    "away_activity",
 ]
 CommunityAction: TypeAlias = Literal["invite_resident", "join_together"]
 
 ACTIVE_INCIDENT_STATES: tuple[IncidentState, ...] = ("grace", "notified", "acknowledged")
+MAX_AWAY_DAYS = 90
 
 
 class ContractModel(BaseModel):
@@ -104,6 +107,24 @@ class QuietGap(ContractModel):
     usual_max_seconds: int
 
 
+class AwayPeriod(ContractModel):
+    """A caregiver-declared time when the resident is not at home.
+
+    Sent to every screen (township included) as part of Unit, so it carries no reason.
+    """
+
+    period_id: str
+    starts_at: UtcDatetime
+    ends_at: UtcDatetime
+    created_at: UtcDatetime
+
+
+class AwayPeriodDetail(AwayPeriod):
+    """Caregiver-only view: adds the optional private reason."""
+
+    reason: str | None
+
+
 class Unit(ContractModel):
     unit_id: UnitId
     resident_name: str
@@ -117,6 +138,8 @@ class Unit(ContractModel):
     quiet_gap: QuietGap
     baseline: Baseline
     active_incident_id: str | None
+    # Current and upcoming away periods, earliest first. Ended or cancelled ones are left out.
+    away_periods: list[AwayPeriod] = []
 
 
 class Actor(ContractModel):
@@ -270,6 +293,31 @@ class CaregiverResponseRequest(ContractModel):
 
 
 class ConfirmHomeRequest(ContractModel):
+    role: Literal["caregiver"]
+    name: str = Field(min_length=1, pattern=r".*\S.*")
+
+
+class AwayPeriodRequest(ContractModel):
+    """POST /api/units/{unit_id}/away-periods body. A start in the past means "from now"."""
+
+    role: Literal["caregiver"]
+    name: str = Field(min_length=1, pattern=r".*\S.*")
+    starts_at: UtcDatetime
+    ends_at: UtcDatetime
+    # Optional and private: only the caregiver can read it back.
+    reason: str | None = Field(default=None, max_length=200)
+
+    @model_validator(mode="after")
+    def _check_period(self) -> "AwayPeriodRequest":
+        self.reason = (self.reason or "").strip() or None
+        if self.ends_at <= self.starts_at:
+            raise ValueError("The away period must end after it starts")
+        if self.ends_at - self.starts_at > timedelta(days=MAX_AWAY_DAYS):
+            raise ValueError(f"An away period can last at most {MAX_AWAY_DAYS} days")
+        return self
+
+
+class CancelAwayPeriodRequest(ContractModel):
     role: Literal["caregiver"]
     name: str = Field(min_length=1, pattern=r".*\S.*")
 

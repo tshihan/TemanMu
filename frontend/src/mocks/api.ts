@@ -1,7 +1,7 @@
 import seed from '../../../shared/seed.json'
 import { ApiError } from '../api/live'
 import type {
-  Api, BuddyMatch, CallTiming, CommunityActivity, CompanionMessage, Config, Incident,
+  Api, AwayPeriod, AwayPeriodDetail, BuddyMatch, CallTiming, CommunityActivity, CompanionMessage, Config, Incident,
   MessagePreset, NeighbourMatch, NeighbourState, Notification, Reading, RealtimeEvent, Role, Snapshot, Unit,
 } from '../api/types'
 
@@ -127,6 +127,7 @@ function initialSnapshot(): Snapshot {
       },
       baseline: { ...item.baseline, source: 'simulated_history' as const },
       active_incident_id: null,
+      away_periods: [],
     })),
     incidents: [],
     notifications: [],
@@ -147,14 +148,36 @@ let monitoringActive = false
 // Per-scenario call pacing, like the backend watch; null uses the mock config.
 let callTiming: CallTiming | null = null
 let watchTimer: ReturnType<typeof setTimeout> | null = null
+// Every away period, ended and cancelled ones included; unit.away_periods shows only current and upcoming.
+// The reason is kept apart from `period`, so it never reaches Unit (which township also receives).
+let awayPeriods: { unit_id: string; period: AwayPeriod; reason: string | null; cancelled: boolean; notified: boolean }[] = []
 
 export const mockSnapshot = (): Snapshot => clone(state)
+
+const awayAt = (unitId: string, at = now()) => awayPeriods.find(item => item.unit_id === unitId && !item.cancelled
+  && item.period.starts_at <= at && at < item.period.ends_at)
+
+function syncAway(unit: Unit): void {
+  const at = now()
+  unit.away_periods = awayPeriods.filter(item => item.unit_id === unit.unit_id && !item.cancelled && item.period.ends_at > at)
+    .map(item => clone(item.period)).sort((a, b) => a.starts_at.localeCompare(b.starts_at))
+}
+
+// Mirrors rules/engine.py _after_away: an away period that begins before the check would fire
+// restarts the clock at its end.
+function afterAway(unitId: string, anchor: number, seconds: number): number {
+  const windows = awayPeriods.filter(item => item.unit_id === unitId && !item.cancelled)
+    .map(item => [Date.parse(item.period.starts_at), Date.parse(item.period.ends_at)]).sort((a, b) => a[0] - b[0])
+  for (const [start, end] of windows) if (end > anchor && start <= anchor + seconds * 1000) anchor = end
+  return anchor
+}
 
 // Presenter-only time jump: simulate the quiet-gap detector after a visible quiet period.
 // It never runs in live mode; real status decisions belong to the backend.
 export function primeMockInactivity(): Incident {
   const unit = unitOrThrow('A-105')
   if (latestIncident(unit.unit_id)) throw new ApiError(409, 'An incident is already active. Reset Demo before the inactivity scenario.')
+  if (awayAt(unit.unit_id)) throw new ApiError(409, 'The resident is marked away, so inactivity checks are paused. End the away period first.')
   if (unit.status === 'possible_away' || unit.latest.door !== 'closed')
     throw new ApiError(409, 'The door or away status still suggests an outing. Return home or reset the demo before the inactivity scenario.')
   if (unit.latest.water_lpm > 0 || unit.latest.power_kw > unit.baseline.standby_power_kw)
@@ -272,7 +295,7 @@ function scheduleMockWatch(unit: Unit): void {
     if (confirmedHome && unit.quiet_gap.last_caregiver_confirmation_at === anchor
       && (!unit.quiet_gap.last_water_activity_at || unit.quiet_gap.last_water_activity_at <= anchor))
       startGrace(unit, 'caregiver_confirmation')
-  }, Math.max(0, new Date(anchor).getTime() + seconds * 1000 - Date.now()))
+  }, Math.max(0, afterAway(unit.unit_id, new Date(anchor).getTime(), seconds) + seconds * 1000 - Date.now()))
 }
 
 function autoResolve(unit: Unit, incident: Incident): void {
@@ -403,7 +426,15 @@ export const mockApi: Api = {
     else if (incident?.events.some(event => event.type === 'emergency_called' || event.type === 'unable_to_verify')) publish('unit.updated', clone(unit))
     else if (activity && !incident) applyActivity(unit, reading)
     else publish('unit.updated', clone(unit))
-    if (morningSentOn !== localDay() && activity && !incident) {
+    const away = awayAt(unit.unit_id, reading.recorded_at)
+    if (away) {
+      // Gentle, once per period, door or water only: the caregiver decides whether it was expected.
+      if (activity && !wasActive && reading.sensor !== 'electricity' && !away.notified) {
+        away.notified = true
+        notify({ role: 'caregiver', unit_id: unit.unit_id, kind: 'away_activity', incident_id: null,
+          message: `${reading.sensor === 'door' ? 'Front door opened' : 'Water used'} at ${localHHMM(reading.recorded_at)} while ${unit.caregiver_relationship} is marked away. If this is expected, no action is needed.` })
+      }
+    } else if (morningSentOn !== localDay() && activity && !incident) {
       morningSentOn = localDay()
       notify({ role: 'caregiver', unit_id: unit.unit_id, kind: 'morning_reassurance', message: `${unit.caregiver_relationship}'s day has started. ${activityMessage(reading.sensor)}`, incident_id: null })
     }
@@ -464,6 +495,47 @@ export const mockApi: Api = {
       throw new ApiError(409, 'Home confirmation is available only while the resident is possibly away')
     unit.quiet_gap.last_caregiver_confirmation_at = now()
     updateUnit(unit, 'routine', `${actor.name} reports speaking directly with ${unit.caregiver_relationship}: home and okay; sensor activity has not been confirmed.`)
+    return clone(unit)
+  },
+  async getAwayPeriods(id) {
+    unitOrThrow(id)
+    const at = now()
+    return awayPeriods.filter(item => item.unit_id === id && !item.cancelled && item.period.ends_at > at)
+      .map((item): AwayPeriodDetail => ({ ...clone(item.period), reason: item.reason }))
+      .sort((a, b) => a.starts_at.localeCompare(b.starts_at))
+  },
+  async addAwayPeriod(id, body) {
+    const unit = unitOrThrow(id)
+    if (body.role !== 'caregiver' || body.name !== unit.caregiver_name) throw new ApiError(409, 'Only the designated caregiver can add an away period')
+    const reason = body.reason?.trim() || null
+    if (reason && reason.length > 200) throw new ApiError(422, 'Reason must be at most 200 characters')
+    const at = now()
+    const startsAt = new Date(Math.max(Date.parse(body.starts_at), Date.parse(at))).toISOString()
+    const endsAt = new Date(body.ends_at).toISOString()
+    if (endsAt <= startsAt) throw new ApiError(422, 'The away period must end in the future')
+    if (Date.parse(endsAt) - Date.parse(body.starts_at) > 90 * 864e5) throw new ApiError(422, 'An away period can last at most 90 days')
+    if (awayPeriods.some(item => item.unit_id === id && !item.cancelled && item.period.starts_at < endsAt && item.period.ends_at > startsAt))
+      throw new ApiError(409, 'This overlaps another away period')
+    awayPeriods.push({ unit_id: id, reason, cancelled: false, notified: false,
+      period: { period_id: crypto.randomUUID(), starts_at: startsAt, ends_at: endsAt, created_at: at } })
+    syncAway(unit)
+    scheduleMockWatch(unit)
+    publish('unit.updated', clone(unit))
+    return clone(unit)
+  },
+  async cancelAwayPeriod(id, periodId, actor) {
+    const unit = unitOrThrow(id)
+    const item = awayPeriods.find(entry => entry.unit_id === id && entry.period.period_id === periodId)
+    if (!item) throw new ApiError(404, 'Away period not found')
+    if (actor.role !== 'caregiver' || actor.name !== unit.caregiver_name) throw new ApiError(409, 'Only the designated caregiver can change an away period')
+    const at = now()
+    if (item.cancelled || item.period.ends_at <= at) throw new ApiError(409, 'This away period is already over')
+    // Like the backend: one that has started ends now (the clock restarts); an upcoming one is cancelled.
+    if (item.period.starts_at < at) item.period.ends_at = at
+    else item.cancelled = true
+    syncAway(unit)
+    scheduleMockWatch(unit)
+    publish('unit.updated', clone(unit))
     return clone(unit)
   },
   async escalateIncident(id, actor) {
@@ -607,6 +679,7 @@ export const mockApi: Api = {
     responses = []
     neighbourConsents = initialConsents()
     introductions = []
+    awayPeriods = []
     morningSentOn = null
     publish('snapshot', clone(state))
     return { units: clone(state.units) }

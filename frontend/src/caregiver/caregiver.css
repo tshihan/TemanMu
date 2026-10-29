@@ -480,3 +480,30 @@
 @media (prefers-reduced-motion: reduce) {
   .cg-root *, .cg-root *::before, .cg-root *::after { animation: none !important; transition-duration: .01ms !important; }
 }
+
+/* Away periods (Settings) */
+.cg-away-list { display: grid; gap: 8px; margin: 14px 0 0; padding: 0; list-style: none; }
+.cg-away-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 16px; background: var(--card); }
+.cg-away-item.is-active { border-color: color-mix(in srgb, var(--y) 30%, transparent); background: var(--yw); }
+.cg-away-text { flex: 1; min-width: 0; display: grid; gap: 2px; color: var(--mut); font-size: 13px; line-height: 1.4; }
+.cg-away-text strong { color: var(--ink); font-size: 15px; font-weight: 650; overflow-wrap: anywhere; }
+.cg-away-item.is-active .cg-away-text span { color: var(--y); font-weight: 600; }
+.cg-away-end { flex: none; min-height: 36px; padding: 0 14px; border: 1.5px solid var(--line); border-radius: 999px; background: var(--card2); font-size: 13px; font-weight: 650; transition: border-color .2s, color .2s; }
+.cg-away-end:not(:disabled):hover { border-color: var(--acc); color: var(--accd); }
+.cg-away-end:disabled { opacity: .55; }
+.cg-away-form { display: grid; gap: 12px; margin-top: 16px; }
+.cg-field { display: grid; gap: 6px; color: var(--mut); font-size: 13px; font-weight: 600; }
+.cg-field input { width: 100%; min-height: 46px; padding: 0 14px; border: 1.5px solid var(--line); border-radius: 14px; background: var(--card); color: var(--ink); font: inherit; font-size: 16px; font-weight: 500; }
+.cg-field input::placeholder { color: var(--faint); }
+.cg-field input:focus-visible { border-color: var(--acc); outline: none; }
+.cg-away-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.cg-away-chip { min-height: 32px; padding: 0 12px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--mut); font-size: 13px; font-weight: 600; }
+.cg-away-chip[aria-pressed='true'] { border-color: var(--acc); background: var(--accw); color: var(--accd); }
+.cg-check { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; }
+.cg-check input { width: 20px; height: 20px; margin: 0; accent-color: var(--acc); }
+.cg-away-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cg-away-actions .cg-btn { margin-top: 0; }
+.cg-away-error { margin: 12px 0 0; color: var(--o); font-size: 13px; line-height: 1.45; }
+.cg-away-form .cg-away-error { margin: 0; }
+.cg-field-note { color: var(--faint); font-weight: 500; }
+.cg-away-hint { margin: -4px 0 0; color: var(--mut); font-size: 12px; line-height: 1.45; }
