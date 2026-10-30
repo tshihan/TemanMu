@@ -388,7 +388,7 @@ export function Slides() {
 
           <div className="slides-how-inputs">
             <article className="slides-how-box">
-              <span className="slides-how-label">1 · At home</span>
+              <span className="slides-how-label">01 · At home</span>
               <div className="slides-how-sensors" aria-hidden="true">
                 <span><Droplets /></span><span><Zap /></span><span><DoorOpen /></span>
               </div>
@@ -398,7 +398,7 @@ export function Slides() {
             <div className="slides-how-down" aria-hidden="true">↓</div>
             <article ref={howFlow.box2Ref} className="slides-how-box">
               <div className="slides-how-box-top">
-                <span className="slides-how-label">2 · TemanMu</span>
+                <span className="slides-how-label">02 · TemanMu</span>
                 <span className="slides-how-bars" aria-hidden="true">{[.5, .8, .4, 1, .6, .9, .45].map((v, i) => <i key={i} style={{ height: `${22 * v}px`, animationDelay: `${i * .15}s` }} />)}</span>
               </div>
               <h3>Compares today with her usual routine</h3>
@@ -409,7 +409,7 @@ export function Slides() {
           <div className="slides-how-feed" aria-hidden="true"><div ref={howFlow.feedRef} /></div>
 
           <div className="slides-how-outcomes">
-            <div className="slides-how-outcomes-head"><span /><span>3 · Result is one of</span><span>4 · What happens</span></div>
+            <div className="slides-how-outcomes-head"><span /><span>03 · Detected status</span><span>What this means</span></div>
 
             <div className="slides-how-branch slides-how-branch-first">
               <span className="slides-how-stub" aria-hidden="true" />
@@ -423,7 +423,7 @@ export function Slides() {
               <span className="slides-how-stub" aria-hidden="true" />
               <div ref={howFlow.rowRefs[1]} className="slides-how-outcome slides-how-outcome-away">
                 <div><span>Possible Away</span><h3>Door opened, then the home went quiet</h3></div>
-                <div className="slides-how-chain"><b>Family is told she may be out</b><i>→</i><b>Family may call her</b><i>→</i><b>Home and okay? Back to Routine</b></div>
+                <p>Likely out. Quiet status, no automatic alert. Family may call to check.</p>
               </div>
             </div>
 
@@ -431,7 +431,7 @@ export function Slides() {
               <span className="slides-how-stub" aria-hidden="true" />
               <div ref={howFlow.rowRefs[2]} className="slides-how-outcome slides-how-outcome-concern">
                 <div><span>Unusual Inactivity</span><h3>Quiet for longer than usual</h3></div>
-                <div className="slides-how-chain"><b>TemanMu calls her</b><i>→</i><b>No answer: family + township alerted</b><i>→</i><b>Someone checks, records outcome</b></div>
+                <div className="slides-how-chain"><b>Simulated check-in call</b><i>→</i><b>No answer or activity by grace deadline</b><i>→</i><b>Family + township alerted</b></div>
               </div>
             </div>
           </div>
@@ -528,7 +528,7 @@ export function Slides() {
         <div className="slides-visual-flow" aria-label="The Unusual Inactivity scenario seen from the home, the family and the township">
           <figure className="slides-visual-step slides-visual-home" data-slide-reveal>
             <div className="slides-visual-media"><img src="/images/visual-home-sensors.jpg" alt="3D view of Mum's flat with water meter, power meter and door sensor readings" /></div>
-            <figcaption><span>1 · At home</span><h3>The home goes quiet</h3><p>No water use beyond her usual gap, power at standby, door closed. Only meters and a door sensor, no cameras.</p></figcaption>
+            <figcaption><span>01 · At home</span><h3>The home goes quiet</h3><p>No water use beyond her usual gap, power at standby, door closed. Only meters and a door sensor, no cameras.</p></figcaption>
           </figure>
           <span className="slides-visual-arrow" aria-hidden="true">→</span>
           <figure className="slides-visual-step slides-visual-family" data-slide-reveal>
