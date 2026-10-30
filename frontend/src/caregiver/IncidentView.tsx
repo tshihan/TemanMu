@@ -3,7 +3,7 @@ import { BellRing, Check, ChevronLeft, CircleCheck, Info, Phone, ShieldCheck, Tr
 import { api } from '../api'
 import { applyIncident } from '../api/store'
 import type { Incident, Outcome, Unit } from '../api/types'
-import { actorName, eventCopy, GUARD, isOuting, OUTCOMES, outcomeLabel, STATUS_LABELS, type Ctx } from './copy'
+import { actorName, eventCopy, GUARD, isHomeCheck, isOuting, OUTCOMES, outcomeLabel, STATUS_LABELS, type Ctx } from './copy'
 import { clock, initials, until } from './format'
 
 export type AckError = { kind: 'failed' } | null
@@ -30,7 +30,17 @@ export function IncidentView({ incident, unit, ctx, now, liveNote, ackBusy, ackE
   const lastWater = unit.quiet_gap.last_water_activity_at
   const cause = isOuting(incident) ? `${R} has been out longer than usual.` : lastWater ? `No water use since ${clock(lastWater)}, longer than the usual gap.` : 'No water use for longer than the usual gap.'
 
-  const hero = state === 'notified'
+  const homeCheck = isHomeCheck(incident)
+  const requested = incident.events.find(event => event.type === 'township_requested')
+  // The request detail is "<notice> <name> asked township to check the home."; keep the notice.
+  const notice = requested?.detail?.replace(` ${requested.actor?.name} asked township to check the home.`, '')
+  const hero = homeCheck && (state === 'notified' || state === 'acknowledged')
+    ? state === 'notified'
+      ? { variant: 'alarm', chip: 'Waiting for guard', Icon: ShieldCheck, badge: 'Home check', title: 'Home check requested',
+        body: `${notice ? `${notice} ` : ''}You asked ${GUARD} to check the home. Reminders continue until someone takes it.` }
+      : { variant: 'checking', chip: 'Awaiting outcome', Icon: ShieldCheck, badge: 'Home check', title: `${actorName(ctx, ack)} is checking the home`,
+        body: `Taken at ${ack ? clock(ack.at) : '—'}. You’ll get an update when the check is done.` }
+    : state === 'notified'
     ? { variant: 'alarm', chip: 'Needs response', Icon: TriangleAlert, badge: STATUS_LABELS[unit.status], title: 'Unusual inactivity', body: `${cause} The simulated call to ${R} went unanswered. You and the township operator have been alerted.` }
     : state === 'acknowledged'
       ? { variant: called || unable ? 'alarm' : 'checking', chip: called ? '999 called' : unable ? 'Urgent follow-up' : 'Awaiting outcome', Icon: called || unable ? TriangleAlert : ShieldCheck, badge: called ? 'Emergency handoff' : unable ? 'Safety not verified' : 'Someone is checking', title: called ? '999 call reported' : unable ? 'Safety not verified' : mine ? 'You’re checking' : `${actorName(ctx, ack)} is checking`,
@@ -80,8 +90,8 @@ export function IncidentView({ incident, unit, ctx, now, liveNote, ackBusy, ackE
         {state === 'notified' && <p className="cg-hero-reminder"><BellRing size={16} aria-hidden="true" />
           <span>{incident.reminder_count ? `Reminder #${incident.reminder_count} sent` : 'Alert sent'}</span><span className="cg-hero-next">next in <span className="cg-num">{until(incident.next_reminder_at, now)}</span></span>
         </p>}
-        {state === 'notified' && <p className="cg-hero-note">Township can visit while you check in. Reminders continue until someone takes the visit.</p>}
-        {(state === 'notified' || state === 'acknowledged') && !mine && <div className="cg-hero-actions">
+        {state === 'notified' && !homeCheck && <p className="cg-hero-note">Township can visit while you check in. Reminders continue until someone takes the visit.</p>}
+        {(state === 'notified' || state === 'acknowledged') && !mine && !homeCheck && <div className="cg-hero-actions">
           {!checkingIn && <button type="button" className="cg-btn cg-btn-inverse cg-btn-tall" onClick={onCheckIn} disabled={ackBusy}>I’ll check in with {R}</button>}
           {!visitRequested && state === 'notified' && <button type="button" className="cg-btn cg-btn-outline cg-btn-tall" onClick={onAck} disabled={ackBusy}>Ask township to visit</button>}
           {checkingIn && <p role="status">Check-in recorded. {R} is not yet confirmed safe.</p>}

@@ -6,6 +6,8 @@ export type DoorState = 'open' | 'closed'
 export type Status = 'routine' | 'possible_away' | 'unusual_inactivity' | 'unresolved_concern'
 export type IncidentState = 'grace' | 'notified' | 'acknowledged' | 'closed' | 'auto_resolved'
 export type Outcome = 'resident_ok' | 'assistance_provided' | 'sent_to_hospital' | 'resident_away' | 'resident_activity_detected'
+/** The caregiver's answer to activity at home during an away period. */
+export type AwayActivityResponse = 'resident_returned' | 'known_visitor' | 'home_check_requested'
 
 export interface Reading {
   unit_id: UnitId
@@ -99,6 +101,9 @@ export interface Notification {
   incident_id: string | null
   created_at: string
   read: boolean
+  // away_activity only: the caregiver's answer, once given.
+  response?: AwayActivityResponse | null
+  responded_at?: string | null
 }
 
 export interface CommunityActivity {
@@ -198,6 +203,7 @@ export interface Api {
   closeIncident(id: string, actor: { role: Role; name: string; outcome: Exclude<Outcome, 'resident_activity_detected'>; report?: string }): Promise<Incident>
   markNotificationsRead(role: Role): Promise<void>
   markNotificationRead(id: string, role: Role): Promise<Notification>
+  respondToAwayActivity(id: string, body: { role: 'caregiver'; name: string; response: AwayActivityResponse }): Promise<Notification>
   respondToActivity(id: string, action: 'invite_resident' | 'join_together'): Promise<{ ok: true }>
   sendMessage(body: { unit_id: UnitId; from_name: string; preset_id: string }): Promise<CompanionMessage>
   requestBuddy(unitId: UnitId): Promise<BuddyMatch>

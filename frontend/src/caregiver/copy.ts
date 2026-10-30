@@ -42,6 +42,15 @@ export const actorName = (ctx: Ctx, actor: { role: string; name: string } | null
 export const isOuting = (incident: Incident | null | undefined) =>
   !!incident?.events.some(event => event.type === 'detected' && /outing/i.test(event.detail || ''))
 
+/** Mirrors reasons.DETECTED_HOME_CHECK: the caregiver asked township to check the home during an away period. */
+export const HOME_CHECK_DETECTED = 'Activity at home during an away period'
+export const isHomeCheck = (incident: Incident | null | undefined) =>
+  !!incident?.events.some(event => event.type === 'detected' && event.detail === HOME_CHECK_DETECTED)
+
+/** An away-activity notice still waiting for the caregiver's answer, raised during the current away period. */
+export const awaitingAnswer = (n: Notification, away: AwayPeriod | null) =>
+  n.kind === 'away_activity' && !n.response && !!away && n.created_at >= away.starts_at
+
 const cause = (ctx: Ctx, incident: Incident | null | undefined) =>
   isOuting(incident) ? `${ctx.R} has been out longer than usual` : 'No water use for longer than usual'
 
@@ -89,7 +98,15 @@ export function notificationCopy(n: Notification, ctx: Ctx, incident: Incident |
       return { title: 'Introduction requested', body: name ? `The community coordinator will arrange for ${R} to meet ${name} (recorded only).` : n.message, Icon: Users, tone: 'warm' }
     }
     case 'away_activity':
-      return { title: `Activity while ${R} is away`, body: n.message, Icon: Luggage, tone: 'info' }
+      switch (n.response) {
+        case 'resident_returned':
+          return { title: `${R} is back home`, body: `${n.message} You confirmed ${R} is back, so the away period ended and inactivity alerts are on again.`, Icon: Luggage, tone: 'calm' }
+        case 'known_visitor':
+          return { title: `Activity while ${R} is away`, body: `${n.message} You said it was someone you know. No check was requested.`, Icon: Luggage, tone: 'info' }
+        case 'home_check_requested':
+          return { title: 'Home check requested', body: `${n.message} You asked ${GUARD} to check the home.`, Icon: ShieldCheck, tone: 'alarm' }
+      }
+      return { title: `Activity while ${R} is away`, body: `${n.message} Do you know who’s there? Answer on Home.`, Icon: Luggage, tone: 'info' }
   }
   return { title: 'Update', body: n.message, Icon: Bell, tone: 'info' }
 }
@@ -98,6 +115,7 @@ export function eventCopy(event: IncidentEvent, ctx: Ctx, incident: Incident): C
   const { R } = ctx
   switch (event.type) {
     case 'detected':
+      if (isHomeCheck(incident)) return { title: `Activity while ${R} is away`, body: `Activity at home while ${R} was marked away.`, Icon: DoorOpen, tone: 'info' }
       return isOuting(incident)
         ? { title: 'Outing longer than usual', body: `${R} has been away longer than usual.`, Icon: DoorOpen, tone: 'info' }
         : { title: 'Quiet gap detected', body: 'No water use for longer than the usual gap.', Icon: Droplets, tone: 'info' }
@@ -111,7 +129,9 @@ export function eventCopy(event: IncidentEvent, ctx: Ctx, incident: Incident): C
     case 'caregiver_checking_in':
       return { title: 'Caregiver checking in', body: `You are trying to contact ${R}. Township can still visit.`, Icon: PhoneOutgoing, tone: 'info' }
     case 'township_requested':
-      return { title: 'Township visit requested', body: `You asked ${GUARD} to visit ${R}.`, Icon: ShieldCheck, tone: 'alarm' }
+      return isHomeCheck(incident)
+        ? { title: 'Home check requested', body: `You asked ${GUARD} to check the home.`, Icon: ShieldCheck, tone: 'alarm' }
+        : { title: 'Township visit requested', body: `You asked ${GUARD} to visit ${R}.`, Icon: ShieldCheck, tone: 'alarm' }
     case 'unable_to_verify':
       return { title: 'Safety not verified', body: `${actorName(ctx, event.actor)} could not verify ${R}’s safety. Urgent follow-up is needed.`, Icon: TriangleAlert, tone: 'alarm' }
     case 'emergency_called':

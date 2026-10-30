@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import { Bell, Check, ChevronRight, HeartHandshake, House, PhoneOff, Settings, ShieldCheck, TriangleAlert, Volume2, VolumeX, WifiOff } from 'lucide-react'
+import { Bell, Check, ChevronRight, HeartHandshake, House, Luggage, PhoneOff, Settings, ShieldCheck, TriangleAlert, Volume2, VolumeX, WifiOff } from 'lucide-react'
 import { api } from '../api'
 import { applyEvent, applyIncident, getAppState, loadUnitReadings, markNotificationViewed, markRoleViewed, subscribeAppEvents, useAppState } from '../api/store'
-import type { Notification } from '../api/types'
-import { actorName, ctxFor, NOTIFICATION_TARGET, notificationCopy } from './copy'
+import type { AwayActivityResponse, Notification } from '../api/types'
+import { actorName, awaitingAnswer, ctxFor, currentAway, GUARD, isHomeCheck, NOTIFICATION_TARGET, notificationCopy } from './copy'
 import { clock, initials } from './format'
 import { HomeTab } from './HomeTab'
 import { IncidentView, type AckError } from './IncidentView'
@@ -51,6 +51,8 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
   const [ackError, setAckError] = useState<AckError>(null)
   const [confirmBusy, setConfirmBusy] = useState(false)
   const [confirmError, setConfirmError] = useState(false)
+  const [answerBusy, setAnswerBusy] = useState(false)
+  const [answerError, setAnswerError] = useState(false)
   const [liveNote, setLiveNote] = useState(false)
   const [lastSync, setLastSync] = useState(() => Date.now())
   const [connectionTimedOut, setConnectionTimedOut] = useState(false)
@@ -75,6 +77,8 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
       seenReminders.add(item.incident_id)
       return true
     })
+  const away = unit ? currentAway(unit, now) : null
+  const awayNotice = feed.find(n => awaitingAnswer(n, away)) || null
   const isUnread = (n: Notification) => !n.read && !readIds.has(n.notification_id)
   const unread = feed.filter(isUnread).length
   const showIncident = incidentOpen && !!incident && incident.state !== 'grace'
@@ -202,6 +206,20 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
       setConfirmError(true)
     } finally { setConfirmBusy(false) }
   }
+  async function answerAway(n: Notification, response: AwayActivityResponse) {
+    if (!unit || answerBusy) return
+    const R = unit.caregiver_relationship
+    if (response === 'resident_returned' && !window.confirm(`End the away period now? Inactivity alerts for ${R} will start again.`)) return
+    setAnswerBusy(true)
+    setAnswerError(false)
+    try {
+      const answered = await api.respondToAwayActivity(n.notification_id, { role: 'caregiver', name: unit.caregiver_name, response })
+      applyEvent({ type: 'notification.updated', at: answered.responded_at ?? answered.created_at, data: answered })
+      showToast(response === 'home_check_requested' ? `${GUARD} has been asked to check the home`
+        : response === 'resident_returned' ? `Away period ended. ${R} is marked home` : 'Got it. No check requested')
+    } catch { setAnswerError(true) }
+    finally { setAnswerBusy(false) }
+  }
   function startCall() {
     setCall('calling')
     window.clearTimeout(timers.current.call)
@@ -234,10 +252,15 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
 
       {ctx && !showIncident && tab !== 'home' && incident?.state === 'notified' && <button type="button" className="cg-concern is-alarm" onClick={openIncident}>
         <TriangleAlert size={22} aria-hidden="true" />
-        <span><strong>Unusual inactivity</strong><span>{incident.reminder_count ? `Reminder #${incident.reminder_count}` : 'Alert sent'} · Tap to respond</span></span>
+        <span><strong>{isHomeCheck(incident) ? 'Home check requested' : 'Unusual inactivity'}</strong><span>{incident.reminder_count ? `Reminder #${incident.reminder_count}` : 'Alert sent'} · {isHomeCheck(incident) ? 'Tap for details' : 'Tap to respond'}</span></span>
         <ChevronRight size={20} aria-hidden="true" />
       </button>}
-      {ctx && !showIncident && tab !== 'home' && incident?.state === 'acknowledged' && <button type="button" className="cg-concern is-checking" onClick={openIncident}>
+      {ctx && !showIncident && tab !== 'home' && awayNotice && <button type="button" className="cg-concern is-checking" onClick={() => goTo('home')}>
+        <Luggage size={22} aria-hidden="true" />
+        <span><strong>Activity while {ctx.R} is away</strong><span>Do you know who’s there? · Tap to answer</span></span>
+        <ChevronRight size={20} aria-hidden="true" />
+      </button>}
+      {ctx && !showIncident && tab !== 'home' && incident?.state === 'acknowledged' &&<button type="button" className="cg-concern is-checking" onClick={openIncident}>
         <ShieldCheck size={22} aria-hidden="true" />
         <span><strong>{ackWho} {ackWho === 'You' ? 'are' : 'is'} checking on {ctx.R}</strong><span>{ackWho === 'You' ? 'Record the outcome when you’re done' : `Awaiting ${ackWho}’s outcome`}</span></span>
         <ChevronRight size={20} aria-hidden="true" />
@@ -250,8 +273,10 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
         </div> : !unit || !ctx ? <p className="cg-card-lead cg-pad">The resident’s home is unavailable.</p>
           : tab === 'home' ? <HomeTab unit={unit} ctx={ctx} incident={incident} readings={readingsByUnit[unit.unit_id] || []} now={now} awayReasons={awayReasons}
             ackBusy={ackBusy} responseError={ackError?.kind === 'failed'} confirmBusy={confirmBusy} confirmError={confirmError}
+            awayNotice={awayNotice} answerBusy={answerBusy} answerError={answerError}
             onCheckIn={() => void respond('caregiver_checking_in')}
-            onRequestVisit={() => void respond('township_requested')} onOpenIncident={openIncident} onCall={startCall} onConfirmHome={() => void confirmHome()} />
+            onRequestVisit={() => void respond('township_requested')} onOpenIncident={openIncident} onCall={startCall} onConfirmHome={() => void confirmHome()}
+            onAnswerAway={(n, response) => void answerAway(n, response)} />
           : tab === 'updates' ? <UpdatesTab feed={feed} ctx={ctx} now={now} incidentFor={incidentFor} isUnread={isUnread} ackTargetId={ackTargetId}
             ackBusy={ackBusy} onOpen={open} onMarkAllRead={markAllRead} onAck={openIncident} />
           : tab === 'together' ? <TogetherTab unit={unit} ctx={ctx} companion={companion} onToast={showToast} />

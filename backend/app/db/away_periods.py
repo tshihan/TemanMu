@@ -94,3 +94,13 @@ async def is_away(unit_id: str, at: datetime, conn: asyncpg.Connection | None = 
                                  and starts_at <= $2 and ends_at > $2)""",
             unit_id, at,
         )
+
+
+async def covering(unit_id: str, at: datetime, conn: asyncpg.Connection | None = None) -> str | None:
+    """The period_id of the away period in progress at `at`, if any."""
+    async with connection(conn) as c:
+        return await c.fetchval(
+            """select period_id from away_periods
+                where unit_id = $1 and cancelled_at is null and starts_at <= $2 and ends_at > $2""",
+            unit_id, at,
+        )

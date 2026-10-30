@@ -1,5 +1,6 @@
 import seed from '../../../shared/seed.json'
 import { ApiError } from '../api/live'
+import { HOME_CHECK_DETECTED, isHomeCheck } from '../caregiver/copy'
 import type {
   Api, AwayPeriod, AwayPeriodDetail, BuddyMatch, CallTiming, CommunityActivity, CompanionMessage, Config, Incident,
   MessagePreset, NeighbourMatch, NeighbourState, Notification, Reading, RealtimeEvent, Role, Snapshot, Unit,
@@ -422,8 +423,10 @@ export const mockApi: Api = {
     publish('reading.received', clone(reading))
     const activity = reading.sensor === 'door' ? reading.value === 'open' : typeof reading.value === 'number' && reading.value > (reading.sensor === 'electricity' ? unit.baseline.standby_power_kw : 0)
     const incident = latestIncident(unit.unit_id)
-    if (activity && !wasActive && incident && !incident.events.some(event => event.type === 'emergency_called' || event.type === 'unable_to_verify')) autoResolve(unit, incident)
-    else if (incident?.events.some(event => event.type === 'emergency_called' || event.type === 'unable_to_verify')) publish('unit.updated', clone(unit))
+    // Like the backend: an emergency handoff or a caregiver-requested home check stays open whatever the meters do.
+    const heldOpen = !!incident && (isHomeCheck(incident) || incident.events.some(event => event.type === 'emergency_called' || event.type === 'unable_to_verify'))
+    if (activity && !wasActive && incident && !heldOpen) autoResolve(unit, incident)
+    else if (heldOpen) publish('unit.updated', clone(unit))
     else if (activity && !incident) applyActivity(unit, reading)
     else publish('unit.updated', clone(unit))
     const away = awayAt(unit.unit_id, reading.recorded_at)
@@ -432,7 +435,7 @@ export const mockApi: Api = {
       if (activity && !wasActive && reading.sensor !== 'electricity' && !away.notified) {
         away.notified = true
         notify({ role: 'caregiver', unit_id: unit.unit_id, kind: 'away_activity', incident_id: null,
-          message: `${reading.sensor === 'door' ? 'Front door opened' : 'Water used'} at ${localHHMM(reading.recorded_at)} while ${unit.caregiver_relationship} is marked away. If this is expected, no action is needed.` })
+          message: `${reading.sensor === 'door' ? 'Front door opened' : 'Water used'} at ${localHHMM(reading.recorded_at)} while ${unit.caregiver_relationship} is marked away.` })
       }
     } else if (morningSentOn !== localDay() && activity && !incident) {
       morningSentOn = localDay()
@@ -592,6 +595,49 @@ export const mockApi: Api = {
     item.read = true
     publish('notification.updated', clone(item))
     return clone(item)
+  },
+  // Mirrors monitoring.respond_to_away_activity: only a home check alerts township.
+  async respondToAwayActivity(id, body) {
+    const notice = state.notifications.find(item => item.notification_id === id && item.kind === 'away_activity')
+    if (!notice) throw new ApiError(404, 'Notification not found')
+    const unit = unitOrThrow(notice.unit_id)
+    if (body.role !== 'caregiver' || body.name !== unit.caregiver_name) throw new ApiError(409, 'Only the designated caregiver can answer this')
+    if (notice.response) throw new ApiError(409, 'This has already been answered')
+    const at = now()
+    if (body.response === 'resident_returned') {
+      const item = awayAt(unit.unit_id, at)
+      if (!item) throw new ApiError(409, 'The away period has already ended')
+      item.period.ends_at = at
+      syncAway(unit)
+      scheduleMockWatch(unit)
+      publish('unit.updated', clone(unit))
+    } else if (body.response === 'home_check_requested') {
+      if (latestIncident(unit.unit_id)) throw new ApiError(409, 'This home already has an open alert')
+      const detail = `${notice.message} ${body.name} asked township to check the home.`
+      const incident: Incident = {
+        incident_id: crypto.randomUUID(), unit_id: unit.unit_id, state: 'notified', opened_at: at, grace_ends_at: null,
+        next_reminder_at: new Date(Date.now() + state.config.reminder_interval_seconds * 1000).toISOString(),
+        reminder_count: 0, acknowledged_by: null, outcome: null, closed_at: null,
+        events: [
+          { type: 'detected', at: notice.created_at, detail: HOME_CHECK_DETECTED },
+          { type: 'township_requested', at, actor: { role: 'caregiver', name: body.name }, detail },
+          { type: 'notified', at, detail: 'Caregiver and township notified together' },
+        ],
+      }
+      state.incidents.unshift(incident)
+      unit.active_incident_id = incident.incident_id
+      notice.incident_id = incident.incident_id
+      updateUnit(unit, 'unresolved_concern', detail)
+      publish('incident.updated', clone(incident))
+      notify({ role: 'township', unit_id: unit.unit_id, kind: 'township_requested', incident_id: incident.incident_id,
+        message: `${body.name} asked for a home check at ${unit.unit_id}. ${notice.message}` })
+      later(() => sendReminder(incident), state.config.reminder_interval_seconds * 1000)
+    }
+    notice.response = body.response
+    notice.responded_at = at
+    notice.read = true
+    publish('notification.updated', clone(notice))
+    return clone(notice)
   },
   async respondToActivity(id, action) {
     if (!activities().some(item => item.activity_id === id)) throw new ApiError(404, 'Activity not found')

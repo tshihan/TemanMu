@@ -4,6 +4,7 @@ import { api } from '../api'
 import { ApiError } from '../api/live'
 import { applyEvent } from '../api/store'
 import type { Incident, Outcome, Role, Unit } from '../api/types'
+import { isHomeCheck } from '../caregiver/copy'
 
 const outcomes: { value: Exclude<Outcome, 'resident_activity_detected'>; label: string }[] = [
   { value: 'resident_ok', label: 'Resident OK' },
@@ -208,15 +209,18 @@ export function IncidentPanel({ incident, unit, role, onDone }: { incident: Inci
   const acknowledgedAt = incident.acknowledged_by?.at ?? incident.events.find(event => event.type === 'acknowledged')?.at
   const unableAt = incident.events.find(event => event.type === 'unable_to_verify')?.at
   const calledAt = incident.events.find(event => event.type === 'emergency_called')?.at
-  const visitRequested = incident.events.some(event => event.type === 'township_requested')
+  const requested = incident.events.find(event => event.type === 'township_requested')
+  const visitRequested = !!requested
+  const homeCheck = isHomeCheck(incident)
   const caregiverCheckingIn = incident.events.some(event => event.type === 'caregiver_checking_in')
   if (role === 'township' && canClose) return <TownshipCheck incident={incident} unit={unit} />
   if (resolved && onDone) return <TownshipDone incident={incident} onDone={onDone} />
   return <section className={`incident-panel incident-${incident.state}`} aria-label="Incident response">
     <div className="incident-panel-head"><h4>Incident response</h4><span className={`incident-state ${resolved ? 'calm' : ''}`}>{statusText}</span></div>
     {incident.state === 'grace' && <p className="incident-lead">A possible break in routine was detected. A simulated voice call is being made before anyone is alerted.</p>}
-    {incident.state === 'notified' && <p className="incident-lead urgent">Resident {unit.unit_id} · {unit.resident_name} did not answer. Caregiver and township have been alerted.</p>}
-    {visitRequested && incident.state === 'notified' && <p className="incident-lead urgent">Caregiver requested a township visit.</p>}
+    {incident.state === 'notified' && !homeCheck && <p className="incident-lead urgent">Resident {unit.unit_id} · {unit.resident_name} did not answer. Caregiver and township have been alerted.</p>}
+    {incident.state === 'notified' && homeCheck && <p className="incident-lead urgent">Home check requested for {unit.unit_id}. {requested?.detail}</p>}
+    {visitRequested && incident.state === 'notified' && !homeCheck && <p className="incident-lead urgent">Caregiver requested a township visit.</p>}
     {caregiverCheckingIn && incident.state === 'notified' && <p className="incident-lead">Caregiver is checking in remotely. Resident safety is not confirmed.</p>}
     {incident.state === 'acknowledged' && <p className="incident-lead">{incident.acknowledged_by?.name} is checking. Reminders have stopped.</p>}
     {unable && !called && !resolved && <p className="incident-lead urgent">Resident safety could not be verified. Contact the duty supervisor and caregiver urgently; call 999 if an emergency is suspected.</p>}
@@ -228,7 +232,7 @@ export function IncidentPanel({ incident, unit, role, onDone }: { incident: Inci
     {incident.state === 'notified' && <div className="incident-count"><span>Reminder #{incident.reminder_count + 1} in</span><strong>{countdown(incident.next_reminder_at, clock)}</strong></div>}
 
     <dl className="incident-milestones" aria-label="Incident summary">
-      <div><dt>Inactivity detected</dt><dd><time dateTime={detectedAt}>{timeLabel(detectedAt)}</time></dd></div>
+      <div><dt>{homeCheck ? 'Activity while away' : 'Inactivity detected'}</dt><dd><time dateTime={detectedAt}>{timeLabel(detectedAt)}</time></dd></div>
       <div><dt>Caregiver and township notified</dt><dd>{notifiedAt ? <time dateTime={notifiedAt}>{timeLabel(notifiedAt)}</time> : 'Pending'}</dd></div>
       <div><dt>Response acknowledged</dt><dd>{acknowledgedAt ? <time dateTime={acknowledgedAt}>{timeLabel(acknowledgedAt)}</time> : 'Pending'}</dd></div>
       {unableAt && <div><dt>Safety not verified</dt><dd><time dateTime={unableAt}>{timeLabel(unableAt)}</time></dd></div>}

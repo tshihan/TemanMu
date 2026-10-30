@@ -3,7 +3,7 @@ from datetime import datetime
 import asyncpg
 
 from app.db.pool import connection
-from app.models import Notification, NotificationKind, Role
+from app.models import AwayActivityResponse, Notification, NotificationKind, Role
 from app.timeutil import utc_now
 
 
@@ -60,5 +60,30 @@ async def mark_one_read(notification_id: str, role: Role, conn: asyncpg.Connecti
         row = await c.fetchrow(
             "update notifications set read = true where notification_id = $1 and role = $2 returning *",
             notification_id, role,
+        )
+    return _row_to_notification(row) if row else None
+
+
+async def get_notification(notification_id: str, conn: asyncpg.Connection | None = None) -> Notification | None:
+    async with connection(conn) as c:
+        row = await c.fetchrow("select * from notifications where notification_id = $1", notification_id)
+    return _row_to_notification(row) if row else None
+
+
+async def record_away_response(
+    notification_id: str,
+    response: AwayActivityResponse,
+    at: datetime,
+    incident_id: str | None = None,
+    conn: asyncpg.Connection | None = None,
+) -> Notification | None:
+    """Record the caregiver's answer once. None if it was already answered."""
+    async with connection(conn) as c:
+        row = await c.fetchrow(
+            """update notifications
+                  set response = $2, responded_at = $3, incident_id = coalesce($4, incident_id), read = true
+                where notification_id = $1 and response is null
+               returning *""",
+            notification_id, response, at, incident_id,
         )
     return _row_to_notification(row) if row else None

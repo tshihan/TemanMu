@@ -16,10 +16,12 @@ const TURN_SPEED = 4 // radians per second
 const CHECK_HEADING = Math.atan2(0, WAYPOINTS.collapseSpot[1] - WAYPOINTS.responderCheck[1])
 
 /** Presenter-only reenactment of Guard Ali. No pose or movement here is a sensor event. */
-export function TownshipResponder({ command, visible, checking, paused, onArrived }: {
+export function TownshipResponder({ command, visible, checking, note, paused, onArrived }: {
   command: ResponderCommand
   visible: boolean
   checking: boolean
+  // Overrides the label suffix, e.g. a home check with nobody inside.
+  note?: string | null
   paused: boolean
   onArrived: (id: number) => void
 }) {
@@ -128,7 +130,7 @@ export function TownshipResponder({ command, visible, checking, paused, onArrive
   return <group ref={root} name="township-responder-guard-ali" visible={visible} position={[WAYPOINTS.outside[0], .05, WAYPOINTS.outside[1]]}>
     {model && <primitive object={model} />}
     {visible && <Html position={[0, 2, 0]} center style={{ pointerEvents: 'none' }}>
-      <span className="home-responder-label">Guard Ali · Township{checking ? ' · checking Madam Lee' : ''}</span>
+      <span className="home-responder-label">Guard Ali · Township{note ? ` · ${note}` : checking ? ' · checking Madam Lee' : ''}</span>
     </Html>}
   </group>
 }

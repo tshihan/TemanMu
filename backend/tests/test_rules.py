@@ -346,9 +346,19 @@ def test_outing_after_away_keeps_outing_detail():
 
 def test_away_activity_message():
     assert reasons.away_activity_message("Mum", "door", "15:42") == (
-        "Front door opened at 15:42 while Mum is marked away. If this is expected, no action is needed."
+        "Front door opened at 15:42 while Mum is marked away."
     )
     assert reasons.away_activity_message("Mum", "water", "08:00").startswith("Water used at 08:00")
+
+
+def test_home_check_texts():
+    notice = "Front door opened at 15:42 while Mum is marked away."
+    assert reasons.home_check_detail("Sarah Lee", notice) == (
+        "Front door opened at 15:42 while Mum is marked away. Sarah Lee asked township to check the home."
+    )
+    assert reasons.home_check_message("Sarah Lee", "A-105", notice) == (
+        "Sarah Lee asked for a home check at A-105. Front door opened at 15:42 while Mum is marked away."
+    )
 
 
 # --- text --------------------------------------------------------------------------------

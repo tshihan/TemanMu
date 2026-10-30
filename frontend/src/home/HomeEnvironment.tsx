@@ -16,6 +16,7 @@ import { INITIAL_OBJECT_STATES, interactionPrompt, type InteractionBindings, typ
 import { ScenarioController, type ScenarioActions } from './scenarios/ScenarioController'
 import { DEFAULT_TIMING, SCENARIO_CALL_TIMING, SCENARIO_DESCRIPTIONS, SCENARIO_LABELS, scenarioSteps, type ScenarioId, type ScenarioStep, type ScenarioTiming } from './scenarios/definitions'
 import { api, usingMock } from '../api'
+import { isHomeCheck } from '../caregiver/copy'
 import { ApiError } from '../api/live'
 import { primeSharedMockInactivity, settleSharedMockHome } from '../mocks/shared-client'
 import { applyEvent, getAppState, subscribeAppEvents, useAppState } from '../api/store'
@@ -37,9 +38,9 @@ export function HouseModel({ interaction }: { interaction?: InteractionBindings 
     <Architecture interaction={interaction} /><Bedroom interaction={interaction} /><Bathroom interaction={interaction} /><Kitchen interaction={interaction} /><LivingRoom interaction={interaction} /><DiningArea />
   </group>
 }
-function Scene({ command, characterCommand, responderCommand, responderVisible, responderChecking, interaction, pose, speech, visible, paused, urgent, sensorView, unit, pulses, onCharacterStatus, onReached, onArrived, onResponderArrived, onAnimationComplete, onReady }: {
+function Scene({ command, characterCommand, responderCommand, responderVisible, responderChecking, responderNote, interaction, pose, speech, visible, paused, urgent, sensorView, unit, pulses, onCharacterStatus, onReached, onArrived, onResponderArrived, onAnimationComplete, onReady }: {
   sensorView: boolean; unit: Unit | null; pulses: SensorPulses
-  command: Command; characterCommand: CharacterCommand; responderCommand: ResponderCommand; responderVisible: boolean; responderChecking: boolean
+  command: Command; characterCommand: CharacterCommand; responderCommand: ResponderCommand; responderVisible: boolean; responderChecking: boolean; responderNote: string | null
   interaction: InteractionBindings; pose: InteractionPose; speech: string | null; visible: boolean; paused: boolean; urgent: boolean
   onCharacterStatus: (status: CharacterStatus) => void; onReached: (id: number, target: InteractionId) => void
   onArrived: (id: number, target: Waypoint) => void; onResponderArrived: (id: number) => void
@@ -108,7 +109,7 @@ function Scene({ command, characterCommand, responderCommand, responderVisible, 
     <ElderlyCharacter command={characterCommand} pose={pose} speech={sensorView ? null : speech} visible={visible && !sensorView} paused={paused} urgent={urgent} phoneSpot={interaction.phoneSpot}
       onStatus={onCharacterStatus} onReached={onReached} onArrived={onArrived} onAnimationComplete={onAnimationComplete} />
     <SensorBeacons unit={unit} pulses={pulses} sensorView={sensorView} />
-    <TownshipResponder command={responderCommand} visible={responderVisible && !sensorView} checking={responderChecking} paused={paused} onArrived={onResponderArrived} />
+    <TownshipResponder command={responderCommand} visible={responderVisible && !sensorView} checking={responderChecking} note={responderNote} paused={paused} onArrived={onResponderArrived} />
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -.48, 0]} receiveShadow>
       <planeGeometry args={[200, 200]} /><meshStandardMaterial color="#eeeae1" roughness={1} />
     </mesh>
@@ -813,6 +814,27 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
     if (scenarioActive || away || !monitoringOn.current) return
     switchMonitoring(false).catch(error => console.error('Could not switch off A-105 monitoring', error))
   }, [scenarioActive, away])
+  // A home check the caregiver asked for during an away period: once the township takes it, reenact
+  // Guard Ali walking in to look around the empty home. It ends when the outcome closes the incident.
+  const homeCheckId = appState.incidents.find(item => item.unit_id === HOME_UNIT_ID && item.state === 'acknowledged'
+    && item.acknowledged_by?.role === 'township' && isHomeCheck(item))?.incident_id ?? null
+  useEffect(() => {
+    if (!homeCheckId || scenarioActive) return
+    const aborter = new AbortController()
+    const { signal } = aborter
+    const door = (open: boolean) => { setResponderDoorOpen(open); sound.current.play(open ? 'doorOpen' : 'doorClose') }
+    resetResponder()
+    setResponseIncidentId(homeCheckId)
+    setResponderVisible(true)
+    void (async () => {
+      await moveResponder('porch', signal)
+      door(true)
+      await moveResponder('dining', signal)
+      door(false)
+      await moveResponder('living', signal)
+    })().catch(() => { /* Stopped: the check closed or the demo was reset. */ })
+    return () => { aborter.abort(); resetResponder() }
+  }, [homeCheckId, scenarioActive])
   useEffect(() => {
     const off = () => {
       if (!monitoringOn.current) return
@@ -869,7 +891,9 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
       : away ? `${homeUnit?.caregiver_relationship ?? 'The resident'} is away until ${awayUntil(away.ends_at)}` : 'Preparing the home…')
   const playback = scenarioState === 'running' && scenarioProgress?.kind === 'hold' ? 'Awaiting outcome'
     : scenarioState === 'idle' ? 'Ready' : scenarioState[0].toUpperCase() + scenarioState.slice(1)
-  const demoNote = away && !scenarioActive
+  const demoNote = homeCheckId && !scenarioActive
+    ? 'Guard Ali is checking the home because the caregiver asked. This is a reenactment; he records the outcome on the township dashboard.'
+    : away && !scenarioActive
     ? 'Nobody is home. Click the tap, shower, kettle, TV, lamp or door to simulate something left on or someone coming in. The phone is locked.'
     : scenario === 'unusualInactivity' && scenarioActive && autoAcknowledged
     ? `Nobody acknowledged within ${MOCK_AUTO_ACK_SECONDS} seconds, so Guard Ali acknowledged automatically (demo only). A human must still record the outcome.`
@@ -910,7 +934,7 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
       <SceneBoundary><Canvas shadows={{ type: PCFShadowMap }} frameloop="demand" dpr={[1, 1.7]} gl={{ antialias: true, toneMapping: ACESFilmicToneMapping, toneMappingExposure: 1 }}
         fallback={<div className="home-fallback">This home needs a browser with WebGL enabled.</div>}>
         <Suspense fallback={null}><Scene command={command} characterCommand={characterCommand} responderCommand={responderCommand}
-          responderVisible={showResponder} responderChecking={responderChecking} interaction={interaction}
+          responderVisible={showResponder} responderChecking={responderChecking} responderNote={homeCheckId ? 'checking the home' : null} interaction={interaction}
           pose={pose} speech={speech} visible={visible && !away} paused={paused}
           urgent={false}
           sensorView={sensorView} unit={homeUnit} pulses={pulses}

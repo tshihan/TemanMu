@@ -49,6 +49,7 @@ export const liveApi: Api = {
   closeIncident: (id, actor) => post(`/api/incidents/${query(id)}/close`, actor),
   markNotificationsRead: role => post('/api/notifications/read', { role }),
   markNotificationRead: (id, role) => post(`/api/notifications/${query(id)}/read`, { role }),
+  respondToAwayActivity: (id, body) => post(`/api/notifications/${query(id)}/away-response`, body),
   respondToActivity: (id, action) => post(`/api/community/activities/${query(id)}/respond`, { action }),
   sendMessage: body => post('/api/companion/messages', body),
   requestBuddy: unit_id => post('/api/companion/buddy/request', { unit_id }),

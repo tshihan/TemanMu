@@ -45,8 +45,7 @@ export function UpdatesTab({ feed, ctx, now, incidentFor, isUnread, ackTargetId,
             </button>
             {n.notification_id === ackTargetId && <button type="button" className="cg-btn cg-btn-alarm cg-feed-ack" onClick={onAck} disabled={ackBusy}>
               {ackBusy ? 'Opening…' : 'Respond to alert'}
-            </button>}
-          </li>
+            </button>}          </li>
         })}
       </ol>
     </section>) : <div className="cg-empty">

@@ -146,6 +146,11 @@
 .cg-status-details { justify-self: start; padding: 6px 0; border: 0; background: transparent; color: inherit; font: inherit; font-size: 13px; font-weight: 650; text-decoration: underline; cursor: pointer; }
 .cg-status.is-alarm .cg-btn-outline, .cg-hero.is-alarm .cg-btn-outline { border-color: color-mix(in srgb, var(--onalarm) 76%, transparent); color: var(--onalarm); }
 .cg-status.is-alarm .cg-btn-outline:hover, .cg-hero.is-alarm .cg-btn-outline:hover { background: color-mix(in srgb, var(--onalarm) 12%, transparent); }
+.cg-status-ask strong { display: block; margin-bottom: 2px; font-size: 14px; }
+.cg-away-choices { display: grid; gap: 10px; }
+.cg-away-choices .cg-btn { margin-top: 0; }
+.cg-away-choices .cg-btn svg { flex: none; }
+.cg-away-choices-note { color: var(--mut); }
 .cg-status-who { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; margin-top: 22px; padding-top: 14px; border-top: 1px solid color-mix(in srgb, currentColor 14%, transparent); color: var(--mut); font-size: 12px; }
 .cg-status-name { color: var(--ink); font-family: var(--serif); font-size: 17px; font-weight: 500; letter-spacing: -.02em; }
 

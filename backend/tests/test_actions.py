@@ -155,6 +155,57 @@ async def test_activity_while_away_notifies_caregiver_once(client):
     assert await notes("morning_reassurance") == []
 
 
+async def away_notice(client, name):
+    assert (await client.post(f"/api/units/{UNIT}/away-periods", json=away_body(name))).status_code == 200
+    assert (await client.post("/api/readings", json={"unit_id": UNIT, "sensor": "door", "value": "open"})).status_code == 200
+    [note] = await notes("away_activity")
+    return f"/api/notifications/{note.notification_id}/away-response"
+
+
+async def test_away_activity_known_visitor_only_records_answer(client):
+    name = (await units.get_unit(UNIT)).caregiver_name
+    path = await away_notice(client, name)
+    assert (await client.post(path, json={"role": "caregiver", "name": "Someone else", "response": "known_visitor"})).status_code == 409
+    response = await client.post(path, json={"role": "caregiver", "name": name, "response": "known_visitor"})
+    assert response.status_code == 200
+    assert response.json()["response"] == "known_visitor"
+    assert response.json()["incident_id"] is None
+    assert await incidents.list_active_incidents() == []
+    assert (await units.get_unit(UNIT)).away_periods != []
+    # One answer per notice.
+    assert (await client.post(path, json={"role": "caregiver", "name": name, "response": "resident_returned"})).status_code == 409
+    assert (await client.post("/api/notifications/nope/away-response",
+                              json={"role": "caregiver", "name": name, "response": "known_visitor"})).status_code == 404
+
+
+async def test_away_activity_resident_returned_ends_period(client):
+    name = (await units.get_unit(UNIT)).caregiver_name
+    path = await away_notice(client, name)
+    response = await client.post(path, json={"role": "caregiver", "name": name, "response": "resident_returned"})
+    assert response.status_code == 200
+    assert (await units.get_unit(UNIT)).away_periods == []
+
+
+async def test_away_activity_home_check_goes_to_township(client):
+    name = (await units.get_unit(UNIT)).caregiver_name
+    path = await away_notice(client, name)
+    response = await client.post(path, json={"role": "caregiver", "name": name, "response": "home_check_requested"})
+    assert response.status_code == 200
+    iid = response.json()["incident_id"]
+    incident = await incidents.get_incident(iid)
+    assert incident.state == "notified"
+    assert [e.type for e in incident.events] == ["detected", "township_requested", "notified"]
+    assert (await units.get_unit(UNIT)).status == "unresolved_concern"
+    [request] = await notes("township_requested")
+    assert request.role == "township" and request.incident_id == iid
+    # More activity at home must not close a check the caregiver asked for.
+    assert (await client.post("/api/readings", json={"unit_id": UNIT, "sensor": "water", "value": 6})).status_code == 200
+    assert (await incidents.get_incident(iid)).state == "notified"
+    assert (await ack(client, iid)).status_code == 200
+    assert (await close(client, iid, outcome="resident_away", report="Daughter collecting post; resident still away.")).status_code == 200
+    assert (await units.get_unit(UNIT)).status == "routine"
+
+
 async def test_caregiver_coordination_does_not_claim_visit(client):
     iid = await notified_incident()
     assert (await ack(client, iid, {"role": "caregiver", "name": "Sarah Lee"})).status_code == 409

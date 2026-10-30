@@ -28,7 +28,7 @@ While Mum is away, the **Home** tab shows a yellow card saying **"Mum is away"**
 | "No water used for too long" | **Paused.** The house is meant to be quiet. |
 | "Out longer than usual" | **Paused.** Mum is meant to be out. |
 | "Tap left running" / "power left on" | **Still on.** This is dangerous even when nobody is home. |
-| Front door opens or water is used | **Gentle message** to the caregiver: *"Front door opened at 15:42 while Mum is marked away. If this is expected, no action is needed."* It is sent only **once per away period**, so it doesn't spam. |
+| Front door opens or water is used | The caregiver gets *"Front door opened at 15:42 while Mum is marked away."* and the **Home** tab asks *"Do you know who's there?"* with three choices: **Mum is back home** (ends the away period), **I know who it is** (only records the answer) or **Request a home check** (the guard gets a home check to take and close with an outcome, as with any alert). It is sent only **once per away period**, so it doesn't spam. |
 | "Mum's day has started" morning message | **Not sent.** It would be wrong while she's away. |
 
 ## What happens when the away period ends
@@ -65,6 +65,8 @@ The objects stay clickable so you can show what happens in an empty home. Nobody
 | **Mobile phone** | **Locked.** Nobody is home to answer it, so it shows *"Mum is away"* and does nothing. A message the caregiver sends from the **Together** tab waits and rings once Mum is back. |
 
 Each "while Mum is marked away" message is sent **once per away period**, so clicking the door again won't send another.
+
+If the caregiver taps **Request a home check** and the guard takes it on the township dashboard (**I'll Check Now**), **Guard Ali walks in**: from outside to the porch, opens the door, walks to the dining area, closes the door and stands in the living room, labelled *"Guard Ali · Township · checking the home"*. He leaves once the outcome is recorded. Like the inactivity scenario, this is a reenactment, not a sensor event.
 
 **Why the tap alert needs extra wiring:** normally the backend only runs its alert timers while a scenario is playing, so Mum's home never raises alerts by itself between scenarios. When you click an object while Mum is away, the simulator switches the timers on first and keeps them on until the away period ends. The "too quiet" alerts still don't fire, because the away period pauses them. Only "tap left running" and "power left on" can fire.
 

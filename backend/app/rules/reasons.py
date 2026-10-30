@@ -132,6 +132,7 @@ DETECTED_OUTING = "Outing longer than usual"
 DETECTED_AFTER_AWAY = "No water activity since away period ended"
 DETECTED_CONTINUOUS_WATER = "Continuous water flow longer than expected"
 DETECTED_SUSTAINED_POWER = "Sustained high electricity use"
+DETECTED_HOME_CHECK = "Activity at home during an away period"
 VOICE_NO_ANSWER = "No answer (simulated)"
 VOICE_CANCELLED = "simulated"
 NOTIFIED = "Caregiver and township notified together"
@@ -160,7 +161,16 @@ def morning_message(relationship: str, sensor: Sensor) -> str:
 
 def away_activity_message(relationship: str, sensor: Sensor, clock: str) -> str:
     signal = "Front door opened" if sensor == "door" else "Water used"
-    return f"{signal} at {clock} while {relationship} is marked away. If this is expected, no action is needed."
+    return f"{signal} at {clock} while {relationship} is marked away."
+
+
+def home_check_detail(name: str, notice: str) -> str:
+    """Timeline detail and status reason when the caregiver asks township to check an away home."""
+    return f"{notice} {name} asked township to check the home."
+
+
+def home_check_message(name: str, unit_id: str, notice: str) -> str:
+    return f"{name} asked for a home check at {unit_id}. {notice}"
 
 
 def alert_message(unit_id: str, resident_name: str) -> str:

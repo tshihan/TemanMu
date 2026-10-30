@@ -1,8 +1,9 @@
 import type { CSSProperties } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { ArrowRight, CircleCheck, Clock3, DoorOpen, Droplets, Luggage, Phone, PhoneOutgoing, ShieldCheck, TriangleAlert, Zap } from 'lucide-react'
-import type { AwayPeriod, Incident, Reading, Unit } from '../api/types'
-import { actorName, currentAway, isOuting, outcomeLabel, STATUS_LABELS, type Ctx } from './copy'
+import type { AwayActivityResponse, AwayPeriod, Incident, Notification, Reading, Unit } from '../api/types'
+import { AwayActivityChoices } from './AwayActivityChoices'
+import { actorName, currentAway, GUARD, isHomeCheck, isOuting, outcomeLabel, STATUS_LABELS, type Ctx } from './copy'
 import { clock, dayFraction, dayLabel, greeting, isToday, until, when } from './format'
 
 type Variant = 'alarm' | 'checking' | 'quiet' | 'away' | 'calm' | 'pending'
@@ -11,6 +12,13 @@ interface Card { variant: Variant; Icon: LucideIcon; badge: string; headline: st
 function statusCard(unit: Unit, incident: Incident | null, ctx: Ctx, now: number, hasRoutineEvidence: boolean, away: AwayPeriod | null, awayReason: string | null): Card {
   const { R } = ctx
   const doorAt = unit.latest.last_door_event_at
+  if (isHomeCheck(incident) && (incident?.state === 'notified' || incident?.state === 'acknowledged')) {
+    const taken = incident.state === 'acknowledged' && incident.acknowledged_by
+    return { variant: taken ? 'checking' : 'alarm', Icon: ShieldCheck, badge: 'Home check', open: 'View details',
+      headline: taken ? `${actorName(ctx, incident.acknowledged_by)} is checking the home` : 'Home check requested',
+      reason: taken ? `Taken at ${clock(incident.acknowledged_by!.at)}. You’ll get an update when the check is done.`
+        : `You asked ${GUARD} to check the home. Waiting for them to take it.${incident.reminder_count ? ` Reminder #${incident.reminder_count}.` : ''}` }
+  }
   if (incident?.state === 'notified') {
     const cause = isOuting(incident) ? `${R} has been out longer than usual` : 'No water use for longer than the usual gap'
     const reminder = incident.reminder_count ? ` Reminder #${incident.reminder_count}.` : ''
@@ -61,10 +69,13 @@ function statusCard(unit: Unit, incident: Incident | null, ctx: Ctx, now: number
 interface Props {
   unit: Unit; ctx: Ctx; incident: Incident | null; readings: Reading[]; now: number; awayReasons: Record<string, string | null>
   ackBusy: boolean; responseError: boolean; confirmBusy: boolean; confirmError: boolean
+  awayNotice: Notification | null; answerBusy: boolean; answerError: boolean
   onCheckIn: () => void; onRequestVisit: () => void; onOpenIncident: () => void; onCall: () => void; onConfirmHome: () => void
+  onAnswerAway: (n: Notification, response: AwayActivityResponse) => void
 }
 
-export function HomeTab({ unit, ctx, incident, readings, now, awayReasons, ackBusy, responseError, confirmBusy, confirmError, onCheckIn, onRequestVisit, onOpenIncident, onCall, onConfirmHome }: Props) {
+export function HomeTab({ unit, ctx, incident, readings, now, awayReasons, ackBusy, responseError, confirmBusy, confirmError, awayNotice, answerBusy, answerError,
+  onCheckIn, onRequestVisit, onOpenIncident, onCall, onConfirmHome, onAnswerAway }: Props) {
   const { R } = ctx
   const today = readings.filter(reading => isToday(reading.recorded_at, now))
   const last = (match: (reading: Reading) => boolean) => [...today].reverse().find(match)
@@ -116,6 +127,10 @@ export function HomeTab({ unit, ctx, incident, readings, now, awayReasons, ackBu
       </div>
       <h2 className="cg-status-headline">{card.headline}</h2>
       <p className="cg-status-reason">{card.reason}</p>
+      {card.variant === 'away' && awayNotice && <div className="cg-status-actions">
+        <p className="cg-status-ask"><strong>{awayNotice.message}</strong> Do you know who’s there?</p>
+        <AwayActivityChoices ctx={ctx} busy={answerBusy} failed={answerError} onAnswer={response => onAnswerAway(awayNotice, response)} />
+      </div>}
       {unit.status === 'possible_away' && !away && <div className="cg-status-actions">
         <button type="button" className="cg-btn cg-btn-accent" onClick={onCall}><Phone size={18} aria-hidden="true" />Call {R}</button>
         <button type="button" className="cg-btn cg-btn-outline" onClick={onConfirmHome} disabled={confirmBusy}>

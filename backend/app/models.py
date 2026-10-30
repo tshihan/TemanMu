@@ -54,6 +54,7 @@ NotificationKind: TypeAlias = Literal[
     "away_activity",
 ]
 CommunityAction: TypeAlias = Literal["invite_resident", "join_together"]
+AwayActivityResponse: TypeAlias = Literal["resident_returned", "known_visitor", "home_check_requested"]
 
 ACTIVE_INCIDENT_STATES: tuple[IncidentState, ...] = ("grace", "notified", "acknowledged")
 MAX_AWAY_DAYS = 90
@@ -194,6 +195,9 @@ class Notification(ContractModel):
     incident_id: str | None
     created_at: UtcDatetime
     read: bool
+    # away_activity only: the caregiver's answer, once given.
+    response: AwayActivityResponse | None = None
+    responded_at: UtcDatetime | None = None
 
 
 class CommunityActivity(ContractModel):
@@ -320,6 +324,14 @@ class AwayPeriodRequest(ContractModel):
 class CancelAwayPeriodRequest(ContractModel):
     role: Literal["caregiver"]
     name: str = Field(min_length=1, pattern=r".*\S.*")
+
+
+class AwayActivityResponseRequest(ContractModel):
+    """POST /api/notifications/{id}/away-response body."""
+
+    role: Literal["caregiver"]
+    name: str = Field(min_length=1, pattern=r".*\S.*")
+    response: AwayActivityResponse
 
 
 class EscalateRequest(ContractModel):

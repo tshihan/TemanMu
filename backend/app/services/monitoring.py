@@ -21,7 +21,17 @@ from app.db import notifications as db_notifications
 from app.db import readings as db_readings
 from app.db import units as db_units
 from app.db.pool import get_pool
-from app.models import Actor, Incident, NotificationKind, Reading, ReadingIn, Role, Unit
+from app.models import (
+    Actor,
+    AwayActivityResponse,
+    Incident,
+    Notification,
+    NotificationKind,
+    Reading,
+    ReadingIn,
+    Role,
+    Unit,
+)
 from app.realtime import broadcast as realtime
 from app.rules import reasons
 from app.services.notifications import create_notification
@@ -55,6 +65,9 @@ class AwayPeriodNotFound(MonitoringError): ...
 
 
 class InvalidAwayPeriod(MonitoringError): ...
+
+
+class NotificationNotFound(MonitoringError): ...
 
 
 # --- locks -------------------------------------------------------------------------------
@@ -100,6 +113,14 @@ def _is_sustained_load_incident(incident: Incident | None) -> bool:
         )
         for event in incident.events
     )
+
+
+def _is_home_check_incident(incident: Incident | None) -> bool:
+    """Opened by the caregiver after activity during an away period. Activity is the concern
+    here, so a reading must not auto-resolve it; only the visiting guard closes it."""
+    if incident is None:
+        return False
+    return any(event.type == "detected" and event.detail == reasons.DETECTED_HOME_CHECK for event in incident.events)
 
 
 async def _notify_both(unit_id: str, kind: NotificationKind, message: str, incident_id: str) -> None:
@@ -518,6 +539,76 @@ async def cancel_away_period(unit_id: str, period_id: str, name: str) -> Unit:
         return unit
 
 
+async def respond_to_away_activity(notification_id: str, name: str, response: AwayActivityResponse) -> Notification:
+    """The caregiver answers an activity-while-away notice.
+
+    resident_returned ends the away period now (the inactivity clock restarts); known_visitor
+    only records the answer; home_check_requested opens an incident straight in `notified`
+    so the guard takes it through the usual acknowledge and close. No voice call: the resident
+    is marked away, so there is nobody to call at home.
+    """
+    notice = await db_notifications.get_notification(notification_id)
+    if notice is None or notice.kind != "away_activity":
+        raise NotificationNotFound(notification_id)
+    unit_id = notice.unit_id
+    async with _unit_lock(unit_id):
+        now = utc_now()
+        next_reminder_at = now + timedelta(seconds=settings.reminder_interval_seconds)
+        incident = None
+        async with get_pool().acquire() as conn, conn.transaction():
+            unit = await db_units.get_unit(unit_id, conn=conn)
+            if unit is None:
+                raise UnitNotFound(unit_id)
+            if name != unit.caregiver_name:
+                raise IncidentConflict("Only the designated caregiver can answer this")
+            if response == "resident_returned":
+                period_id = await db_away.covering(unit_id, now, conn=conn)
+                if period_id is None:
+                    raise IncidentConflict("The away period has already ended")
+                await db_away.end_away_period(period_id, now, conn=conn)
+            elif response == "home_check_requested":
+                if unit.active_incident_id is not None:
+                    raise IncidentConflict("This home already has an open alert")
+                detail = reasons.home_check_detail(name, notice.message)
+                incident = await db_incidents.create_incident(unit_id, now, None, conn=conn)
+                await db_incidents.add_incident_event(
+                    incident.incident_id, "detected", notice.created_at, detail=reasons.DETECTED_HOME_CHECK, conn=conn
+                )
+                await db_incidents.add_incident_event(
+                    incident.incident_id, "township_requested", now,
+                    actor=Actor(role="caregiver", name=name), detail=detail, conn=conn,
+                )
+                await db_incidents.update_incident(
+                    incident.incident_id, state="notified", grace_ends_at=None, next_reminder_at=next_reminder_at, conn=conn
+                )
+                incident = await db_incidents.add_incident_event(
+                    incident.incident_id, "notified", now, detail=reasons.NOTIFIED, conn=conn
+                )
+                await db_units.update_unit_state(
+                    unit_id, status="unresolved_concern", status_reason=detail, status_since=now, conn=conn
+                )
+            answered = await db_notifications.record_away_response(
+                notification_id, response, now, incident.incident_id if incident else None, conn=conn
+            )
+            if answered is None:
+                raise IncidentConflict("This has already been answered")
+            unit = await db_units.get_unit(unit_id, conn=conn)
+
+        await realtime.broadcast("notification.updated", answered)
+        if incident is not None:
+            timers.cancel(_watch_key(unit_id))
+            _schedule_incident_timer("reminder", incident.incident_id, next_reminder_at, _send_reminder)
+            await realtime.broadcast("incident.updated", incident)
+        await realtime.broadcast("unit.updated", unit)
+        if incident is not None:
+            await create_notification(
+                "township", unit_id, "township_requested",
+                reasons.home_check_message(name, unit_id, notice.message), incident_id=incident.incident_id,
+            )
+        await _arm_watch_locked(unit_id)
+        return answered
+
+
 async def caregiver_response(incident_id: str, name: str, action: str) -> Incident:
     """Log remote caregiver coordination without claiming the in-person welfare check."""
     unit_id = await _incident_unit_id(incident_id)
@@ -708,7 +799,7 @@ async def ingest_reading(body: ReadingIn) -> Unit:
         emergency_open = incident is not None and (
             _has_event(incident, "unable_to_verify") or _has_event(incident, "emergency_called")
         )
-        sustained_open = _is_sustained_load_incident(incident)
+        sustained_open = _is_sustained_load_incident(incident) or _is_home_check_incident(incident)
         resolving = incident if decision.resolve_incident and not emergency_open and not sustained_open else None
 
         async with get_pool().acquire() as conn, conn.transaction():
