@@ -6,6 +6,8 @@ export type DoorState = 'open' | 'closed'
 export type Status = 'routine' | 'possible_away' | 'unusual_inactivity' | 'unresolved_concern'
 export type IncidentState = 'grace' | 'notified' | 'acknowledged' | 'closed' | 'auto_resolved'
 export type Outcome = 'resident_ok' | 'assistance_provided' | 'sent_to_hospital' | 'resident_away' | 'resident_activity_detected'
+  // Home check during an away period: what the guard found at the home.
+  | 'home_secure' | 'known_person_home' | 'resident_returned' | 'security_concern'
 /** The caregiver's answer to activity at home during an away period. */
 export type AwayActivityResponse = 'resident_returned' | 'known_visitor' | 'home_check_requested'
 

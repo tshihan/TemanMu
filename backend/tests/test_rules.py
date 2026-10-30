@@ -389,6 +389,7 @@ def test_lifecycle_texts():
     assert reasons.acknowledged_message("Guard Ali") == "Guard Ali is checking now."
     assert reasons.closed_message("resident_ok") == "Incident closed: Resident OK."
     assert reasons.closed_message("resident_away") == "Incident closed: Resident was away."
+    assert reasons.closed_message("home_secure") == "Incident closed: Home secure, nobody inside."
     assert reasons.closed_reason("Guard Ali", "assistance_provided") == "Incident closed by Guard Ali: Assistance provided"
     assert reasons.auto_resolved_message("Mdm Tan") == "Mdm Tan activity detected. Concern resolved."
 

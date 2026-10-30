@@ -17,6 +17,10 @@ OUTCOME_LABELS: dict[str, str] = {
     "assistance_provided": "Assistance provided",
     "sent_to_hospital": "Sent to hospital",
     "resident_away": "Resident was away",
+    "home_secure": "Home secure, nobody inside",
+    "known_person_home": "Family or helper at home",
+    "resident_returned": "Resident back home",
+    "security_concern": "Security concern reported",
 }
 
 

@@ -202,7 +202,10 @@ async def test_away_activity_home_check_goes_to_township(client):
     assert (await client.post("/api/readings", json={"unit_id": UNIT, "sensor": "water", "value": 6})).status_code == 200
     assert (await incidents.get_incident(iid)).state == "notified"
     assert (await ack(client, iid)).status_code == 200
-    assert (await close(client, iid, outcome="resident_away", report="Daughter collecting post; resident still away.")).status_code == 200
+    # A home check records what was found at the home, not the resident's condition.
+    assert (await close(client, iid, outcome="resident_ok")).status_code == 409
+    assert (await close(client, iid, outcome="known_person_home", report="Daughter collecting post.")).status_code == 200
+    assert (await units.get_unit(UNIT)).away_periods != []
     assert (await units.get_unit(UNIT)).status == "routine"
 
 
@@ -420,3 +423,18 @@ async def test_unknown_incident_is_404(client):
     missing = "00000000-0000-0000-0000-000000000000"
     assert (await ack(client, missing)).status_code == 404
     assert (await close(client, missing)).status_code == 404
+
+
+async def test_home_check_resident_returned_ends_away_period(client):
+    name = (await units.get_unit(UNIT)).caregiver_name
+    path = await away_notice(client, name)
+    iid = (await client.post(path, json={"role": "caregiver", "name": name, "response": "home_check_requested"})).json()["incident_id"]
+    assert (await ack(client, iid)).status_code == 200
+    assert (await close(client, iid, outcome="resident_returned", report="Resident came back early.")).status_code == 200
+    assert (await units.get_unit(UNIT)).away_periods == []
+
+
+async def test_home_check_outcomes_only_for_home_checks(client):
+    iid = await notified_incident()
+    assert (await ack(client, iid)).status_code == 200
+    assert (await close(client, iid, outcome="home_secure")).status_code == 409

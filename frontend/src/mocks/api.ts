@@ -1,6 +1,6 @@
 import seed from '../../../shared/seed.json'
 import { ApiError } from '../api/live'
-import { HOME_CHECK_DETECTED, isHomeCheck } from '../caregiver/copy'
+import { HOME_CHECK_DETECTED, HOME_CHECK_OUTCOMES, isHomeCheck, outcomeLabel } from '../caregiver/copy'
 import type {
   Api, AwayPeriod, AwayPeriodDetail, BuddyMatch, CallTiming, CommunityActivity, CompanionMessage, Config, Incident,
   MessagePreset, NeighbourMatch, NeighbourState, Notification, Reading, RealtimeEvent, Role, Snapshot, Unit,
@@ -561,7 +561,11 @@ export const mockApi: Api = {
     const incident = incidentOrThrow(id)
     if (incident.state !== 'acknowledged') throw new ApiError(409, 'Incident must be acknowledged first')
     if (incident.acknowledged_by?.role !== actor.role || incident.acknowledged_by.name !== actor.name) throw new ApiError(403, 'Only the acknowledger can close this incident')
-    if (incident.events.some(event => event.type === 'unable_to_verify') && !incident.events.some(event => event.type === 'emergency_called') && actor.outcome !== 'resident_ok')
+    // Like the backend: a home check records what was found at the home, not the resident's condition.
+    const homeCheck = isHomeCheck(incident)
+    if (HOME_CHECK_OUTCOMES.some(item => item.value === actor.outcome) !== homeCheck)
+      throw new ApiError(409, homeCheck ? 'Choose what you found at the home' : 'This outcome is only for a home check')
+    if (!homeCheck && incident.events.some(event => event.type === 'unable_to_verify') && !incident.events.some(event => event.type === 'emergency_called') && actor.outcome !== 'resident_ok')
       throw new ApiError(409, 'Record the emergency handoff or confirm the resident is safe before closing')
     clearScenarioTimers()
     incident.state = 'closed'
@@ -575,12 +579,16 @@ export const mockApi: Api = {
     unit.status_since = incident.closed_at
     unit.quiet_gap.last_water_activity_at = incident.closed_at
     unit.active_incident_id = null
+    if (actor.outcome === 'resident_returned') {
+      // She is back, so the away period ends and the inactivity clock restarts now.
+      const item = awayAt(unit.unit_id, incident.closed_at)
+      if (item) item.period.ends_at = incident.closed_at
+      syncAway(unit)
+      scheduleMockWatch(unit)
+    }
     publish('incident.updated', clone(incident))
     publish('unit.updated', clone(unit))
-    const outcomeLabel = actor.outcome === 'resident_ok' ? 'Resident OK'
-      : actor.outcome === 'assistance_provided' ? 'Assistance provided'
-      : actor.outcome === 'sent_to_hospital' ? 'Sent to hospital' : 'Resident was away'
-    for (const role of ['township', 'caregiver'] as Role[]) notify({ role, unit_id: incident.unit_id, kind: 'closed', message: `Incident closed: ${outcomeLabel}.`, incident_id: id })
+    for (const role of ['township', 'caregiver'] as Role[]) notify({ role, unit_id: incident.unit_id, kind: 'closed', message: `Incident closed: ${outcomeLabel(actor.outcome)}.`, incident_id: id })
     return clone(incident)
   },
   async markNotificationsRead(role) {

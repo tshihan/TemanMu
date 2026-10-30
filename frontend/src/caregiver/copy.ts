@@ -14,8 +14,16 @@ export const OUTCOMES: { value: Exclude<Outcome, 'resident_activity_detected'>; 
   { value: 'sent_to_hospital', label: 'Sent to hospital', help: 'Hospital transfer confirmed' },
   { value: 'resident_away', label: 'Resident was away', help: 'Not at home when checked' },
 ]
+/** A home check during an away period records what the guard found at the home. Mirrors models.HOME_CHECK_OUTCOMES. */
+export const HOME_CHECK_OUTCOMES: { value: Exclude<Outcome, 'resident_activity_detected'>; label: string; help: string }[] = [
+  { value: 'home_secure', label: 'Home secure, nobody inside', help: 'Nothing wrong, or closed or locked up' },
+  { value: 'known_person_home', label: 'Family or helper at home', help: 'Someone the family knows, with permission' },
+  { value: 'resident_returned', label: 'Resident back home', help: 'Back early; this ends the away period' },
+  { value: 'security_concern', label: 'Security concern reported', help: 'Break-in signs or a stranger; reported on' },
+]
 export const outcomeLabel = (outcome: Outcome | null | undefined) =>
-  outcome === 'resident_activity_detected' ? 'Resident activity detected' : OUTCOMES.find(item => item.value === outcome)?.label || 'Resolved'
+  outcome === 'resident_activity_detected' ? 'Resident activity detected'
+    : [...OUTCOMES, ...HOME_CHECK_OUTCOMES].find(item => item.value === outcome)?.label || 'Resolved'
 
 export const STATUS_LABELS: Record<Status, string> = {
   routine: 'Routine', possible_away: 'Possible Away', unusual_inactivity: 'Unusual Inactivity', unresolved_concern: 'Unresolved Concern',

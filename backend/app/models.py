@@ -21,7 +21,18 @@ Sensor: TypeAlias = Literal["water", "electricity", "door"]
 DoorState: TypeAlias = Literal["open", "closed"]
 Status: TypeAlias = Literal["routine", "possible_away", "unusual_inactivity", "unresolved_concern"]
 IncidentState: TypeAlias = Literal["grace", "notified", "acknowledged", "closed", "auto_resolved"]
-Outcome: TypeAlias = Literal["resident_ok", "assistance_provided", "sent_to_hospital", "resident_away", "resident_activity_detected"]
+Outcome: TypeAlias = Literal[
+    "resident_ok",
+    "assistance_provided",
+    "sent_to_hospital",
+    "resident_away",
+    "resident_activity_detected",
+    # Home check during an away period: what the guard found at the home.
+    "home_secure",
+    "known_person_home",
+    "resident_returned",
+    "security_concern",
+]
 IncidentEventType: TypeAlias = Literal[
     "detected",
     "voice_call_started",
@@ -57,6 +68,7 @@ CommunityAction: TypeAlias = Literal["invite_resident", "join_together"]
 AwayActivityResponse: TypeAlias = Literal["resident_returned", "known_visitor", "home_check_requested"]
 
 ACTIVE_INCIDENT_STATES: tuple[IncidentState, ...] = ("grace", "notified", "acknowledged")
+HOME_CHECK_OUTCOMES: tuple[Outcome, ...] = ("home_secure", "known_person_home", "resident_returned", "security_concern")
 MAX_AWAY_DAYS = 90
 
 

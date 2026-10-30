@@ -22,6 +22,7 @@ from app.db import readings as db_readings
 from app.db import units as db_units
 from app.db.pool import get_pool
 from app.models import (
+    HOME_CHECK_OUTCOMES,
     Actor,
     AwayActivityResponse,
     Incident,
@@ -707,8 +708,20 @@ async def close(incident_id: str, role: Role, name: str, outcome: str, report: s
             ack = incident.acknowledged_by
             if ack is None or ack.role != role or ack.name != name:
                 raise NotAcknowledger("Only the acknowledger can close this incident")
-            if _has_event(incident, "unable_to_verify") and not _has_event(incident, "emergency_called") and outcome != "resident_ok":
+            # A home check records what was found at an away home, not the resident's condition.
+            home_check = _is_home_check_incident(incident)
+            if (outcome in HOME_CHECK_OUTCOMES) != home_check:
+                raise IncidentConflict(
+                    "Choose what you found at the home" if home_check else "This outcome is only for a home check"
+                )
+            if (not home_check and _has_event(incident, "unable_to_verify") and not _has_event(incident, "emergency_called")
+                    and outcome != "resident_ok"):
                 raise IncidentConflict("Record the emergency handoff or confirm the resident is safe before closing")
+            if outcome == "resident_returned":
+                # She is back, so the away period ends and inactivity monitoring restarts now.
+                period_id = await db_away.covering(unit_id, now, conn=conn)
+                if period_id is not None:
+                    await db_away.end_away_period(period_id, now, conn=conn)
             await db_incidents.update_incident(incident_id, state="closed", outcome=outcome, report=report, closed_at=now, conn=conn)
             incident = await db_incidents.add_incident_event(
                 incident_id,

@@ -4,14 +4,17 @@ import { api } from '../api'
 import { ApiError } from '../api/live'
 import { applyEvent } from '../api/store'
 import type { Incident, Outcome, Role, Unit } from '../api/types'
-import { isHomeCheck } from '../caregiver/copy'
+import { HOME_CHECK_OUTCOMES, isHomeCheck, outcomeLabel } from '../caregiver/copy'
 
-const outcomes: { value: Exclude<Outcome, 'resident_activity_detected'>; label: string }[] = [
+type OutcomeOption = { value: Exclude<Outcome, 'resident_activity_detected'>; label: string; help?: string }
+const outcomes: OutcomeOption[] = [
   { value: 'resident_ok', label: 'Resident OK' },
   { value: 'assistance_provided', label: 'Assistance provided' },
   { value: 'sent_to_hospital', label: 'Sent to hospital' },
   { value: 'resident_away', label: 'Resident was away' },
 ]
+// A home check during an away period records what was found at the home, not the resident's condition.
+const outcomesFor = (incident: Incident): OutcomeOption[] => isHomeCheck(incident) ? HOME_CHECK_OUTCOMES : outcomes
 
 function actorName(role: Role, unit: Unit): string {
   return role === 'caregiver' ? unit.caregiver_name : seed.responders.township
@@ -78,8 +81,9 @@ function TownshipCheck({ incident, unit }: { incident: Incident; unit: Unit }) {
   const actor = { role: 'township' as const, name: actorName('township', unit) }
   const unable = incident.events.some(event => event.type === 'unable_to_verify')
   const calledAt = incident.events.find(event => event.type === 'emergency_called')?.at
-  // The backend closes an unverified check only as Resident OK until a 999 call is recorded.
-  const allowed = (value: CloseOutcome) => !unable || !!calledAt || value === 'resident_ok'
+  const options = outcomesFor(incident)
+  // The backend closes an unverified welfare check only as Resident OK until a 999 call is recorded.
+  const allowed = (value: CloseOutcome) => isHomeCheck(incident) || !unable || !!calledAt || value === 'resident_ok'
   const outcome = picked && allowed(picked) ? picked : ''
 
   async function escalate(action: 'unable_to_verify' | 'emergency_called') {
@@ -96,7 +100,7 @@ function TownshipCheck({ incident, unit }: { incident: Incident; unit: Unit }) {
     setBusy(true)
     setError(null)
     // The backend requires a township report; the outcome label stands in when no note is added.
-    const report = note.trim() || outcomes.find(item => item.value === outcome)!.label
+    const report = note.trim() || options.find(item => item.value === outcome)!.label
     try { applyEvent({ type: 'incident.updated', at: new Date().toISOString(), data: await api.closeIncident(incident.incident_id, { ...actor, outcome, report }) }) }
     catch (cause) { setError(actionError(cause)); await refreshIncident(incident.incident_id) }
     finally { setBusy(false) }
@@ -113,12 +117,13 @@ function TownshipCheck({ incident, unit }: { incident: Incident; unit: Unit }) {
     <form onSubmit={event => { event.preventDefault(); void submit() }} noValidate>
       <h3 className="ir-title" id={`ir-outcome-${incident.incident_id}`}>Check outcome</h3>
       <div className="ir-options" role="group" aria-labelledby={`ir-outcome-${incident.incident_id}`}>
-        {outcomes.map(item => <button key={item.value} type="button" className="ir-option" aria-pressed={outcome === item.value}
+        {options.map(item => <button key={item.value} type="button" className="ir-option" aria-pressed={outcome === item.value}
           disabled={busy || !allowed(item.value)} onClick={() => setPicked(item.value)}>
-          <span className="ir-option-dot" aria-hidden="true" /><span>{item.label}</span>
+          <span className="ir-option-dot" aria-hidden="true" />
+          <span className="ir-option-text"><span>{item.label}</span>{item.help && <small>{item.help}</small>}</span>
         </button>)}
       </div>
-      {unable && !calledAt && <p className="ir-hint">Record a 999 call to choose another outcome.</p>}
+      {unable && !calledAt && !isHomeCheck(incident) && <p className="ir-hint">Record a 999 call to choose another outcome.</p>}
       {noteOpen
         ? <textarea className="ir-note" rows={2} maxLength={500} aria-label="Note" placeholder="Anything the caregiver should know"
             value={note} onChange={event => setNote(event.target.value)} autoFocus />
@@ -145,8 +150,7 @@ function TownshipCheck({ incident, unit }: { incident: Incident; unit: Unit }) {
 /** Confirmation after the incident ends, kept on screen until the responder dismisses it. */
 function TownshipDone({ incident, onDone }: { incident: Incident; onDone: () => void }) {
   const closer = incident.events.find(event => event.type === 'closed')?.actor
-  const label = incident.outcome === 'resident_activity_detected' ? 'Resident activity detected'
-    : outcomes.find(item => item.value === incident.outcome)?.label ?? 'Resolved'
+  const label = outcomeLabel(incident.outcome)
   return <section className="ir-done" aria-label="Incident closed">
     <span>Closed{incident.closed_at ? ` · ${clockLabel(incident.closed_at)}` : ''}</span>
     <h3>{label}</h3>
@@ -225,7 +229,7 @@ export function IncidentPanel({ incident, unit, role, onDone }: { incident: Inci
     {incident.state === 'acknowledged' && <p className="incident-lead">{incident.acknowledged_by?.name} is checking. Reminders have stopped.</p>}
     {unable && !called && !resolved && <p className="incident-lead urgent">Resident safety could not be verified. Contact the duty supervisor and caregiver urgently; call 999 if an emergency is suspected.</p>}
     {called && !resolved && <p className="incident-lead urgent">{incident.events.find(event => event.type === 'emergency_called')?.actor?.name} reports calling 999. Keep this case open and help responders reach the unit. Dispatch is not confirmed.</p>}
-    {resolved && <p className="incident-lead">Outcome: {incident.outcome === 'resident_activity_detected' ? 'Resident activity detected' : outcomes.find(item => item.value === incident.outcome)?.label || 'Resolved'}{incident.acknowledged_by ? ` · Checked by ${incident.acknowledged_by.name}` : ''}.</p>}
+    {resolved && <p className="incident-lead">Outcome: {outcomeLabel(incident.outcome)}{incident.acknowledged_by ? ` · Checked by ${incident.acknowledged_by.name}` : ''}.</p>}
     {resolved && incident.report && <p className="incident-report"><strong>Report</strong><span>{incident.report}</span></p>}
 
     {incident.state === 'grace' && <div className="incident-count"><span>Grace period remaining</span><strong>{countdown(incident.grace_ends_at, clock)}</strong></div>}
@@ -255,11 +259,11 @@ export function IncidentPanel({ incident, unit, role, onDone }: { incident: Inci
     </div>}
     {canClose && <form className="outcome-form" onSubmit={event => { event.preventDefault(); void close() }}>
       <label htmlFor={`outcome-${role}`}>Confirmed outcome</label>
-      <p className="outcome-hint">Choose this only after checking the resident. Recording the outcome closes the incident.</p>
+      <p className="outcome-hint">{homeCheck ? 'Choose what you found at the home.' : 'Choose this only after checking the resident.'} Recording the outcome closes the incident.</p>
       <div className="outcome-controls">
         <select id={`outcome-${role}`} value={outcome} onChange={event => setOutcome(event.target.value as Exclude<Outcome, 'resident_activity_detected'> | '')} required>
           <option value="">Select confirmed outcome</option>
-          {outcomes.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
+          {outcomesFor(incident).map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
         </select>
       </div>
       {role === 'township' && <>
