@@ -92,6 +92,7 @@ several checks are due, the earliest one fires.
 
 | Situation | What happens |
 |---|---|
+| Caregiver tries to add an away period (Stop Tracking) while an incident is open | Refused: "Record an outcome for the current alert before stopping tracking" |
 | During an away period | T1 and T2 are paused |
 | Away period ends | The T1/T2 clock restarts from the end time. If it fires: "Away period ended at HH:MM, then no activity at home for X. … may not be back yet." (U3) |
 | Continuous water or sustained power during an away period | Keep running; they are not paused |
@@ -129,7 +130,7 @@ several checks are due, the earliest one fires.
 - **Caregiver**: "checking in" → "resident confirmed safe" (only while `notified`, and only after
   checking in). "Request township visit" is logged but does not close the incident.
 - **Township close outcomes**:
-  - Normal incidents: Resident OK, Assistance provided, Sent to hospital, Resident was away.
+  - Normal incidents: Resident OK, Assistance provided, Sent to hospital (see section 7), Resident was away.
   - Home checks: Home secure, Family or helper at home, Resident back home (also ends the away
     period), Security concern.
 - If "unable to verify" was recorded without a 999 call, the incident can only close as
@@ -137,7 +138,23 @@ several checks are due, the earliest one fires.
 
 ---
 
-## 7. Other notifications
+## 7. Resident in hospital
+
+Closing an incident as **Sent to hospital** sets `care_state = in_hospital` on the unit. This is
+kept separate from the status, so later home alerts do not erase it.
+
+| Situation | What happens |
+|---|---|
+| Door, water or electricity readings | Latest values are stored, but **status never changes** |
+| T1 quiet gap, T2 outing | Paused |
+| Continuous water, sustained power | **Keep running** |
+| Away-activity notice, morning reassurance | Not sent |
+| An away period expires, or sensor activity is seen | Does **not** clear hospital state |
+| Designated caregiver confirms the resident is home (Return Home) | → `routine`, `care_state = home_monitoring`, any active away period ends, the quiet-gap clock restarts from the confirmation. Refused while an incident is open |
+
+---
+
+## 8. Other notifications
 
 - **Morning reassurance**: the first activity of the day (no incident open, not away) sends the
   caregiver one message, for example "…'s day has started. Water used at home."
@@ -149,3 +166,4 @@ several checks are due, the earliest one fires.
 - Electricity use does not reset the quiet-gap timer; only water does.
 - Electricity used during an away period sends no caregiver notice.
 - Power counts as activity just above standby, but the high-power alarm needs standby + 1 kW.
+- Only the caregiver's Return Home confirmation ends hospital state; sensor activity cannot.
