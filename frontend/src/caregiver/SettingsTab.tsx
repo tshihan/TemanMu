@@ -1,6 +1,5 @@
 import { Moon, Sun } from 'lucide-react'
 import type { Unit } from '../api/types'
-import { AwayPeriods } from './AwayPeriods'
 import { GUARD, type Ctx } from './copy'
 import { ResidentAvatar } from './Avatar'
 
@@ -11,7 +10,7 @@ interface Props {
   theme: Theme; onTheme: (theme: Theme) => void; onToast: (text: string) => void
 }
 
-export function SettingsTab({ unit, ctx, now, awayReasons, theme, onTheme, onToast }: Props) {
+export function SettingsTab({ unit, ctx, theme, onTheme }: Props) {
   return <div className="cg-page">
     <header className="cg-page-head">
       <p className="cg-kicker">Settings</p>
@@ -31,7 +30,6 @@ export function SettingsTab({ unit, ctx, now, awayReasons, theme, onTheme, onToa
         <div><dt>Sensors</dt><dd>Water · Electricity · Door</dd></div>
       </dl>
     </section>
-    <AwayPeriods unit={unit} ctx={ctx} now={now} reasons={awayReasons} onToast={onToast} />
     <section className="cg-card cg-settings">
       <div>
         <h2 className="cg-section-title">Appearance</h2>
