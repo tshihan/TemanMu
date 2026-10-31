@@ -232,7 +232,6 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
   const incidentFor = (n: Notification) => incidents.find(item => item.incident_id === n.incident_id)
   const latestAlert = feed.find(item => item.kind === 'alert' || item.kind === 'reminder')
   const ackTargetId = incident?.state === 'notified' && latestAlert?.incident_id === incident.incident_id ? latestAlert.notification_id : null
-  const connection = !loaded ? 'Connecting' : connected ? 'Live' : 'Reconnecting'
   const pushCopy = push && ctx ? notificationCopy(push, ctx, incidentFor(push)) : null
   const ackWho = incident?.acknowledged_by && ctx ? actorName(ctx, incident.acknowledged_by) : ''
 
@@ -267,7 +266,7 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
         </div> : !unit || !ctx ? <p className="cg-card-lead cg-pad">The resident’s home is unavailable.</p>
           : tab === 'home' ? <HomeTab unit={unit} ctx={ctx} incident={incident} readings={readingsByUnit[unit.unit_id] || []} now={now} awayReasons={awayReasons}
             ackBusy={ackBusy} responseError={ackError?.kind === 'failed'} confirmBusy={confirmBusy} confirmError={confirmError}
-            connection={connection} muted={muted} onToggleMute={() => setMuted(value => !value)}
+            muted={muted} onToggleMute={() => setMuted(value => !value)}
             awayNotice={awayNotice} answerBusy={answerBusy} answerError={answerError}
             onCheckIn={() => void respond('caregiver_checking_in')}
             onRequestVisit={() => void respond('township_requested')} onOpenIncident={openIncident} onCall={startCall} onConfirmHome={() => void confirmHome()}

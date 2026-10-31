@@ -73,13 +73,13 @@ function statusCard(unit: Unit, incident: Incident | null, ctx: Ctx, now: number
 interface Props {
   unit: Unit; ctx: Ctx; incident: Incident | null; readings: Reading[]; now: number; awayReasons: Record<string, string | null>
   ackBusy: boolean; responseError: boolean; confirmBusy: boolean; confirmError: boolean
-  connection: string; muted: boolean; onToggleMute: () => void
+  muted: boolean; onToggleMute: () => void
   awayNotice: Notification | null; answerBusy: boolean; answerError: boolean
   onCheckIn: () => void; onRequestVisit: () => void; onOpenIncident: () => void; onCall: () => void; onConfirmHome: () => void
   onAnswerAway: (n: Notification, response: AwayActivityResponse) => void
 }
 
-export function HomeTab({ unit, ctx, incident, readings, now, awayReasons, ackBusy, responseError, confirmBusy, confirmError, connection, muted, onToggleMute, awayNotice, answerBusy, answerError,
+export function HomeTab({ unit, ctx, incident, readings, now, awayReasons, ackBusy, responseError, confirmBusy, confirmError, muted, onToggleMute, awayNotice, answerBusy, answerError,
   onCheckIn, onRequestVisit, onOpenIncident, onCall, onConfirmHome, onAnswerAway }: Props) {
   const { R } = ctx
   const today = readings.filter(reading => isToday(reading.recorded_at, now))
