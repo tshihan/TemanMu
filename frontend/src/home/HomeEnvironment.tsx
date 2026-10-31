@@ -167,8 +167,10 @@ function useAwayPeriod(unit: Unit | null): AwayPeriod | null {
     const timer = setTimeout(() => setNow(Date.now()), Math.min(next - Date.now() + 50, 2 ** 31 - 1))
     return () => clearTimeout(timer)
   }, [periods, now])
-  return periods?.find(period => Date.parse(period.starts_at) <= Math.max(now, Date.parse(period.created_at))
-    && now < Date.parse(period.ends_at)) ?? null
+  // Read the clock afresh: a period ended just now (Resume tracking) arrives with no future boundary to wake on.
+  const at = Math.max(now, Date.now())
+  return periods?.find(period => Date.parse(period.starts_at) <= Math.max(at, Date.parse(period.created_at))
+    && at < Date.parse(period.ends_at)) ?? null
 }
 
 /** Self-contained viewer. The parent controls its dimensions; no API or store dependency. */
