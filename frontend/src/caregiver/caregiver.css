@@ -528,3 +528,5 @@
 .cg-tracking-dialog .cg-away-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
 .cg-tracking-dialog input { width: 100%; min-width: 0; }
+
+.cg-status.is-hospital { --tone: var(--mut); --tone-wash: var(--line); background: var(--card); }

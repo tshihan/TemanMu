@@ -33,6 +33,7 @@ class UnitFacts:
     incident_state: IncidentState | None  # active incident only; None if none
     # (starts_at, ends_at) of caregiver-declared away periods, past ones included.
     away_windows: tuple[tuple[datetime, datetime], ...] = ()
+    in_hospital: bool = False
 
 
 @dataclass(frozen=True)
@@ -116,6 +117,9 @@ def on_reading(facts: UnitFacts, reading: Reading, clock_text: ClockText = utc_h
             resolve_reason=None,
         )
 
+    if facts.in_hospital:
+        return decide()
+
     # R6: not activity (tap off, kettle off, door closed) → no status change.
     if not activity:
         return decide()
@@ -187,7 +191,7 @@ def _after_away(facts: UnitFacts, anchor: datetime, seconds: int) -> tuple[datet
 
 def _clock(facts: UnitFacts) -> tuple[datetime, int, bool] | None:
     """(start, length in seconds, moved by an away period) of the T1 or T2 clock now running."""
-    if _has_active_incident(facts):
+    if facts.in_hospital or _has_active_incident(facts):
         return None
     if facts.status == "routine":
         seconds, anchor = facts.baseline.usual_quiet_gap_seconds, _quiet_anchor(facts)
@@ -279,4 +283,5 @@ def facts_from(
         baseline=unit.baseline,
         incident_state=incident_state if incident_state in ACTIVE_INCIDENT_STATES else None,
         away_windows=away_windows,
+        in_hospital=unit.care_state == "in_hospital",
     )

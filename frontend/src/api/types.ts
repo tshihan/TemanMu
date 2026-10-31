@@ -43,6 +43,7 @@ export interface Unit {
   caregiver_name: string
   caregiver_relationship: string
   controllable: boolean
+  care_state: 'home_monitoring' | 'in_hospital'
   status: Status
   status_reason: string
   status_since: string

@@ -232,6 +232,8 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
   const monitoringQueue = useRef<Promise<void>>(Promise.resolve())
   const homeUnit = fetchedUnit ?? storeUnit ?? null
   const away = useAwayPeriod(homeUnit)
+  const inHospital = homeUnit?.care_state === 'in_hospital'
+  const absent = !!away || inHospital
   const responseIncident = appState.incidents.find(item => item.incident_id === responseIncidentId)
   const showResponder = responderVisible && responseIncident?.state === 'acknowledged'
   const setVisualStates = (next: ObjectStates) => {
@@ -404,14 +406,14 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
   }
   const manualInteract = (target: InteractionId, incomingCall = false) => {
     if (scenarioActive || resetBusy || characterStatus.phase === 'loading' || characterStatus.phase === 'error' || !homeUnit) return
-    if (away) {
+    if (absent) {
       if (target !== 'telephone') void toggleWhileAway(target).catch(error => console.error('Interaction failed', error))
       return
     }
     void interactWith(target, incomingCall).catch(error => { if (!(error instanceof DOMException && error.name === 'AbortError')) console.error('Interaction failed', error) })
   }
   const interaction: InteractionBindings = { states, selected, hovered, paused, responderDoorOpen, disabled: scenarioActive || resetBusy || !homeUnit,
-    phoneDisabledReason: away ? `${homeUnit?.caregiver_relationship ?? 'The resident'} is away` : null,
+    phoneDisabledReason: absent ? `${homeUnit?.caregiver_relationship ?? 'The resident'} is ${inHospital ? 'in hospital' : 'away'}` : null,
     phoneTag: callCard === 'noAnswer' ? 'Unanswered' : null,
     phoneSpot: (scenario ?? picked) === 'falseAlarmRecovery' ? 'bedside' : 'living',
     onSelect: id => manualInteract(id), onHover: setHovered }
@@ -811,9 +813,9 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
     return call
   }
   useEffect(() => {
-    if (scenarioActive || away || !monitoringOn.current) return
+    if (scenarioActive || absent || !monitoringOn.current) return
     switchMonitoring(false).catch(error => console.error('Could not switch off A-105 monitoring', error))
-  }, [scenarioActive, away])
+  }, [scenarioActive, absent])
   // A home check the caregiver asked for during an away period: once the township takes it, reenact
   // Guard Ali walking in to look around the empty home. It ends when the outcome closes the incident.
   const homeCheckId = appState.incidents.find(item => item.unit_id === HOME_UNIT_ID && item.state === 'acknowledged'
@@ -874,26 +876,26 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
   }), [])
   useEffect(() => {
     // An away resident can't answer the home phone; the call waits until they're back.
-    if (!queuedCalls.length || scenarioActive || resetBusy || !visible || away || characterStatus.phase !== 'idle' || active.current) return
+    if (!queuedCalls.length || scenarioActive || resetBusy || !visible || absent || characterStatus.phase !== 'idle' || active.current) return
     const message = queuedCalls[0]
     setQueuedCalls(items => items.slice(1))
     void interactWith('telephone', true, undefined, undefined, undefined, message.text).catch(error => {
       if (!(error instanceof DOMException && error.name === 'AbortError')) setIntegrationError(error instanceof Error ? error.message : 'Companion call failed')
     })
-  }, [queuedCalls, scenarioActive, resetBusy, visible, away, characterStatus.phase])
+  }, [queuedCalls, scenarioActive, resetBusy, visible, absent, characterStatus.phase])
   const characterBusy = characterStatus.phase === 'loading' || characterStatus.phase === 'error'
-  const canStart = !scenarioActive && !resetBusy && !!homeUnit && (usingMock || appState.connected) && !characterBusy && !away
+  const canStart = !scenarioActive && !resetBusy && !!homeUnit && (usingMock || appState.connected) && !characterBusy && !absent
   const shownScenario = scenario ?? picked
   const timelineSteps = scenarioSteps(shownScenario, timing)
   const stepIndex = scenarioState === 'complete' ? timelineSteps.length : scenarioProgress?.index ?? 0
   const caption = scenarioState === 'complete' ? 'Scenario complete' : scenarioState === 'stopped' ? 'Scenario stopped'
     : scenarioProgress?.label ?? (canStart ? `Press play to run “${SCENARIO_LABELS[picked]}”`
-      : away ? `${homeUnit?.caregiver_relationship ?? 'The resident'} is away until ${awayUntil(away.ends_at)}` : 'Preparing the home…')
+      : inHospital ? 'Resident is in hospital. Confirm their return in the caregiver app.' : away ? `${homeUnit?.caregiver_relationship ?? 'The resident'} is away until ${awayUntil(away.ends_at)}` : 'Preparing the home…')
   const playback = scenarioState === 'running' && scenarioProgress?.kind === 'hold' ? 'Awaiting outcome'
     : scenarioState === 'idle' ? 'Ready' : scenarioState[0].toUpperCase() + scenarioState.slice(1)
   const demoNote = homeCheckId && !scenarioActive
     ? 'Guard Ali is checking the home because the caregiver asked. This is a reenactment; he records the outcome on the township dashboard.'
-    : away && !scenarioActive
+    : absent && !scenarioActive
     ? 'Nobody is home. Click the tap, shower, kettle, TV, lamp or door to simulate something left on or someone coming in. The phone is locked.'
     : scenario === 'unusualInactivity' && scenarioActive && autoAcknowledged
     ? `Nobody acknowledged within ${MOCK_AUTO_ACK_SECONDS} seconds, so Guard Ali acknowledged automatically (demo only). A human must still record the outcome.`
@@ -935,7 +937,7 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
         fallback={<div className="home-fallback">This home needs a browser with WebGL enabled.</div>}>
         <Suspense fallback={null}><Scene command={command} characterCommand={characterCommand} responderCommand={responderCommand}
           responderVisible={showResponder} responderChecking={responderChecking} responderNote={homeCheckId ? 'checking the home' : null} interaction={interaction}
-          pose={pose} speech={speech} visible={visible && !away} paused={paused}
+          pose={pose} speech={speech} visible={visible && !absent} paused={paused}
           urgent={false}
           sensorView={sensorView} unit={homeUnit} pulses={pulses}
           onCharacterStatus={setCharacterStatus} onReached={onReached} onArrived={onArrived} onResponderArrived={onResponderArrived}
@@ -1007,7 +1009,8 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
 
     <div className="live-top-right">
       <p className="live-demo-badge"><b>Demo only</b>Real homes are sensed, never seen.</p>
-      {away && <p className="live-away-badge" role="status"><b>Away</b>Caregiver marked {homeUnit?.caregiver_relationship ?? 'the resident'} away until {awayUntil(away.ends_at)}</p>}
+      {inHospital && <p className="live-away-badge" role="status"><b>In hospital</b>Home inactivity checks paused until the caregiver confirms a return.</p>}
+      {!inHospital && away && <p className="live-away-badge" role="status"><b>Away</b>Caregiver marked {homeUnit?.caregiver_relationship ?? 'the resident'} away until {awayUntil(away.ends_at)}</p>}
     </div>
 
     <div className="home-camera-tools" aria-label="Camera controls">

@@ -449,3 +449,26 @@ async def test_home_check_outcomes_only_for_home_checks(client):
     iid = await notified_incident()
     assert (await ack(client, iid)).status_code == 200
     assert (await close(client, iid, outcome="home_secure")).status_code == 409
+
+
+async def test_hospital_transfer_persists_until_caregiver_confirms_return(client):
+    iid = await notified_incident()
+    await ack(client, iid)
+    assert (await close(client, iid, outcome="sent_to_hospital")).status_code == 200
+    unit = await units.get_unit(UNIT)
+    assert unit.care_state == "in_hospital"
+    assert unit.active_incident_id is None
+    await units.update_unit_state(UNIT, last_water_activity_at=utc_now() - timedelta(days=3))
+    await monitoring.check_unit(UNIT)
+    assert await incidents.list_active_incidents() == []
+    morning_before = len(await notes("morning_reassurance"))
+    await client.post("/api/readings", json={"unit_id": UNIT, "sensor": "water", "value": 1})
+    assert (await units.get_unit(UNIT)).care_state == "in_hospital"
+    assert len(await notes("morning_reassurance")) == morning_before
+    path = f"/api/units/{UNIT}/confirm-home"
+    assert (await client.post(path, json={"role": "caregiver", "name": "Someone else"})).status_code == 409
+    response = await client.post(path, json={"role": "caregiver", "name": unit.caregiver_name})
+    assert response.status_code == 200
+    assert response.json()["care_state"] == "home_monitoring"
+    assert response.json()["quiet_gap"]["last_caregiver_confirmation_at"] is not None
+    assert (await client.post(path, json={"role": "caregiver", "name": unit.caregiver_name})).status_code == 409

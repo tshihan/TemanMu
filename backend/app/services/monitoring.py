@@ -479,15 +479,20 @@ async def confirm_home_after_call(unit_id: str, name: str) -> Unit:
                 raise UnitNotFound(unit_id)
             if name != unit.caregiver_name:
                 raise IncidentConflict("Only the designated caregiver can record this confirmation")
-            if unit.status != "possible_away" or unit.active_incident_id is not None:
-                raise IncidentConflict("Home confirmation is available only while the resident is possibly away")
+            if (unit.status != "possible_away" and unit.care_state != "in_hospital") or unit.active_incident_id is not None:
+                raise IncidentConflict("Home confirmation is available only while the resident is possibly away or in hospital")
             confirmed_at = utc_now()
+            if unit.care_state == "in_hospital":
+                period_id = await db_away.covering(unit_id, confirmed_at, conn=conn)
+                if period_id is not None:
+                    await db_away.end_away_period(period_id, confirmed_at, conn=conn)
             unit = await db_units.update_unit_state(
                 unit_id,
                 status="routine",
                 status_reason=f"{name} reports speaking directly with {unit.caregiver_relationship}: home and okay; sensor activity has not been confirmed.",
                 status_since=confirmed_at,
                 last_caregiver_confirmation_at=confirmed_at,
+                care_state="home_monitoring",
                 conn=conn,
             )
         await _arm_watch_locked(unit_id)
@@ -697,7 +702,7 @@ async def acknowledge(incident_id: str, role: Role, name: str) -> Incident:
 
 
 async def close(incident_id: str, role: Role, name: str, outcome: str, report: str | None = None) -> Incident:
-    """POST /api/incidents/{id}/close: only the acknowledger; the unit returns to routine."""
+    """Close the response; a hospital transfer pauses resident inactivity monitoring."""
     unit_id = await _incident_unit_id(incident_id)
     async with _unit_lock(unit_id):
         now = utc_now()
@@ -737,9 +742,10 @@ async def close(incident_id: str, role: Role, name: str, outcome: str, report: s
             unit = await db_units.update_unit_state(
                 unit_id,
                 status="routine",
+                care_state="in_hospital" if outcome == "sent_to_hospital" else None,
                 status_reason=reasons.closed_reason(name, outcome),
                 status_since=now,
-                last_water_activity_at=now,
+                last_water_activity_at=None if outcome == "sent_to_hospital" else now,
                 conn=conn,
             )
 
@@ -847,7 +853,7 @@ async def ingest_reading(body: ReadingIn) -> Unit:
                     reasons.auto_resolved_message(unit.resident_name),
                     resolving.incident_id,
                 )
-        elif await db_away.is_away(unit.unit_id, reading.recorded_at):
+        elif unit.care_state != "in_hospital" and await db_away.is_away(unit.unit_id, reading.recorded_at):
             # Gentle, once per period: the caregiver decides whether it was expected.
             if fresh_activity and await db_away.claim_activity_notice(unit.unit_id, reading.recorded_at):
                 await create_notification(
@@ -858,7 +864,7 @@ async def ingest_reading(body: ReadingIn) -> Unit:
                         unit.caregiver_relationship, reading.sensor, local_hhmm(reading.recorded_at)
                     ),
                 )
-        elif incident is None and decision.is_activity and not await _morning_reassurance_sent(unit.unit_id):
+        elif unit.care_state != "in_hospital" and incident is None and decision.is_activity and not await _morning_reassurance_sent(unit.unit_id):
             await create_notification(
                 "caregiver",
                 unit.unit_id,

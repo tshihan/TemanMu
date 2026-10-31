@@ -135,3 +135,16 @@ A unit whose resident is away shows a small **"Away"** tag (no reason). Its quie
 - New database tests in `backend/tests/test_actions.py` cover adding, ending, validation, reason privacy, the optional reason and the "once per period" message. They need a test database (`TEST_DATABASE_URL`) and **have not been run yet**.
 - Checked on the real backend: the reason never appears in the unit data, township gets "not allowed" when it asks for reasons, the caregiver gets them, and saving without a reason works.
 - The frontend typecheck, lint and build all pass. The whole flow was clicked through in the browser in mock mode: add a period, see the Home card, get the door message once, end the period.
+
+## Hospital transfers (31 October 2026)
+
+Recording **Sent to hospital** closes the incident response and persists `units.care_state = in_hospital`. This care context is separate from the home alert status so later home safety incidents cannot erase it. The caregiver sees **Mum is in hospital**, with grayscale status/day cards and **Return Home** opening an in-app confirmation. Only the designated caregiver can clear it after confirming the resident is home; an unresolved home alert must have an outcome first. The return restarts the inactivity clock and ends an active scheduled absence. Sensor activity and an away period expiring never clear hospital context. Morning activity messages and inactivity/outing checks are suppressed; existing sustained-water/high-power handling remains enabled. Township shows an In hospital tag and no inactivity bar. The simulator hides the resident and blocks resident scenarios/home-phone interactions until return. Reset Demo restores the default care context.
+
+Before starting a backend with this change, apply `012_hospital_care_state.sql` using the existing runner:
+
+```bash
+cd /Users/hjkhor/TemanMu/TemanMu/backend
+.venv/bin/python -m app.db.migrate
+```
+
+The migration preserves the latest recorded hospital outcomes on existing units unless a later caregiver home confirmation exists. Mock-mode browser verification covered responder close-out, a subsequent water reading retaining hospital context, and caregiver return confirmation. Database integration verification requires a separate `TEST_DATABASE_URL`.

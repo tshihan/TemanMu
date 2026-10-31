@@ -40,6 +40,7 @@ def _row_to_unit(row: asyncpg.Record) -> Unit:
         caregiver_name=row["caregiver_name"],
         caregiver_relationship=row["caregiver_relationship"],
         controllable=row["controllable"],
+        care_state=row["care_state"],
         status=row["status"],
         status_reason=row["status_reason"],
         status_since=row["status_since"],
@@ -88,6 +89,7 @@ async def update_unit_state(
     unit_id: str,
     *,
     status: Status | None = None,
+    care_state: str | None = None,
     status_reason: str | None = None,
     status_since: datetime | None = None,
     last_water_activity_at: datetime | None = None,
@@ -105,6 +107,7 @@ async def update_unit_state(
     # Column names come from this fixed mapping, never from caller input.
     fields = {
         "status": status,
+        "care_state": care_state,
         "status_reason": status_reason,
         "status_since": status_since,
         "last_water_activity_at": last_water_activity_at,

@@ -1,13 +1,13 @@
 import { TrackingControl } from './TrackingControl'
 import type { CSSProperties } from 'react'
 import type { LucideIcon } from 'lucide-react'
-import { ArrowRight, CircleCheck, Clock3, DoorOpen, Droplets, Luggage, Phone, PhoneOutgoing, ShieldCheck, TriangleAlert, Zap } from 'lucide-react'
+import { ArrowRight, CircleCheck, Clock3, DoorOpen, Droplets, Hospital, Luggage, Phone, PhoneOutgoing, ShieldCheck, TriangleAlert, Zap } from 'lucide-react'
 import type { AwayActivityResponse, AwayPeriod, Incident, Notification, Reading, Unit } from '../api/types'
 import { AwayActivityChoices } from './AwayActivityChoices'
 import { actorName, currentAway, GUARD, isHomeCheck, isOuting, outcomeLabel, STATUS_LABELS, type Ctx } from './copy'
 import { clock, dayFraction, dayLabel, greeting, isToday, until, when } from './format'
 
-type Variant = 'alarm' | 'checking' | 'quiet' | 'away' | 'calm' | 'pending'
+type Variant = 'alarm' | 'checking' | 'quiet' | 'away' | 'calm' | 'pending' | 'hospital'
 interface Card { variant: Variant; Icon: LucideIcon; badge: string; headline: string; reason: string; grace?: string; ack?: boolean; open?: string }
 
 function statusCard(unit: Unit, incident: Incident | null, ctx: Ctx, now: number, hasRoutineEvidence: boolean, away: AwayPeriod | null, awayReason: string | null): Card {
@@ -44,6 +44,8 @@ function statusCard(unit: Unit, incident: Incident | null, ctx: Ctx, now: number
     return { variant: 'quiet', Icon: PhoneOutgoing, badge: STATUS_LABELS.unusual_inactivity, headline: `Checking on ${R} quietly`,
       reason: `${cause} TemanMu is calling ${R} now (simulated).`, grace: incident?.state === 'grace' ? until(incident.grace_ends_at, now) : undefined }
   }
+  if (unit.care_state === 'in_hospital') return { variant: 'hospital', Icon: Hospital, badge: 'In hospital', headline: `${R} is in hospital`,
+    reason: 'A responder recorded a hospital transfer. Inactivity checks are paused until you confirm a return home. Water and power safety alerts remain active.' }
   if (away) return { variant: 'away', Icon: Luggage, badge: 'Tracking paused', headline: 'Monitoring paused',
     reason: `${awayReason ? `${awayReason.replace(/[.!]+$/, '')}. ` : ''}Until ${when(away.ends_at, now)}. Inactivity alerts are paused until then; you’ll still be alerted if water or power is left running.` }
   if (unit.status === 'possible_away') return { variant: 'away', Icon: DoorOpen, badge: STATUS_LABELS.possible_away, headline: `${R} may be out`,
@@ -104,7 +106,7 @@ export function HomeTab({ unit, ctx, incident, readings, now, awayReasons, ackBu
       marks: waterMarks.length || !waterAt ? waterMarks : [waterAt] },
     { key: 'power', Icon: Zap, label: 'Electricity', value: unit.latest.power_kw > unit.baseline.standby_power_kw ? 'In use' : powerUsed ? 'Used today' : power ? 'Standby' : 'No use yet',
       time: powerUsed ? clock(powerUsed.recorded_at) : power ? clock(power.recorded_at) : null, marks: marks('electricity') },
-    { key: 'door', Icon: DoorOpen, label: 'Front door', value: away ? 'Away period' : unit.status === 'possible_away' ? 'Possibly away' : doorMarks.length ? 'Opened today' : 'No outing indicated',
+    { key: 'door', Icon: DoorOpen, label: 'Front door', value: unit.care_state === 'in_hospital' ? 'Resident in hospital' : away ? 'Away period' : unit.status === 'possible_away' ? 'Possibly away' : doorMarks.length ? 'Opened today' : 'No outing indicated',
       time: unit.status === 'possible_away' && unit.latest.last_door_event_at ? clock(unit.latest.last_door_event_at) : doorMarks.length ? clock(doorMarks.at(-1)!) : null, marks: doorMarks },
   ]
   const nowAt = dayFraction(now)
@@ -125,7 +127,7 @@ export function HomeTab({ unit, ctx, incident, readings, now, awayReasons, ackBu
       </div>
     </header>
 
-    <section aria-label="Current status" className={`cg-status is-${card.variant}${away && card.variant === 'away' ? ' is-tracking-paused' : ''}`}>
+    <section aria-label="Current status" className={`cg-status is-${card.variant}${(away && card.variant === 'away') || card.variant === 'hospital' ? ' is-tracking-paused' : ''}`}>
       <span className="cg-orb" aria-hidden="true"><span /><span /><span /></span>
       <div className="cg-status-top">
         <span className="cg-status-badge"><card.Icon size={14} strokeWidth={2.4} aria-hidden="true" />{card.badge}</span>
@@ -159,10 +161,10 @@ export function HomeTab({ unit, ctx, incident, readings, now, awayReasons, ackBu
     </section>
 
     <section className="cg-day" aria-labelledby="cg-day-heading">
-      <div className={`cg-day-card${away ? ' is-tracking-paused' : ''}`} style={{ '--now': nowAt } as CSSProperties}>
+      <div className={`cg-day-card${away || unit.care_state === 'in_hospital' ? ' is-tracking-paused' : ''}`} style={{ '--now': nowAt } as CSSProperties}>
       <div className="cg-section-head">
         <h2 id="cg-day-heading" className="cg-section-title">{R}’s day</h2>
-        <span className="cg-section-note">{away ? 'Inactivity tracking paused' : 'Water, power & door only'}</span>
+        <span className="cg-section-note">{away || unit.care_state === 'in_hospital' ? 'Inactivity tracking paused' : 'Water, power & door only'}</span>
       </div>
       <ul className="cg-lanes">
         {lanes.map(lane => <li key={lane.key} className={`cg-lane is-${lane.key}`}>

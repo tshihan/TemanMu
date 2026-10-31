@@ -414,3 +414,18 @@ def test_facts_from_unit():
     f = facts_from(unit, "closed")
     assert f == facts()
     assert facts_from(unit, "grace").incident_state == "grace"
+
+
+@pytest.mark.parametrize("status", ["routine", "possible_away"])
+def test_hospital_pauses_inactivity_until_human_return(status):
+    f = facts(in_hospital=True, status=status)
+    assert next_check_at(f) is None
+    assert on_tick(f, T0 + timedelta(days=30)) is None
+
+
+@pytest.mark.parametrize(("sensor", "value"), [("water", 1.0), ("electricity", 2.0), ("door", "open")])
+def test_household_activity_cannot_clear_hospital_context(sensor, value):
+    d = on_reading(facts(in_hospital=True), reading(sensor, value), clock)
+    assert d.changes.status is None
+    assert not d.resolve_incident
+    assert d.changes.as_kwargs()

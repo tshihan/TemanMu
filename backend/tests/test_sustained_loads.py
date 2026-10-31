@@ -24,13 +24,15 @@ def unit(water: float, power: float) -> Unit:
 
 
 @pytest.mark.asyncio
-async def test_running_water_uses_sustained_load_deadline_not_quiet_gap(monkeypatch):
+@pytest.mark.parametrize("in_hospital", [False, True])
+async def test_running_water_uses_sustained_load_deadline_not_quiet_gap(monkeypatch, in_hospital):
     async def started(_unit_id, sensor, _threshold):
         return T0 if sensor == "water" else None
 
     monkeypatch.setattr(monitoring.db_readings, "active_load_started_at", started)
     monkeypatch.setitem(monitoring._watch_started_at, "A-105", T0)
-    next_check = await monitoring._next_watch_check(unit(6, 0.15), None)
+    home = unit(6, 0.15).model_copy(update={"care_state": "in_hospital" if in_hospital else "home_monitoring"})
+    next_check = await monitoring._next_watch_check(home, None)
     assert next_check is not None
     assert next_check[0] == T0 + timedelta(seconds=settings.continuous_water_seconds)
     assert next_check[1].kind == "continuous_water"
@@ -38,13 +40,15 @@ async def test_running_water_uses_sustained_load_deadline_not_quiet_gap(monkeypa
 
 
 @pytest.mark.asyncio
-async def test_high_power_only_above_large_load_threshold(monkeypatch):
+@pytest.mark.parametrize("in_hospital", [False, True])
+async def test_high_power_only_above_large_load_threshold(monkeypatch, in_hospital):
     async def started(_unit_id, sensor, _threshold):
         return T0 if sensor == "electricity" else None
 
     monkeypatch.setattr(monitoring.db_readings, "active_load_started_at", started)
     monkeypatch.setitem(monitoring._watch_started_at, "A-105", T0)
-    checks = await monitoring._sustained_load_checks(unit(0, 1.8))
+    home = unit(0, 1.8).model_copy(update={"care_state": "in_hospital" if in_hospital else "home_monitoring"})
+    checks = await monitoring._sustained_load_checks(home)
     assert len(checks) == 1
     assert checks[0][1].kind == "sustained_power"
     assert checks[0][0] == T0 + timedelta(seconds=settings.high_power_seconds)

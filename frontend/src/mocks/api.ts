@@ -128,6 +128,7 @@ function initialSnapshot(): Snapshot {
       },
       baseline: { ...item.baseline, source: 'simulated_history' as const },
       active_incident_id: null,
+      care_state: 'home_monitoring',
       away_periods: [],
     })),
     incidents: [],
@@ -178,6 +179,7 @@ function afterAway(unitId: string, anchor: number, seconds: number): number {
 export function primeMockInactivity(): Incident {
   const unit = unitOrThrow('A-105')
   if (latestIncident(unit.unit_id)) throw new ApiError(409, 'An incident is already active. Reset Demo before the inactivity scenario.')
+  if (unit.care_state === 'in_hospital') throw new ApiError(409, 'Confirm the resident has returned home before starting an inactivity scenario')
   if (awayAt(unit.unit_id)) throw new ApiError(409, 'The resident is marked away, so inactivity checks are paused. End the away period first.')
   if (unit.status === 'possible_away' || unit.latest.door !== 'closed')
     throw new ApiError(409, 'The door or away status still suggests an outing. Return home or reset the demo before the inactivity scenario.')
@@ -251,6 +253,7 @@ function updateUnit(unit: Unit, status: Unit['status'], reason: string, since = 
 // Resident activity with no open incident. Mirrors the backend's rules/engine.py on_reading
 // (R2-R5, N3) and its reason lines in rules/reasons.py, so mock and live screens match.
 function applyActivity(unit: Unit, reading: Reading): void {
+  if (unit.care_state === 'in_hospital') { publish('unit.updated', clone(unit)); return }
   const at = reading.recorded_at
   const backHome = (reason: string) => {
     unit.quiet_gap.last_water_activity_at = at
@@ -281,7 +284,7 @@ function latestIncident(unitId: string): Incident | undefined {
 function scheduleMockWatch(unit: Unit): void {
   if (watchTimer) clearTimeout(watchTimer)
   watchTimer = null
-  if (!monitoringActive || !unit.controllable || latestIncident(unit.unit_id)) return
+  if (unit.care_state === 'in_hospital' || !monitoringActive || !unit.controllable || latestIncident(unit.unit_id)) return
   const confirmed = unit.quiet_gap.last_caregiver_confirmation_at
   const water = unit.quiet_gap.last_water_activity_at
   const possibleAway = unit.status === 'possible_away'
@@ -430,14 +433,14 @@ export const mockApi: Api = {
     else if (activity && !incident) applyActivity(unit, reading)
     else publish('unit.updated', clone(unit))
     const away = awayAt(unit.unit_id, reading.recorded_at)
-    if (away) {
+    if (away && unit.care_state !== 'in_hospital') {
       // Gentle, once per period, door or water only: the caregiver decides whether it was expected.
       if (activity && !wasActive && reading.sensor !== 'electricity' && !away.notified) {
         away.notified = true
         notify({ role: 'caregiver', unit_id: unit.unit_id, kind: 'away_activity', incident_id: null,
           message: `${reading.sensor === 'door' ? 'Front door opened' : 'Water used'} at ${localHHMM(reading.recorded_at)} while ${unit.caregiver_relationship} is marked away.` })
       }
-    } else if (morningSentOn !== localDay() && activity && !incident) {
+    } else if (unit.care_state !== 'in_hospital' && morningSentOn !== localDay() && activity && !incident) {
       morningSentOn = localDay()
       notify({ role: 'caregiver', unit_id: unit.unit_id, kind: 'morning_reassurance', message: `${unit.caregiver_relationship}'s day has started. ${activityMessage(reading.sensor)}`, incident_id: null })
     }
@@ -494,8 +497,14 @@ export const mockApi: Api = {
     const unit = unitOrThrow(id)
     if (actor.role !== 'caregiver' || actor.name !== unit.caregiver_name)
       throw new ApiError(409, 'Only the designated caregiver can record this confirmation')
-    if (unit.status !== 'possible_away' || latestIncident(id))
-      throw new ApiError(409, 'Home confirmation is available only while the resident is possibly away')
+    if ((unit.status !== 'possible_away' && unit.care_state !== 'in_hospital') || latestIncident(id))
+      throw new ApiError(409, 'Home confirmation is available only while the resident is possibly away or in hospital')
+    if (unit.care_state === 'in_hospital') {
+      const period = awayAt(id)
+      if (period) period.period.ends_at = now()
+      syncAway(unit)
+    }
+    unit.care_state = 'home_monitoring'
     unit.quiet_gap.last_caregiver_confirmation_at = now()
     updateUnit(unit, 'routine', `${actor.name} reports speaking directly with ${unit.caregiver_relationship}: home and okay; sensor activity has not been confirmed.`)
     return clone(unit)
@@ -576,9 +585,10 @@ export const mockApi: Api = {
     incident.events.push({ type: 'closed', at: incident.closed_at, actor: { role: actor.role, name: actor.name } })
     const unit = unitOrThrow(incident.unit_id)
     unit.status = 'routine'
+    if (actor.outcome === 'sent_to_hospital') unit.care_state = 'in_hospital'
     unit.status_reason = 'Incident closed by responder'
     unit.status_since = incident.closed_at
-    unit.quiet_gap.last_water_activity_at = incident.closed_at
+    if (actor.outcome !== 'sent_to_hospital') unit.quiet_gap.last_water_activity_at = incident.closed_at
     unit.active_incident_id = null
     if (actor.outcome === 'resident_returned') {
       // She is back, so the away period ends and the inactivity clock restarts now.

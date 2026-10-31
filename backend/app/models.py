@@ -144,6 +144,7 @@ class Unit(ContractModel):
     caregiver_name: str
     caregiver_relationship: str
     controllable: bool
+    care_state: Literal["home_monitoring", "in_hospital"] = "home_monitoring"
     status: Status
     status_reason: str
     status_since: UtcDatetime
