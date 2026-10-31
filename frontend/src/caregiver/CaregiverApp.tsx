@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import { Bell, Check, ChevronRight, HeartHandshake, House, Luggage, PhoneOff, Settings, ShieldCheck, TriangleAlert, Volume2, VolumeX, WifiOff } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Bell, Check, ChevronRight, HeartHandshake, House, Luggage, PhoneOff, Settings, ShieldCheck, TriangleAlert, WifiOff } from 'lucide-react'
 import { api } from '../api'
 import { applyEvent, applyIncident, getAppState, loadUnitReadings, markNotificationViewed, markRoleViewed, subscribeAppEvents, useAppState } from '../api/store'
 import type { AwayActivityResponse, Notification } from '../api/types'
+import { ConfirmContext, useConfirmAlert } from './ConfirmAlert'
 import { actorName, awaitingAnswer, ctxFor, currentAway, GUARD, isHomeCheck, NOTIFICATION_TARGET, notificationCopy } from './copy'
 import { clock, initials } from './format'
 import { HomeTab } from './HomeTab'
@@ -21,7 +22,7 @@ const TABS: { id: Tab; label: string; Icon: typeof House }[] = [
   { id: 'together', label: 'Together', Icon: HeartHandshake }, { id: 'settings', label: 'Settings', Icon: Settings },
 ]
 const TONES: Partial<Record<Notification['kind'], ToneKind>> = { morning_reassurance: 'morning', alert: 'alert', reminder: 'reminder' }
-const THEME_COLOR: Record<Theme, string> = { light: '#faf7f0', dark: '#1b1a18' }
+const THEME_COLOR: Record<Theme, string> = { light: '#e9ebe3', dark: '#101310' }
 
 // Preferences are per device; storage can be unavailable (private mode), so every access is guarded.
 const THEME_KEY = 'temanmu.caregiver.theme'
@@ -57,7 +58,7 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
   const [lastSync, setLastSync] = useState(() => Date.now())
   const [connectionTimedOut, setConnectionTimedOut] = useState(false)
   const [now, setNow] = useState(() => Date.now())
-  const [scrolled, setScrolled] = useState(false)
+  const { confirm, alert } = useConfirmAlert()
   const companion = useCompanion(unitId, snapshotRevision)
   const awayReasons = useAwayReasons(unit)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -193,7 +194,8 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
   }
   async function confirmHome() {
     if (!unit || unit.status !== 'possible_away' || confirmBusy) return
-    if (!window.confirm(`Have you spoken directly with ${unit.caregiver_relationship} and confirmed they are home and okay?`)) return
+    const R = unit.caregiver_relationship
+    if (!await confirm({ title: `Confirm ${R} is okay`, message: `Have you spoken directly with ${R} and confirmed they are home and okay?`, confirmLabel: 'Confirm' })) return
     setConfirmBusy(true)
     setConfirmError(false)
     try {
@@ -209,7 +211,7 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
   async function answerAway(n: Notification, response: AwayActivityResponse) {
     if (!unit || answerBusy) return
     const R = unit.caregiver_relationship
-    if (response === 'resident_returned' && !window.confirm(`End the away period now? Inactivity alerts for ${R} will start again.`)) return
+    if (response === 'resident_returned' && !await confirm({ title: 'End away period?', message: `End the away period now? Inactivity alerts for ${R} will start again.`, confirmLabel: 'End now' })) return
     setAnswerBusy(true)
     setAnswerError(false)
     try {
@@ -235,16 +237,8 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
   const ackWho = incident?.acknowledged_by && ctx ? actorName(ctx, incident.acknowledged_by) : ''
 
   return <div className={`cg-root ${standalone ? 'is-standalone' : 'is-embedded'}`} data-theme={theme} onPointerDown={unlockAudio}>
+    <ConfirmContext.Provider value={confirm}>
     <div className="cg-app">
-      <header className={`cg-header ${scrolled ? 'is-scrolled' : ''}`}>
-        <span className="cg-wordmark"><span className="cg-brand-mark"><Mark /></span>TemanMu</span>
-        <span className={`cg-connection is-${connection.toLowerCase()}`} role="status"><span aria-hidden="true" />{connection}</span>
-        <button type="button" className="cg-round" onClick={() => setMuted(value => !value)}
-          aria-label={muted ? 'Sounds off. Turn on' : 'Sounds on. Mute'} title={muted ? 'Sounds off. Turn on' : 'Sounds on. Mute'}>
-          {muted ? <VolumeX size={18} aria-hidden="true" /> : <Volume2 size={18} aria-hidden="true" />}
-        </button>
-      </header>
-
       {loaded && !connected && <div className="cg-reconnect" role="status">
         <WifiOff size={18} aria-hidden="true" />
         <span><strong>Reconnecting…</strong> <span>Showing the last update from {clock(lastSync)}.</span></span>
@@ -255,24 +249,25 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
         <span><strong>{isHomeCheck(incident) ? 'Home check requested' : 'Unusual inactivity'}</strong><span>{incident.reminder_count ? `Reminder #${incident.reminder_count}` : 'Alert sent'} · {isHomeCheck(incident) ? 'Tap for details' : 'Tap to respond'}</span></span>
         <ChevronRight size={20} aria-hidden="true" />
       </button>}
-      {ctx && !showIncident && tab !== 'home' && awayNotice && <button type="button" className="cg-concern is-checking" onClick={() => goTo('home')}>
+      {ctx && !showIncident && tab !== 'home' && awayNotice && <button type="button" className="cg-concern is-away" onClick={() => goTo('home')}>
         <Luggage size={22} aria-hidden="true" />
         <span><strong>Activity while {ctx.R} is away</strong><span>Do you know who’s there? · Tap to answer</span></span>
         <ChevronRight size={20} aria-hidden="true" />
       </button>}
-      {ctx && !showIncident && tab !== 'home' && incident?.state === 'acknowledged' &&<button type="button" className="cg-concern is-checking" onClick={openIncident}>
+      {ctx && !showIncident && tab !== 'home' && incident?.state === 'acknowledged' && <button type="button" className="cg-concern is-checking" onClick={openIncident}>
         <ShieldCheck size={22} aria-hidden="true" />
         <span><strong>{ackWho} {ackWho === 'You' ? 'are' : 'is'} checking on {ctx.R}</strong><span>{ackWho === 'You' ? 'Record the outcome when you’re done' : `Awaiting ${ackWho}’s outcome`}</span></span>
         <ChevronRight size={20} aria-hidden="true" />
       </button>}
 
-      <div className="cg-scroll" ref={scrollRef} onScroll={event => setScrolled(event.currentTarget.scrollTop > 6)}>
+      <div className="cg-scroll" ref={scrollRef}>
         {!loaded ? <div className="cg-loading" role="status">
           <div /><div /><div /><div />
           <p>{connectionTimedOut ? 'Cannot reach TemanMu. Check the backend connection and retry.' : 'Connecting to TemanMu…'}</p>
         </div> : !unit || !ctx ? <p className="cg-card-lead cg-pad">The resident’s home is unavailable.</p>
           : tab === 'home' ? <HomeTab unit={unit} ctx={ctx} incident={incident} readings={readingsByUnit[unit.unit_id] || []} now={now} awayReasons={awayReasons}
             ackBusy={ackBusy} responseError={ackError?.kind === 'failed'} confirmBusy={confirmBusy} confirmError={confirmError}
+            connection={connection} muted={muted} onToggleMute={() => setMuted(value => !value)}
             awayNotice={awayNotice} answerBusy={answerBusy} answerError={answerError}
             onCheckIn={() => void respond('caregiver_checking_in')}
             onRequestVisit={() => void respond('township_requested')} onOpenIncident={openIncident} onCall={startCall} onConfirmHome={() => void confirmHome()}
@@ -283,8 +278,7 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
           : <SettingsTab unit={unit} ctx={ctx} now={now} awayReasons={awayReasons} theme={theme} onTheme={setTheme} onToast={showToast} />}
       </div>
 
-      <nav className="cg-nav" aria-label="Main" style={{ '--tab': TABS.findIndex(item => item.id === tab) } as CSSProperties}>
-        <span className={`cg-nav-thumb ${showIncident ? 'is-hidden' : ''}`} aria-hidden="true" />
+      <nav className="cg-nav" aria-label="Main">
         {TABS.map(item => {
           const current = tab === item.id && !showIncident
           return <button key={item.id} type="button" aria-current={current ? 'page' : undefined} className={current ? 'is-current' : ''} onClick={() => goTo(item.id)}>
@@ -303,7 +297,7 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
         <div className={`cg-call ${call === 'calling' ? 'is-calling' : ''}`} role="dialog" aria-modal="true" aria-label="Simulated call">
           <span className="cg-call-tag">Simulated call</span>
           <span className="cg-call-avatar" aria-hidden="true"><span /><span />{initials(ctx.R)}</span>
-          <strong className="cg-serif">{ctx.R}</strong>
+          <strong>{ctx.R}</strong>
           <span role="status">{call === 'calling' ? 'Calling… (simulated)' : 'Simulated call ended'}</span>
           <p>This is a demo. No real phone call is made and {ctx.R}’s phone won’t ring.</p>
           <button type="button" autoFocus className={call === 'calling' ? 'is-calling' : ''} onClick={() => setCall(current => current === 'calling' ? 'ended' : null)}>
@@ -317,15 +311,9 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
         <span><strong>{pushCopy.title}</strong><span>{pushCopy.body}</span></span>
       </button>}
 
-      {toast && <div className="cg-toast" role="status"><Check size={14} aria-hidden="true" />{toast}</div>}
+      {toast && <div className="cg-toast" role="status"><Check size={15} aria-hidden="true" />{toast}</div>}
+      {alert}
     </div>
+    </ConfirmContext.Provider>
   </div>
-}
-
-function Mark() {
-  return <svg className="cg-mark" width="22" height="22" viewBox="0 0 64 64" aria-hidden="true">
-    <path d="M14 29 L32 15 L50 29 V50 H14 Z" fill="none" stroke="currentColor" strokeWidth="3.6" strokeLinejoin="round" />
-    <path d="M14 31 H50 M32 31 V50" stroke="currentColor" strokeWidth="3.6" />
-    <rect x="35" y="34" width="12" height="13" fill="#f0b25a" />
-  </svg>
 }

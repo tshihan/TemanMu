@@ -1,22 +1,23 @@
 import type { ReactNode } from 'react'
-import { ArrowRight, Check, Info, LoaderCircle } from 'lucide-react'
+import { ArrowRight, Building2, Check, Info, LoaderCircle, Sprout, Users } from 'lucide-react'
 import seed from '../../../shared/seed.json'
 import type { Unit } from '../api/types'
 import type { Ctx } from './copy'
 import { clock, initials, neighbourSentence, TZ, weekdayTime } from './format'
-import { BuddyArt, NeighbourArt, OutingArt } from './TogetherArt'
 import type { ActivityAction, useCompanion } from './useCompanion'
 
 interface Props { unit: Unit; ctx: Ctx; companion: ReturnType<typeof useCompanion>; onToast: (text: string) => void }
 
-/** One slim postcard: an art tile beside a kicker, headline and text, then whatever the card needs across the full width. */
+/** One card: an icon tile beside a kicker, headline and text, then whatever the card needs across the full width. */
 function Postcard({ tone, art, kicker, title, text, children, labelId }: { tone: 'sun' | 'leaf' | 'sky'; art: ReactNode; kicker: string; title: string; text?: ReactNode; children?: ReactNode; labelId: string }) {
   return <article className={`cg-postcard is-${tone}`} aria-labelledby={labelId}>
-    <div className="cg-postcard-art">{art}</div>
+    <div className="cg-postcard-head">
+    <div className="cg-postcard-art" aria-hidden="true">{art}</div>
     <div className="cg-postcard-body">
       <p className="cg-postcard-kicker">{kicker}</p>
       <h2 id={labelId} className="cg-postcard-title">{title}</h2>
       {text && <p className="cg-postcard-text">{text}</p>}
+    </div>
     </div>
     {children}
   </article>
@@ -44,7 +45,7 @@ export function TogetherTab({ unit, ctx, companion, onToast }: Props) {
   }
   const actionButton = (action: ActivityAction, idle: string, done: string, primary = false) => {
     const state = responses[action]
-    return <button type="button" className={`cg-pill ${state === 'saved' ? 'is-saved' : primary ? 'cg-pill-ink' : ''}`}
+    return <button type="button" className={`cg-pill ${state === 'saved' ? 'is-saved' : primary ? 'is-primary' : ''}`}
       onClick={() => void respond(action)} disabled={state === 'saving' || state === 'saved'}>
       {state === 'saved' && <Check size={15} aria-hidden="true" />}{state === 'saving' ? 'Saving…' : state === 'saved' ? done : idle}
     </button>
@@ -62,13 +63,13 @@ export function TogetherTab({ unit, ctx, companion, onToast }: Props) {
   const neighbourMatch = neighbourState?.opted_in ? neighbourState.match : null
 
   return <div className="cg-page cg-together">
-    <header className="cg-intro">
-      <p className="cg-eyebrow">Together</p>
-      <h1 className="cg-display">A wider <em>circle.</em></h1>
+    <header className="cg-page-head">
+      <p className="cg-kicker">Together</p>
+      <h1 className="cg-large-title">A wider circle.</h1>
       <p className="cg-lede">Three small ways to keep {R} connected, close to home.</p>
     </header>
 
-    <Postcard tone="sun" art={<OutingArt />} labelId="cg-outing-title" kicker={activity ? `01 · ${longDate(activity.starts_at)}` : '01 · Something to do'}
+    <Postcard tone="sun" art={<Sprout size={24} />} labelId="cg-outing-title" kicker={activity ? `01 · ${longDate(activity.starts_at)}` : '01 · Something to do'}
       title={activity ? activity.title : `Nothing planned near ${R} this week`}
       text={activity ? `${clock(activity.starts_at)} at ${activity.location}. Invite ${R}, or go along together.` : 'New community activities appear here as they’re announced.'}>
       {activity && <>
@@ -81,7 +82,7 @@ export function TogetherTab({ unit, ctx, companion, onToast }: Props) {
       </>}
     </Postcard>
 
-    <Postcard tone="leaf" art={<BuddyArt />} labelId="cg-buddy-title" kicker="02 · A buddy"
+    <Postcard tone="leaf" art={<Users size={24} />} labelId="cg-buddy-title" kicker="02 · A buddy"
       title={buddy.kind === 'matched' ? `Meet ${buddy.match.buddy.name}` : interests.length ? `Someone who loves ${interests[0]} too` : `Someone who shares ${R}’s interests`}
       text={buddy.kind === 'matched' ? undefined : `A local volunteer matched on what ${R} enjoys${interests.length > 1 ? `: ${interests.join(' or ')}` : ''}.`}>
       {buddy.kind === 'matched' ? <Person name={buddy.match.buddy.name} lines={[
@@ -89,7 +90,7 @@ export function TogetherTab({ unit, ctx, companion, onToast }: Props) {
         ...(buddy.match.next_activity ? [`Next together: ${buddy.match.next_activity.title}, ${weekdayTime(buddy.match.next_activity.starts_at)}`] : []),
       ]} /> : <>
         {(buddy.kind === 'none' || buddy.kind === 'loading') && <div className="cg-postcard-actions">
-          <button type="button" className="cg-pill cg-pill-ink" onClick={() => void companion.requestBuddy()} disabled={buddy.kind === 'loading'}>
+          <button type="button" className="cg-pill is-primary" onClick={() => void companion.requestBuddy()} disabled={buddy.kind === 'loading'}>
             Find a buddy<ArrowRight size={15} aria-hidden="true" />
           </button>
         </div>}
@@ -102,7 +103,7 @@ export function TogetherTab({ unit, ctx, companion, onToast }: Props) {
       </>}
     </Postcard>
 
-    <Postcard tone="sky" art={<NeighbourArt />} labelId="cg-neighbour-title" kicker="03 · A neighbour"
+    <Postcard tone="sky" art={<Building2 size={24} />} labelId="cg-neighbour-title" kicker="03 · A neighbour"
       title={neighbourMatch ? `Meet ${neighbourMatch.name}` : 'A neighbour who keeps the same routine'}
       text={neighbourMatch ? undefined : `Some neighbours keep the same hours as ${R}. With ${R}’s OK, we’ll suggest one to meet.`}>
       {neighbours.kind === 'loading' && <p className="cg-pending" role="status"><LoaderCircle className="cg-spin" size={16} aria-hidden="true" />Loading…</p>}
@@ -118,14 +119,14 @@ export function TogetherTab({ unit, ctx, companion, onToast }: Props) {
         {neighbourState?.introduction_requested_at
           ? <p className="cg-postcard-done" role="status"><Check size={15} aria-hidden="true" />Requested at {clock(neighbourState.introduction_requested_at)}. The community coordinator will introduce them in person.</p>
           : <div className="cg-postcard-actions">
-            <button type="button" className="cg-pill cg-pill-ink" onClick={() => void introduce()} disabled={neighbourSaving}>
+            <button type="button" className="cg-pill is-primary" onClick={() => void introduce()} disabled={neighbourSaving}>
               {neighbourSaving ? 'Saving…' : 'Ask for an introduction'}{!neighbourSaving && <ArrowRight size={15} aria-hidden="true" />}
             </button>
           </div>}
       </>}
       {neighbourState?.opted_in && !neighbourMatch && <p className="cg-postcard-note">No neighbour keeps {R}’s hours yet. We’ll keep looking.</p>}
       {neighbourState && !neighbourState.opted_in && <div className="cg-postcard-actions">
-        <button type="button" className="cg-pill cg-pill-ink" onClick={() => void consent(true)} disabled={neighbourSaving}>
+        <button type="button" className="cg-pill is-primary" onClick={() => void consent(true)} disabled={neighbourSaving}>
           {neighbourSaving ? 'Saving…' : 'Open to meeting neighbours'}{!neighbourSaving && <ArrowRight size={15} aria-hidden="true" />}
         </button>
       </div>}

@@ -2,7 +2,7 @@ import { Moon, Sun } from 'lucide-react'
 import type { Unit } from '../api/types'
 import { AwayPeriods } from './AwayPeriods'
 import { GUARD, type Ctx } from './copy'
-import { initials } from './format'
+import { ResidentAvatar } from './Avatar'
 
 export type Theme = 'light' | 'dark'
 
@@ -13,17 +13,19 @@ interface Props {
 
 export function SettingsTab({ unit, ctx, now, awayReasons, theme, onTheme, onToast }: Props) {
   return <div className="cg-page">
-    <header className="cg-intro cg-tab-head">
-      <p className="cg-eyebrow">Settings</p>
-      <h1 className="cg-display">Your <em>setup.</em></h1>
+    <header className="cg-page-head">
+      <p className="cg-kicker">Settings</p>
+      <h1 className="cg-large-title">Your setup.</h1>
     </header>
     <section className="cg-card cg-profile" aria-label="Resident">
-      <span className="cg-avatar cg-avatar-lg" aria-hidden="true">{initials(unit.resident_name.replace(/^Madam\s+/i, ''))}</span>
+      <div className="cg-profile-who">
+      <ResidentAvatar name={unit.resident_name} size="lg" />
       <span className="cg-profile-text">
         <strong>{ctx.R}</strong>
         <span>{unit.resident_name}</span>
         <span>Unit {unit.unit_id}</span>
       </span>
+      </div>
       <dl className="cg-profile-meta">
         <div><dt>Responders</dt><dd>You and {GUARD}</dd></div>
         <div><dt>Sensors</dt><dd>Water · Electricity · Door</dd></div>
@@ -32,9 +34,8 @@ export function SettingsTab({ unit, ctx, now, awayReasons, theme, onTheme, onToa
     <AwayPeriods unit={unit} ctx={ctx} now={now} reasons={awayReasons} onToast={onToast} />
     <section className="cg-card cg-settings">
       <div>
-        <h2 className="cg-setting-title">Appearance</h2>
-        <div role="radiogroup" aria-label="Theme" className={`cg-segmented is-${theme}`}>
-          <span className="cg-segmented-thumb" aria-hidden="true" />
+        <h2 className="cg-section-title">Appearance</h2>
+        <div role="radiogroup" aria-label="Theme" className="cg-segmented">
           <button type="button" role="radio" aria-checked={theme === 'light'} onClick={() => onTheme('light')}><Sun size={16} aria-hidden="true" />Light</button>
           <button type="button" role="radio" aria-checked={theme === 'dark'} onClick={() => onTheme('dark')}><Moon size={16} aria-hidden="true" />Dark</button>
         </div>

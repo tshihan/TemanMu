@@ -21,10 +21,10 @@ export function UpdatesTab({ feed, ctx, now, incidentFor, isUnread, ackTargetId,
   }
 
   return <div className="cg-page">
-    <header className="cg-page-head cg-tab-head">
+    <header className="cg-page-head is-row">
       <div>
-        <p className="cg-eyebrow">{unread ? `${unread} new` : 'All caught up'}</p>
-        <h1 className="cg-display">Updates</h1>
+        <p className="cg-kicker">{unread ? `${unread} new` : 'All caught up'}</p>
+        <h1 className="cg-large-title">Updates</h1>
       </div>
       {unread > 0 && <button type="button" className="cg-link-button" onClick={onMarkAllRead}>Mark all read</button>}
     </header>
@@ -34,7 +34,7 @@ export function UpdatesTab({ feed, ctx, now, incidentFor, isUnread, ackTargetId,
         {day.items.map(n => {
           const copy = notificationCopy(n, ctx, incidentFor(n))
           const fresh = isUnread(n)
-          return <li key={n.notification_id} className={`cg-feed-item is-${copy.tone} ${fresh ? 'is-unread' : ''}`}>
+          return <li key={n.notification_id} className={`cg-feed-item ${fresh ? 'is-unread' : ''}`}>
             <button type="button" className="cg-feed-open" onClick={() => onOpen(n)}>
               <span className={`cg-tone-icon tone-${copy.tone}`}><copy.Icon size={18} aria-hidden="true" /></span>
               <span className="cg-feed-text">
@@ -45,7 +45,8 @@ export function UpdatesTab({ feed, ctx, now, incidentFor, isUnread, ackTargetId,
             </button>
             {n.notification_id === ackTargetId && <button type="button" className="cg-btn cg-btn-alarm cg-feed-ack" onClick={onAck} disabled={ackBusy}>
               {ackBusy ? 'Opening…' : 'Respond to alert'}
-            </button>}          </li>
+            </button>}
+          </li>
         })}
       </ol>
     </section>) : <div className="cg-empty">

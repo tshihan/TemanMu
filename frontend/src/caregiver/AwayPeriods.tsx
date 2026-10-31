@@ -4,7 +4,9 @@ import { api } from '../api'
 import { ApiError } from '../api/live'
 import { applyEvent } from '../api/store'
 import type { AwayPeriod, Unit } from '../api/types'
+import { useConfirm } from './ConfirmAlert'
 import { awayStarted, GUARD, type Ctx } from './copy'
+import { DateTimeSheet } from './DateTimeSheet'
 import { dateTime, fromLocalInput, localInput } from './format'
 
 const SUGGESTIONS = ['Holiday', 'Hospital stay', 'Staying with family']
@@ -22,6 +24,7 @@ export function AwayPeriods({ unit, ctx, now, reasons, onToast }: Props) {
   const [end, setEnd] = useState('')
   const [busy, setBusy] = useState<string | null>(null) // 'add' or the period being ended
   const [error, setError] = useState<string | null>(null)
+  const confirm = useConfirm()
   const periods = unit.away_periods.filter(period => Date.parse(period.ends_at) > now)
   const actor = { role: 'caregiver' as const, name: unit.caregiver_name }
 
@@ -56,7 +59,8 @@ export function AwayPeriods({ unit, ctx, now, reasons, onToast }: Props) {
 
   async function finish(period: AwayPeriod, active: boolean) {
     const question = active ? `End this away period now? Inactivity checks for ${R} restart from now.` : 'Cancel this upcoming away period?'
-    if (busy || !window.confirm(question)) return
+    if (busy) return
+    if (!await confirm({ title: active ? 'End away period?' : 'Cancel away period?', message: question, confirmLabel: active ? 'End now' : 'Cancel period' })) return
     setBusy(period.period_id); setError(null)
     try {
       apply(await api.cancelAwayPeriod(unit.unit_id, period.period_id, actor))
@@ -69,7 +73,7 @@ export function AwayPeriods({ unit, ctx, now, reasons, onToast }: Props) {
   }
 
   return <section className="cg-card cg-away" aria-labelledby="cg-away-heading">
-    <h2 id="cg-away-heading" className="cg-setting-title">Away from home</h2>
+    <h2 id="cg-away-heading" className="cg-section-title">Away from home</h2>
     <p className="cg-card-lead">Let TemanMu know when {R} won’t be home, for any reason. Inactivity alerts pause until {R} is due back.
       You’ll still be alerted if water or power is left running.</p>
 
@@ -89,29 +93,32 @@ export function AwayPeriods({ unit, ctx, now, reasons, onToast }: Props) {
     </ul>}
 
     {adding ? <form className="cg-away-form" onSubmit={event => void submit(event)} noValidate>
-      <label className="cg-field"><span>Reason <span className="cg-field-note">(optional)</span></span>
+      <label className="cg-field"><span>Reason (optional)</span>
         <input value={reason} onChange={event => setReason(event.target.value)} maxLength={200} placeholder="e.g. Staying with Auntie in Ipoh" autoFocus
           aria-describedby="cg-away-private" />
       </label>
       <p id="cg-away-private" className="cg-away-hint">Only you can see the reason. {GUARD} only sees that {R} is away.</p>
       <div className="cg-away-chips" role="group" aria-label="Common reasons">
-        {SUGGESTIONS.map(text => <button key={text} type="button" className="cg-away-chip" aria-pressed={reason === text} onClick={() => setReason(text)}>{text}</button>)}
+        {SUGGESTIONS.map(text => <button key={text} type="button" className={`cg-chip-button ${reason === text ? 'is-on' : ''}`} aria-pressed={reason === text} onClick={() => setReason(text)}>{text}</button>)}
       </div>
-      <label className="cg-check"><input type="checkbox" checked={startsNow} onChange={event => setStartsNow(event.target.checked)} />Starting now</label>
-      {!startsNow && <label className="cg-field"><span>From</span>
-        <input type="datetime-local" value={start} onChange={event => setStart(event.target.value)} />
-      </label>}
-      <label className="cg-field"><span>Until</span>
-        <input type="datetime-local" value={end} onChange={event => setEnd(event.target.value)} />
+      <label className="cg-switch-row">
+        <span>Starting now</span>
+        <input type="checkbox" role="switch" className="cg-switch" checked={startsNow} onChange={event => setStartsNow(event.target.checked)} />
       </label>
-      {error && <p role="alert" className="cg-away-error">{error}</p>}
-      <div className="cg-away-actions">
-        <button type="button" className="cg-btn cg-btn-outline" onClick={() => setAdding(false)} disabled={busy === 'add'}>Cancel</button>
+      {!startsNow && <div className="cg-field"><span>From</span>
+        <DateTimeSheet label="Away from" kind="start" value={start} onChange={setStart} now={now} disabled={busy === 'add'} />
+      </div>}
+      <div className="cg-field"><span>Until</span>
+        <DateTimeSheet label="Away until" kind="end" value={end} onChange={setEnd} now={now} disabled={busy === 'add'} />
+      </div>
+      {error && <p role="alert" className="cg-form-error">{error}</p>}
+      <div className="cg-form-actions">
+        <button type="button" className="cg-btn cg-btn-tile2" onClick={() => setAdding(false)} disabled={busy === 'add'}>Cancel</button>
         <button type="submit" className="cg-btn cg-btn-accent" disabled={busy === 'add'}>{busy === 'add' ? 'Saving…' : 'Save'}</button>
       </div>
     </form> : <>
-      {error && <p role="alert" className="cg-away-error">{error}</p>}
-      <button type="button" className="cg-btn cg-btn-outline" onClick={openForm}><CalendarPlus size={18} aria-hidden="true" />Add away period</button>
+      {error && <p role="alert" className="cg-form-error">{error}</p>}
+      <button type="button" className="cg-btn cg-btn-tile2" onClick={openForm}><CalendarPlus size={18} aria-hidden="true" />Add away period</button>
     </>}
   </section>
 }

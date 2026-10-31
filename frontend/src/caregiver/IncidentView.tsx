@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BellRing, Check, ChevronLeft, CircleCheck, Info, Phone, ShieldCheck, TriangleAlert } from 'lucide-react'
+import { BellRing, ChevronLeft, CircleCheck, Info, Phone, ShieldCheck, TriangleAlert } from 'lucide-react'
 import { api } from '../api'
 import { applyIncident } from '../api/store'
 import type { Incident, Outcome, Unit } from '../api/types'
@@ -75,7 +75,7 @@ export function IncidentView({ incident, unit, ctx, now, liveNote, ackBusy, ackE
 
   return <div className={`cg-sheet is-${hero.variant}`} role="dialog" aria-label="Safety alert">
     <div className="cg-sheet-head">
-      <button type="button" className="cg-round" onClick={onBack} aria-label="Back"><ChevronLeft size={22} aria-hidden="true" /></button>
+      <button type="button" className="cg-icon-btn" onClick={onBack} aria-label="Back"><ChevronLeft size={22} aria-hidden="true" /></button>
       <strong>Safety alert</strong>
       <span className="cg-chip">{hero.chip}</span>
     </div>
@@ -83,9 +83,8 @@ export function IncidentView({ incident, unit, ctx, now, liveNote, ackBusy, ackE
       {liveNote && <div className="cg-live-note" role="status"><Info size={18} aria-hidden="true" />Updated just now: activity was detected at home.</div>}
 
       <section className={`cg-hero is-${hero.variant}`}>
-        <span className="cg-orb" aria-hidden="true"><span /><span /><span /></span>
-        <span className="cg-badge"><hero.Icon size={16} aria-hidden="true" /><span>{hero.badge}</span></span>
-        <h1 className="cg-display">{hero.title}</h1>
+        <span className="cg-hero-badge"><hero.Icon size={15} aria-hidden="true" /><span>{hero.badge}</span></span>
+        <h1 className="cg-hero-title">{hero.title}</h1>
         <p>{hero.body}</p>
         {state === 'notified' && <p className="cg-hero-reminder"><BellRing size={16} aria-hidden="true" />
           <span>{incident.reminder_count ? `Reminder #${incident.reminder_count} sent` : 'Alert sent'}</span><span className="cg-hero-next">next in <span className="cg-num">{until(incident.next_reminder_at, now)}</span></span>
@@ -93,7 +92,7 @@ export function IncidentView({ incident, unit, ctx, now, liveNote, ackBusy, ackE
         {state === 'notified' && !homeCheck && <p className="cg-hero-note">Township can visit while you check in. Reminders continue until someone takes the visit.</p>}
         {(state === 'notified' || state === 'acknowledged') && !mine && !homeCheck && <div className="cg-hero-actions">
           {!checkingIn && <button type="button" className="cg-btn cg-btn-inverse cg-btn-tall" onClick={onCheckIn} disabled={ackBusy}>I’ll check in with {R}</button>}
-          {!visitRequested && state === 'notified' && <button type="button" className="cg-btn cg-btn-outline cg-btn-tall" onClick={onAck} disabled={ackBusy}>Ask township to visit</button>}
+          {!visitRequested && state === 'notified' && <button type="button" className="cg-btn cg-btn-shade cg-btn-tall" onClick={onAck} disabled={ackBusy}>Ask township to visit</button>}
           {checkingIn && <p role="status">Check-in recorded. {R} is not yet confirmed safe.</p>}
           {checkingIn && state === 'notified' && <button type="button" className="cg-btn cg-btn-outline" onClick={onConfirmSafe} disabled={ackBusy}>I spoke to {R} — no help needed</button>}
           {visitRequested && <p role="status">Township visit requested.</p>}
@@ -113,9 +112,9 @@ export function IncidentView({ incident, unit, ctx, now, liveNote, ackBusy, ackE
       {state === 'acknowledged' && mine && <section className="cg-card cg-handoff">
         <h2 className="cg-card-title">Emergency handoff</h2>
         <p className="cg-card-lead">If {R} has collapsed or needs urgent help, call 999 now and request an ambulance. Give the operator the full address and unit {unit.unit_id}; follow their instructions.</p>
-        <a className="cg-btn cg-btn-alarm cg-btn-tall" href="tel:999"><Phone size={20} aria-hidden="true" />Call 999</a>
-        {!called && <button type="button" className="cg-btn cg-btn-outline" onClick={() => void escalate('emergency_called')}>I called 999 — record handoff</button>}
-        {!unable && !called && <button type="button" className="cg-btn cg-btn-outline" onClick={() => void escalate('unable_to_verify')}>Unable to verify safety</button>}
+        <a className="cg-btn cg-btn-alarm cg-btn-999" href="tel:999"><Phone size={20} aria-hidden="true" />Call 999</a>
+        {!called && <button type="button" className="cg-btn cg-btn-tile2 cg-btn-small" onClick={() => void escalate('emergency_called')}>I called 999 — record handoff</button>}
+        {!unable && !called && <button type="button" className="cg-btn cg-btn-tile2 cg-btn-small" onClick={() => void escalate('unable_to_verify')}>Unable to verify safety</button>}
         {called && <p className="cg-card-lead">Keep this case open until the handoff or welfare outcome is confirmed.</p>}
       </section>}
 
@@ -125,15 +124,14 @@ export function IncidentView({ incident, unit, ctx, now, liveNote, ackBusy, ackE
         <div role="radiogroup" aria-label="Outcome" className="cg-outcomes">
           {OUTCOMES.map(item => <button key={item.value} type="button" role="radio" aria-checked={outcome === item.value}
             className={`cg-outcome ${outcome === item.value ? 'is-on' : ''}`} onClick={() => setOutcome(item.value)}>
-            <span className="cg-outcome-dot">{outcome === item.value && <Check size={14} aria-hidden="true" />}</span>
-            <span><strong>{item.label}</strong><span>{item.help}</span></span>
+            <strong>{item.label}</strong><span>{item.help}</span>
           </button>)}
         </div>
         {closeFailed && <p className="cg-inline-error" role="alert"><Info size={16} aria-hidden="true" />The outcome couldn’t be recorded. Please try again.</p>}
         <button type="button" className="cg-btn cg-btn-accent cg-record" onClick={() => void record()} disabled={!outcome || closing}>{closing ? 'Recording…' : 'Record outcome'}</button>
       </section>}
 
-      {state === 'acknowledged' && !mine && <p className="cg-fineprint cg-pad">{actorName(ctx, ack)} is responsible for the in-person outcome. You’ll get an update when it’s recorded.</p>}
+      {state === 'acknowledged' && !mine && <p className="cg-sheet-note">{actorName(ctx, ack)} is responsible for the in-person outcome. You’ll get an update when it’s recorded.</p>}
 
       <section className="cg-card">
         <h2 className="cg-card-title">Timeline</h2>
@@ -141,7 +139,7 @@ export function IncidentView({ incident, unit, ctx, now, liveNote, ackBusy, ackE
           {incident.events.map((event, index) => {
             const copy = eventCopy(event, ctx, incident)
             return <li key={`${event.at}-${event.type}-${index}`}>
-              <span className={`cg-tone-icon tone-${copy.tone}`}><copy.Icon size={18} aria-hidden="true" /></span>
+              <span className="cg-timeline-rail"><span className={`cg-tone-icon tone-${copy.tone}`}><copy.Icon size={17} aria-hidden="true" /></span></span>
               <span><strong>{copy.title}</strong><span>{copy.body}</span><time dateTime={event.at}>{clock(event.at, true)}</time></span>
             </li>
           })}

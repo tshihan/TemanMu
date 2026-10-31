@@ -1,11 +1,12 @@
-import { TrackingControl } from './TrackingControl'
 import type { CSSProperties } from 'react'
 import type { LucideIcon } from 'lucide-react'
-import { ArrowRight, CircleCheck, Clock3, DoorOpen, Droplets, Hospital, Luggage, Phone, PhoneOutgoing, ShieldCheck, TriangleAlert, Zap } from 'lucide-react'
+import { ArrowRight, CircleCheck, Clock3, DoorClosed, DoorOpen, Droplets, Hospital, Luggage, Phone, PhoneOutgoing, ShieldCheck, TriangleAlert, Volume2, VolumeX, Zap } from 'lucide-react'
 import type { AwayActivityResponse, AwayPeriod, Incident, Notification, Reading, Unit } from '../api/types'
 import { AwayActivityChoices } from './AwayActivityChoices'
+import { ResidentAvatar } from './Avatar'
 import { actorName, currentAway, GUARD, isHomeCheck, isOuting, outcomeLabel, STATUS_LABELS, type Ctx } from './copy'
-import { clock, dayFraction, dayLabel, greeting, isToday, until, when } from './format'
+import { clock, dayFraction, dayLabel, isToday, until, when } from './format'
+import { TrackingControl } from './TrackingControl'
 
 type Variant = 'alarm' | 'checking' | 'quiet' | 'away' | 'calm' | 'pending' | 'hospital'
 interface Card { variant: Variant; Icon: LucideIcon; badge: string; headline: string; reason: string; grace?: string; ack?: boolean; open?: string }
@@ -72,12 +73,13 @@ function statusCard(unit: Unit, incident: Incident | null, ctx: Ctx, now: number
 interface Props {
   unit: Unit; ctx: Ctx; incident: Incident | null; readings: Reading[]; now: number; awayReasons: Record<string, string | null>
   ackBusy: boolean; responseError: boolean; confirmBusy: boolean; confirmError: boolean
+  connection: string; muted: boolean; onToggleMute: () => void
   awayNotice: Notification | null; answerBusy: boolean; answerError: boolean
   onCheckIn: () => void; onRequestVisit: () => void; onOpenIncident: () => void; onCall: () => void; onConfirmHome: () => void
   onAnswerAway: (n: Notification, response: AwayActivityResponse) => void
 }
 
-export function HomeTab({ unit, ctx, incident, readings, now, awayReasons, ackBusy, responseError, confirmBusy, confirmError, awayNotice, answerBusy, answerError,
+export function HomeTab({ unit, ctx, incident, readings, now, awayReasons, ackBusy, responseError, confirmBusy, confirmError, connection, muted, onToggleMute, awayNotice, answerBusy, answerError,
   onCheckIn, onRequestVisit, onOpenIncident, onCall, onConfirmHome, onAnswerAway }: Props) {
   const { R } = ctx
   const today = readings.filter(reading => isToday(reading.recorded_at, now))
@@ -101,89 +103,111 @@ export function HomeTab({ unit, ctx, incident, readings, now, awayReasons, ackBu
   const marks = (sensor: Reading['sensor']) => today.filter(reading => reading.sensor === sensor && active(reading)).map(reading => reading.recorded_at)
   const waterMarks = marks('water')
   const doorMarks = marks('door')
-  const lanes: Lane[] = [
-    { key: 'water', Icon: Droplets, label: 'Water', value: waterAt ? 'Used today' : 'No use yet', time: waterAt ? clock(waterAt) : null,
-      marks: waterMarks.length || !waterAt ? waterMarks : [waterAt] },
-    { key: 'power', Icon: Zap, label: 'Electricity', value: unit.latest.power_kw > unit.baseline.standby_power_kw ? 'In use' : powerUsed ? 'Used today' : power ? 'Standby' : 'No use yet',
-      time: powerUsed ? clock(powerUsed.recorded_at) : power ? clock(power.recorded_at) : null, marks: marks('electricity') },
-    { key: 'door', Icon: DoorOpen, label: 'Front door', value: unit.care_state === 'in_hospital' ? 'Resident in hospital' : away ? 'Away period' : unit.status === 'possible_away' ? 'Possibly away' : doorMarks.length ? 'Opened today' : 'No outing indicated',
-      time: unit.status === 'possible_away' && unit.latest.last_door_event_at ? clock(unit.latest.last_door_event_at) : doorMarks.length ? clock(doorMarks.at(-1)!) : null, marks: doorMarks },
+  const powerMarks = marks('electricity')
+  const paused = !!away || unit.care_state === 'in_hospital'
+  const lastDoor = doorMarks.at(-1)
+  const tiles: Tile[] = [
+    { key: 'water', Icon: Droplets, value: waterAt ? clock(waterAt).replace(/\s?[AP]M$/, '') : '—', label: waterAt ? 'used' : 'no use yet' },
+    { key: 'power', Icon: Zap, value: unit.latest.power_kw > unit.baseline.standby_power_kw ? 'In use' : powerUsed ? 'Used today' : 'Standby',
+      label: powerUsed ? `${clock(powerUsed.recorded_at)}` : power ? `${clock(power.recorded_at)}` : 'no use yet' },
+    unit.care_state === 'in_hospital' ? { key: 'door', Icon: DoorClosed, value: 'Hospital', label: 'in hospital' }
+      : away ? { key: 'door', Icon: DoorOpen, value: 'Away', label: 'away period' }
+      : unit.status === 'possible_away' ? { key: 'door', Icon: DoorOpen, value: 'Out?', label: `${unit.latest.last_door_event_at ? clock(unit.latest.last_door_event_at) : 'opened'}` }
+      : { key: 'door', Icon: DoorClosed, value: 'Home', label: lastDoor ? `${clock(lastDoor)}` : 'no outing' },
+  ]
+  const tracks: { key: string; label: string; at: string[] }[] = [
+    { key: 'water', label: 'Water', at: waterMarks.length || !waterAt ? waterMarks : [waterAt] },
+    { key: 'power', label: 'Power', at: powerMarks },
+    { key: 'door', label: 'Door', at: doorMarks },
   ]
   const nowAt = dayFraction(now)
 
   return <div className="cg-page cg-home">
-    <header className="cg-intro">
-      <div>
-        <p className="cg-eyebrow"><time dateTime={new Date(now).toISOString()}>{dayLabel(now)}</time><span aria-hidden="true">·</span>{clock(now)}</p>
-        <h1 className="cg-display">{greeting(now)},<br /><em>{ctx.me.split(' ')[0]}.</em></h1>
+    <header className="cg-home-head">
+      <div className="cg-home-who">
+        <ResidentAvatar name={unit.resident_name} size="md" />
+        <div>
+          <p className="cg-home-date"><time dateTime={new Date(now).toISOString()}>{dayLabel(now)}</time> · {clock(now)}</p>
+          <h1 className="cg-large-title">{R}</h1>
+        </div>
       </div>
-      <div className="cg-home-controls">
-        <TrackingControl unit={unit} relationship={R} away={away} now={now}
-          blocked={!!unit.active_incident_id || !!(incident && !['closed', 'auto_resolved'].includes(incident.state))} />
-      <button type="button" className="cg-call-pill" onClick={onCall}>
-        <Phone aria-hidden="true" />
-        <span>Call {R}</span>
-      </button>
+      <div className="cg-home-tools">
+        <button type="button" className="cg-icon-btn" onClick={onToggleMute}
+          aria-label={muted ? 'Sounds off. Turn on' : 'Sounds on. Mute'} title={muted ? 'Sounds off. Turn on' : 'Sounds on. Mute'}>
+          {muted ? <VolumeX size={18} aria-hidden="true" /> : <Volume2 size={18} aria-hidden="true" />}
+        </button>
+        <span className="cg-brand-mark" title="TemanMu"><Mark /></span>
       </div>
     </header>
 
-    <section aria-label="Current status" className={`cg-status is-${card.variant}${(away && card.variant === 'away') || card.variant === 'hospital' ? ' is-tracking-paused' : ''}`}>
-      <span className="cg-orb" aria-hidden="true"><span /><span /><span /></span>
-      <div className="cg-status-top">
-        <span className="cg-status-badge"><card.Icon size={14} strokeWidth={2.4} aria-hidden="true" />{card.badge}</span>
-      </div>
+    <section aria-label="Current status" className={`cg-status is-${card.variant}`}>
+      <span className="cg-status-seal" aria-hidden="true"><card.Icon size={32} strokeWidth={2.4} /></span>
+      <span className="cg-status-pill" role="status">{card.badge} · {when(updatedAt, now)}</span>
       <h2 className="cg-status-headline">{card.headline}</h2>
       <p className="cg-status-reason">{card.reason}</p>
-      {card.variant === 'away' && awayNotice && <div className="cg-status-actions">
-        <p className="cg-status-ask"><strong>{awayNotice.message}</strong> Do you know who’s there?</p>
-        <AwayActivityChoices ctx={ctx} busy={answerBusy} failed={answerError} onAnswer={response => onAnswerAway(awayNotice, response)} />
-      </div>}
+      {card.grace && <p className="cg-status-grace"><span className="cg-status-timer cg-num">{card.grace}</span>
+        <span>left in the simulated call window. You’ll only be alerted if {R} doesn’t answer.</span></p>}
       {unit.status === 'possible_away' && !away && <div className="cg-status-actions">
-        <button type="button" className="cg-btn cg-btn-accent" onClick={onCall}><Phone size={18} aria-hidden="true" />Call {R}</button>
+        <button type="button" className="cg-btn cg-btn-ink" onClick={onCall}><Phone size={18} aria-hidden="true" />Call {R}</button>
         <button type="button" className="cg-btn cg-btn-outline" onClick={onConfirmHome} disabled={confirmBusy}>
           {confirmBusy ? 'Recording confirmation…' : `I spoke to ${R} — home and okay`}
         </button>
         {confirmError && <p role="alert">Couldn’t record your confirmation. Please try again.</p>}
       </div>}
-      {card.grace && <p className="cg-status-meta"><span className="cg-status-timer cg-num">{card.grace}</span>
-        <span>left in the simulated call window. You’ll only be alerted if {R} doesn’t answer.</span></p>}
+      {card.variant === 'away' && awayNotice && <div className="cg-status-actions">
+        <p className="cg-status-ask"><strong>{awayNotice.message}</strong>Do you know who’s there?</p>
+        <AwayActivityChoices ctx={ctx} busy={answerBusy} failed={answerError} onAnswer={response => onAnswerAway(awayNotice, response)} />
+      </div>}
       {card.ack && <div className="cg-status-actions">
         {!checkingIn && <button type="button" className="cg-btn cg-btn-inverse cg-btn-tall" onClick={onCheckIn} disabled={ackBusy}>I’ll check in with {R}</button>}
-        {!visitRequested && <button type="button" className="cg-btn cg-btn-outline cg-btn-tall" onClick={onRequestVisit} disabled={ackBusy}>Ask township to visit</button>}
-        {checkingIn && <p role="status">Check-in recorded. Safety is not yet confirmed.</p>}
-        {visitRequested && <p role="status">Township visit requested.</p>}
+        {!visitRequested && <button type="button" className="cg-btn cg-btn-shade cg-btn-tall" onClick={onRequestVisit} disabled={ackBusy}>Ask township to visit</button>}
+        {checkingIn && <p className="cg-status-done" role="status"><CircleCheck size={20} aria-hidden="true" /><span><strong>Check-in recorded</strong>Safety is not yet confirmed.</span></p>}
+        {visitRequested && <p className="cg-status-done" role="status"><CircleCheck size={20} aria-hidden="true" /><span><strong>Township visit requested</strong>Waiting for the township to take it.</span></p>}
         {(checkingIn || visitRequested) && <button type="button" className="cg-status-details" onClick={onOpenIncident}>View alert details</button>}
         {responseError && <p role="alert">Couldn’t record your response. Please try again.</p>}
       </div>}
-      {card.open && <button type="button" className="cg-btn cg-btn-ghost" onClick={onOpenIncident}>{card.open}<ArrowRight size={18} aria-hidden="true" /></button>}
-      <p className="cg-status-who"><span className="cg-status-name">{R}</span><span>{unit.resident_name} · {unit.unit_id}</span>
-        <span className="cg-status-updated">{when(updatedAt, now)}</span></p>
+      {card.open && <button type="button" className="cg-btn cg-btn-outline cg-status-open" onClick={onOpenIncident}>{card.open}<ArrowRight size={18} aria-hidden="true" /></button>}
     </section>
 
+    <ul className={`cg-tiles ${paused ? 'is-paused' : ''}`} aria-label="Today at home">
+      {tiles.map(tile => <li key={tile.key} className={`cg-tile is-${tile.key}`}>
+        <span className="cg-tile-icon"><tile.Icon size={16} aria-hidden="true" /></span>
+        <span className="cg-tile-text">
+          <strong className={`cg-num ${tile.value.length > 7 ? 'is-long' : ''}`}>{tile.value}</strong>
+          <span>{tile.label}</span>
+        </span>
+      </li>)}
+    </ul>
+
     <section className="cg-day" aria-labelledby="cg-day-heading">
-      <div className={`cg-day-card${away || unit.care_state === 'in_hospital' ? ' is-tracking-paused' : ''}`} style={{ '--now': nowAt } as CSSProperties}>
-      <div className="cg-section-head">
-        <h2 id="cg-day-heading" className="cg-section-title">{R}’s day</h2>
-        <span className="cg-section-note">{away || unit.care_state === 'in_hospital' ? 'Inactivity tracking paused' : 'Water, power & door only'}</span>
+      <div className="cg-day-head">
+        <h2 id="cg-day-heading">{R}’s day</h2>
+        <span>{paused ? 'Tracking paused' : 'Water, power & door only'}</span>
       </div>
-      <ul className="cg-lanes">
-        {lanes.map(lane => <li key={lane.key} className={`cg-lane is-${lane.key}`}>
-          <span className="cg-lane-icon"><lane.Icon size={17} aria-hidden="true" /></span>
-          <span className="cg-lane-label">{lane.label}</span>
-          <span className="cg-lane-value"><strong>{lane.value}</strong>{lane.time && <time className="cg-num">{lane.time}</time>}</span>
-          <span className="cg-lane-track" aria-hidden="true">
-            <span className="cg-lane-past" />
-            {lane.marks.map((at, index) => <i key={`${at}-${index}`} style={{ left: `${dayFraction(at) * 100}%`, animationDelay: `${300 + index * 40}ms` }} />)}
-          </span>
-        </li>)}
-      </ul>
-      <div className="cg-axis" aria-hidden="true">
-        {['12a', '6a', '12p', '6p', '12a'].map((label, index) => <span key={index} className={Math.abs(index / 4 - nowAt) < .08 ? 'is-hidden' : ''}>{label}</span>)}
-        <b>Now</b>
+      <div className="cg-day-strip-chart" role="img" aria-label={tracks.map(track => `${track.label}: ${track.at.length ? track.at.map(at => clock(at)).join(', ') : 'none'}`).join('. ')}
+        style={{ '--now': nowAt } as CSSProperties}>
+        <span className="cg-day-past" />
+        {tracks.map(track => track.at.map((at, index) => <i key={`${track.key}-${at}-${index}`} className={`is-${track.key}`} style={{ left: `${dayFraction(at) * 100}%` }} />))}
+        <span className="cg-day-now" />
       </div>
-      </div>
+      <div className="cg-axis" aria-hidden="true">{['12a', '6a', '12p', '6p', '12a'].map((label, index) => <span key={index}>{label}</span>)}</div>
+      <div className="cg-legend" aria-hidden="true">{tracks.map(track => <span key={track.key} className={`is-${track.key}`}>{track.label}</span>)}</div>
     </section>
+
+    <div className="cg-actions">
+      <button type="button" className="cg-action is-ink" onClick={onCall}><Phone size={18} aria-hidden="true" />Call {R}</button>
+      <TrackingControl unit={unit} relationship={R} away={away} now={now}
+        blocked={!!unit.active_incident_id || !!(incident && !['closed', 'auto_resolved'].includes(incident.state))} />
+    </div>
   </div>
 }
 
-interface Lane { key: string; Icon: LucideIcon; label: string; value: string; time: string | null; marks: string[] }
+interface Tile { key: string; Icon: LucideIcon; value: string; label: string }
+
+function Mark() {
+  return <svg width="24" height="24" viewBox="0 0 64 64" aria-hidden="true">
+    <path d="M14 29 L32 15 L50 29 V50 H14 Z" fill="none" stroke="currentColor" strokeWidth="3.6" strokeLinejoin="round" />
+    <path d="M14 31 H50 M32 31 V50" stroke="currentColor" strokeWidth="3.6" />
+    <rect x="35" y="34" width="12" height="13" fill="#f0b25a" />
+  </svg>
+}
