@@ -510,6 +510,7 @@ export const mockApi: Api = {
   async addAwayPeriod(id, body) {
     const unit = unitOrThrow(id)
     if (body.role !== 'caregiver' || body.name !== unit.caregiver_name) throw new ApiError(409, 'Only the designated caregiver can add an away period')
+    if (unit.active_incident_id) throw new ApiError(409, 'Record an outcome for the current alert before stopping tracking')
     const reason = body.reason?.trim() || null
     if (reason && reason.length > 200) throw new ApiError(422, 'Reason must be at most 200 characters')
     const at = now()

@@ -509,6 +509,8 @@ async def add_away_period(unit_id: str, name: str, starts_at: datetime, ends_at:
                 raise UnitNotFound(unit_id)
             if name != unit.caregiver_name:
                 raise IncidentConflict("Only the designated caregiver can add an away period")
+            if unit.active_incident_id is not None:
+                raise IncidentConflict("Record an outcome for the current alert before stopping tracking")
             if await db_away.overlaps(unit_id, starts_at, ends_at, conn=conn):
                 raise IncidentConflict("This overlaps another away period")
             await db_away.create_away_period(unit_id, starts_at, ends_at, reason, name, now, conn=conn)

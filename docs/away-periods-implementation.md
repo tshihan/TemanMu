@@ -6,6 +6,14 @@ The caregiver can now tell TemanMu that their parent (e.g. Mum) **won't be at ho
 
 Before this, if Mum went away for 3 days, TemanMu would see "no water used for a long time" and raise a **false alarm**. Now the caregiver marks those days as an away period, and TemanMu knows not to worry about the quiet house.
 
+## Home-screen tracking control (31 October 2026)
+
+The Home screen now has **Stop Tracking** above **Call Mum**. It opens a confirmation dialog with an expected return date/time in Malaysia time, defaulting to tomorrow. Confirming creates an immediate away period through the existing API. The status card and Mum’s day meter turn grayscale and display the paused state; the call button stays available. **Resume Tracking** asks for confirmation and ends the active period early. The chosen return time still resumes inactivity monitoring automatically through the existing away-period handling.
+
+An unresolved incident blocks creating an away period in both mock and backend APIs. Existing incident cards retain their alert colours if a safety concern arises during a pause. Water and power safety handling remains active.
+
+Verification for this change: frontend build and lint passed (existing warnings elsewhere); 56 backend rule tests passed, with 21 database tests skipped because no `TEST_DATABASE_URL` was configured, including the new unresolved-incident guard regression test. Browser checks in mock mode verified confirmation, mobile button order, grayscale styles and manual resumption. Backend-connected browser verification is pending. Other Phase 2 requirements, including return reminders, extension and the explicit activity-return question, remain outside this change.
+
 ## How the caregiver uses it
 
 1. Open the caregiver app and go to **Settings**.

@@ -1,3 +1,4 @@
+import { TrackingControl } from './TrackingControl'
 import type { CSSProperties } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { ArrowRight, CircleCheck, Clock3, DoorOpen, Droplets, Luggage, Phone, PhoneOutgoing, ShieldCheck, TriangleAlert, Zap } from 'lucide-react'
@@ -43,7 +44,7 @@ function statusCard(unit: Unit, incident: Incident | null, ctx: Ctx, now: number
     return { variant: 'quiet', Icon: PhoneOutgoing, badge: STATUS_LABELS.unusual_inactivity, headline: `Checking on ${R} quietly`,
       reason: `${cause} TemanMu is calling ${R} now (simulated).`, grace: incident?.state === 'grace' ? until(incident.grace_ends_at, now) : undefined }
   }
-  if (away) return { variant: 'away', Icon: Luggage, badge: 'Away period', headline: `${R} is away`,
+  if (away) return { variant: 'away', Icon: Luggage, badge: 'Tracking paused', headline: 'Monitoring paused',
     reason: `${awayReason ? `${awayReason.replace(/[.!]+$/, '')}. ` : ''}Until ${when(away.ends_at, now)}. Inactivity alerts are paused until then; you’ll still be alerted if water or power is left running.` }
   if (unit.status === 'possible_away') return { variant: 'away', Icon: DoorOpen, badge: STATUS_LABELS.possible_away, headline: `${R} may be out`,
     reason: `${doorAt ? `Door opened at ${clock(doorAt)}` : 'The door opened'}, then the home went quiet. An outing is possible, but not confirmed. You can call ${R} to check.` }
@@ -114,13 +115,17 @@ export function HomeTab({ unit, ctx, incident, readings, now, awayReasons, ackBu
         <p className="cg-eyebrow"><time dateTime={new Date(now).toISOString()}>{dayLabel(now)}</time><span aria-hidden="true">·</span>{clock(now)}</p>
         <h1 className="cg-display">{greeting(now)},<br /><em>{ctx.me.split(' ')[0]}.</em></h1>
       </div>
+      <div className="cg-home-controls">
+        <TrackingControl unit={unit} relationship={R} away={away} now={now}
+          blocked={!!unit.active_incident_id || !!(incident && !['closed', 'auto_resolved'].includes(incident.state))} />
       <button type="button" className="cg-call-pill" onClick={onCall}>
         <Phone aria-hidden="true" />
         <span>Call {R}</span>
       </button>
+      </div>
     </header>
 
-    <section aria-label="Current status" className={`cg-status is-${card.variant}`}>
+    <section aria-label="Current status" className={`cg-status is-${card.variant}${away && card.variant === 'away' ? ' is-tracking-paused' : ''}`}>
       <span className="cg-orb" aria-hidden="true"><span /><span /><span /></span>
       <div className="cg-status-top">
         <span className="cg-status-badge"><card.Icon size={14} strokeWidth={2.4} aria-hidden="true" />{card.badge}</span>
@@ -154,10 +159,10 @@ export function HomeTab({ unit, ctx, incident, readings, now, awayReasons, ackBu
     </section>
 
     <section className="cg-day" aria-labelledby="cg-day-heading">
-      <div className="cg-day-card" style={{ '--now': nowAt } as CSSProperties}>
+      <div className={`cg-day-card${away ? ' is-tracking-paused' : ''}`} style={{ '--now': nowAt } as CSSProperties}>
       <div className="cg-section-head">
         <h2 id="cg-day-heading" className="cg-section-title">{R}’s day</h2>
-        <span className="cg-section-note">Water, power &amp; door only</span>
+        <span className="cg-section-note">{away ? 'Inactivity tracking paused' : 'Water, power & door only'}</span>
       </div>
       <ul className="cg-lanes">
         {lanes.map(lane => <li key={lane.key} className={`cg-lane is-${lane.key}`}>

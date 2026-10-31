@@ -123,6 +123,17 @@ async def test_away_period_pauses_quiet_gap_alert(client):
     assert await incidents.list_active_incidents() == []
 
 
+async def test_unresolved_incident_blocks_tracking_pause(client):
+    iid = await open_incident()
+    unit = await units.get_unit(UNIT)
+    path = f"/api/units/{UNIT}/away-periods"
+    response = await client.post(path, json=away_body(unit.caregiver_name))
+    assert response.status_code == 409
+    assert "outcome" in response.json()["detail"]
+    assert (await units.get_unit(UNIT)).away_periods == []
+    assert (await incidents.get_incident(iid)).state == "grace"
+
+
 async def test_away_period_validation(client):
     name = (await units.get_unit(UNIT)).caregiver_name
     path = f"/api/units/{UNIT}/away-periods"

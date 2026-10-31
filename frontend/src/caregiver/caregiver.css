@@ -39,10 +39,11 @@
 /* Installed app: the whole screen. Embedded: a phone-sized frame in the dashboard. */
 .cg-root.is-standalone { min-height: 100dvh; }
 .cg-root.is-standalone .cg-app { height: 100dvh; max-width: 480px; margin: 0 auto; }
-/* On a large screen the installed app stays a phone-width column. */
+/* Desktop preview uses a phone frame; mobile keeps the full screen. */
 @media (min-width: 640px) {
-  .cg-root.is-standalone { background: var(--card); }
-  .cg-root.is-standalone .cg-app { max-width: 440px; border-inline: 1px solid var(--line); box-shadow: 0 0 80px -30px #3a2a1a40; }
+  .cg-root.is-standalone { display: grid; place-items: center; padding: 24px; background: var(--card); }
+  .cg-root.is-standalone .cg-app { width: 390px; max-width: 100%; height: min(844px, calc(100dvh - 48px)); margin: 0; border: 10px solid #1d1c1a; border-radius: 48px; box-shadow: 0 24px 60px -20px #3a2a1a66, 0 0 0 2px #55514c; padding-top: 24px; padding-bottom: 12px; }
+  .cg-root.is-standalone .cg-app::after { content: ''; position: absolute; z-index: 20; top: 8px; left: 50%; transform: translateX(-50%); width: 92px; height: 20px; border-radius: 20px; background: #1d1c1a; pointer-events: none; }
 }
 .cg-root.is-embedded { width: min(100%, 390px); height: 100%; max-height: 844px; margin: 0 auto; border: 10px solid #1d1c1a; border-radius: 48px; overflow: hidden; box-shadow: 0 30px 60px -20px #3a2a1a55; }
 .cg-root.is-embedded .cg-app { height: 100%; }
@@ -512,3 +513,18 @@
 .cg-away-form .cg-away-error { margin: 0; }
 .cg-field-note { color: var(--faint); font-weight: 500; }
 .cg-away-hint { margin: -4px 0 0; color: var(--mut); font-size: 12px; line-height: 1.45; }
+
+.cg-home .cg-intro > .cg-home-controls { flex: none; display: grid; justify-items: stretch; gap: 8px; }
+.cg-home-controls .cg-call-pill { justify-content: center; }
+.cg-tracking-button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); color: var(--ink); font-size: 13px; font-weight: 650; }
+.cg-tracking-button:hover { background: var(--card2); }
+.cg-status.is-tracking-paused, .cg-day-card.is-tracking-paused { filter: grayscale(1); }
+.cg-status.is-tracking-paused .cg-orb span { animation: none; }
+.cg-tracking-scrim { position: absolute; inset: 0; z-index: 30; display: grid; place-items: center; padding: 16px; background: var(--scrim); overflow: hidden; }
+.cg-tracking-dialog { width: 100%; max-height: 100%; min-width: 0; box-sizing: border-box; overflow-y: auto; padding: 24px; border: 1px solid var(--line); border-radius: 24px; background: var(--bg); color: var(--ink); }
+.cg-tracking-dialog form { display: grid; gap: 18px; }
+.cg-tracking-dialog h2 { margin: 0; font-size: 24px; line-height: 1.2; }
+.cg-tracking-dialog p { margin: 0; font-size: 14px; line-height: 1.55; }
+.cg-tracking-dialog .cg-away-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+.cg-tracking-dialog input { width: 100%; min-width: 0; }
