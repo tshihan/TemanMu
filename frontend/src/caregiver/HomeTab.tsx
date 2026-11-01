@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react'
 import type { LucideIcon } from 'lucide-react'
-import { ArrowRight, CircleCheck, Clock3, DoorClosed, DoorOpen, Droplets, Hospital, Luggage, Phone, PhoneOutgoing, ShieldCheck, TriangleAlert, Volume2, VolumeX, Zap } from 'lucide-react'
+import { ArrowRight, ChevronRight, CircleCheck, Clock3, DoorClosed, DoorOpen, Droplets, Hospital, Luggage, Phone, PhoneOutgoing, ShieldCheck, TriangleAlert, Volume2, VolumeX, Zap } from 'lucide-react'
 import type { AwayActivityResponse, AwayPeriod, Incident, Notification, Reading, Unit } from '../api/types'
 import { AwayActivityChoices } from './AwayActivityChoices'
 import { ResidentAvatar } from './Avatar'
@@ -76,11 +76,11 @@ interface Props {
   muted: boolean; onToggleMute: () => void
   awayNotice: Notification | null; answerBusy: boolean; answerError: boolean
   onCheckIn: () => void; onRequestVisit: () => void; onOpenIncident: () => void; onCall: () => void; onConfirmHome: () => void
-  onAnswerAway: (n: Notification, response: AwayActivityResponse) => void
+  onAnswerAway: (n: Notification, response: AwayActivityResponse) => void; onOpenHistory: () => void
 }
 
 export function HomeTab({ unit, ctx, incident, readings, now, awayReasons, ackBusy, responseError, confirmBusy, confirmError, muted, onToggleMute, awayNotice, answerBusy, answerError,
-  onCheckIn, onRequestVisit, onOpenIncident, onCall, onConfirmHome, onAnswerAway }: Props) {
+  onCheckIn, onRequestVisit, onOpenIncident, onCall, onConfirmHome, onAnswerAway, onOpenHistory }: Props) {
   const { R } = ctx
   const today = readings.filter(reading => isToday(reading.recorded_at, now))
   const last = (match: (reading: Reading) => boolean) => [...today].reverse().find(match)
@@ -192,6 +192,7 @@ export function HomeTab({ unit, ctx, incident, readings, now, awayReasons, ackBu
       </div>
       <div className="cg-axis" aria-hidden="true">{['12a', '6a', '12p', '6p', '12a'].map((label, index) => <span key={index}>{label}</span>)}</div>
       <div className="cg-legend" aria-hidden="true">{tracks.map(track => <span key={track.key} className={`is-${track.key}`}>{track.label}</span>)}</div>
+      <button type="button" className="cg-day-history" onClick={onOpenHistory}>Past 7 days<ChevronRight size={18} aria-hidden="true" /></button>
     </section>
 
     <div className="cg-actions">

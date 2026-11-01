@@ -103,6 +103,11 @@ async def reset_demo() -> list[Unit]:
                 "insert into neighbour_consents (unit_id, consented_at) values ($1, $2)",
                 [(u.unit_id, now) for u in seed.units if u.open_to_neighbours],
             )
+            await conn.execute(
+                """insert into demo_resets (reset_at) values ($1)
+                   on conflict (id) do update set reset_at = excluded.reset_at""",
+                now,
+            )
             await conn.executemany(
                 "insert into buddies (buddy_id, name, interests) values ($1, $2, $3)",
                 [(b.buddy_id, b.name, list(b.interests)) for b in seed.buddies],

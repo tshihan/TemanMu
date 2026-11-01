@@ -163,6 +163,29 @@ export interface Config {
   reminder_interval_seconds: number
 }
 
+/** Caregiver activity history (phase2.md §5). Mirrors backend/app/models.py. */
+export interface HistoryInterval { starts_at: string; ends_at: string }
+export interface MissingInterval extends HistoryInterval { reason: 'feed_offline' | 'before_demo' }
+/** Use within one local hour; null where the whole hour has no data or is still to come. */
+export interface HistoryHour { hour: number; water_litres: number | null; energy_kwh: number | null }
+export interface HistoryIncident { incident_id: string; state: IncidentState; opened_at: string; closed_at: string | null; outcome: Outcome | null }
+export interface HistoryDay {
+  date: string
+  starts_at: string
+  ends_at: string
+  /** simulated_history days are generated for the demo, never measured. */
+  source: 'simulated_history' | 'live'
+  hours: HistoryHour[]
+  first_water_at: string | null
+  door_opened_at: string[]
+  away: HistoryInterval[]
+  missing: MissingInterval[]
+  incidents: HistoryIncident[]
+}
+export type HistoryRange = 7 | 30
+/** Newest day first, today included. */
+export interface UnitHistory { unit_id: UnitId; standby_power_kw: number; days: HistoryDay[] }
+
 export interface Snapshot {
   units: Unit[]
   incidents: Incident[]
@@ -188,6 +211,7 @@ export interface Api {
   getUnit(id: UnitId): Promise<Unit>
   getReadings(id: UnitId, since?: string): Promise<Reading[]>
   getUnitIncidents(id: UnitId, state?: IncidentState): Promise<Incident[]>
+  getHistory(id: UnitId, days: HistoryRange): Promise<UnitHistory>
   getIncident(id: string): Promise<Incident>
   getNotifications(role: Role): Promise<Notification[]>
   getActivities(unitId?: UnitId): Promise<CommunityActivity[]>

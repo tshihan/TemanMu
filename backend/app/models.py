@@ -275,6 +275,55 @@ class Config(ContractModel):
     reminder_interval_seconds: int
 
 
+# --- Caregiver activity history (phase2.md §5) -------------------------------------------
+
+
+class HistoryInterval(ContractModel):
+    starts_at: UtcDatetime
+    ends_at: UtcDatetime
+
+
+class MissingInterval(HistoryInterval):
+    # feed_offline: the meter feed sent nothing. before_demo: the demo had not started yet.
+    reason: Literal["feed_offline", "before_demo"]
+
+
+class HistoryHour(ContractModel):
+    """Use within one local hour. None where the whole hour has no data or is still to come."""
+
+    hour: int  # 0-23, local time
+    water_litres: float | None
+    energy_kwh: float | None
+
+
+class HistoryIncident(ContractModel):
+    incident_id: str
+    state: IncidentState
+    opened_at: UtcDatetime
+    closed_at: UtcDatetime | None
+    outcome: Outcome | None
+
+
+class HistoryDay(ContractModel):
+    date: str  # local YYYY-MM-DD
+    starts_at: UtcDatetime
+    ends_at: UtcDatetime
+    # simulated_history days are generated for the demo, never measured.
+    source: Literal["simulated_history", "live"]
+    hours: list[HistoryHour]
+    first_water_at: UtcDatetime | None
+    door_opened_at: list[UtcDatetime]
+    away: list[HistoryInterval]  # clipped to the day
+    missing: list[MissingInterval]  # clipped to the day
+    incidents: list[HistoryIncident]  # opened on this day
+
+
+class UnitHistory(ContractModel):
+    unit_id: UnitId
+    standby_power_kw: float
+    days: list[HistoryDay]  # newest first, today included
+
+
 # --- Backend 2 request and response bodies (§8.4, §8.5) ---------------------------------
 # Backend 1 adds its own bodies (POST /api/readings, acknowledge, close) here.
 

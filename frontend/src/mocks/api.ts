@@ -1,6 +1,7 @@
 import seed from '../../../shared/seed.json'
 import { ApiError } from '../api/live'
 import { HOME_CHECK_DETECTED, HOME_CHECK_OUTCOMES, isHomeCheck, outcomeLabel } from '../caregiver/copy'
+import { buildHistory } from './history'
 import type {
   Api, AwayPeriod, AwayPeriodDetail, BuddyMatch, CallTiming, CommunityActivity, CompanionMessage, Config, Incident,
   MessagePreset, NeighbourMatch, NeighbourState, Notification, Reading, RealtimeEvent, Role, Snapshot, Unit,
@@ -138,6 +139,8 @@ function initialSnapshot(): Snapshot {
 }
 
 let state = initialSnapshot()
+// Activity history is live from here on and simulated for the days before.
+let resetAt = Date.now()
 let readings: Reading[] = []
 let messages: CompanionMessage[] = []
 let matches: BuddyMatch[] = []
@@ -394,6 +397,17 @@ export const mockApi: Api = {
   async getUnitIncidents(id, incidentState) {
     unitOrThrow(id)
     return clone(state.incidents.filter(incident => incident.unit_id === id && (!incidentState || incident.state === incidentState)).reverse())
+  },
+  async getHistory(id, days) {
+    const unit = unitOrThrow(id)
+    return buildHistory({
+      unitId: id, days, now: Date.now(), resetAt, standby: unit.baseline.standby_power_kw, rhythm: rhythmOf(id),
+      lastWater: unit.quiet_gap.last_water_activity_at ? Date.parse(unit.quiet_gap.last_water_activity_at) : null,
+      readings: readings.filter(reading => reading.unit_id === id),
+      away: awayPeriods.filter(item => item.unit_id === id && !item.cancelled)
+        .map(item => [Date.parse(item.period.starts_at), Date.parse(item.period.ends_at)]),
+      incidents: state.incidents.filter(incident => incident.unit_id === id),
+    })
   },
   async getIncident(id) { return clone(incidentOrThrow(id)) },
   async getNotifications(role) { return clone(state.notifications.filter(item => item.role === role)) },
@@ -738,6 +752,7 @@ export const mockApi: Api = {
     monitoringActive = false
     callTiming = null
     state = initialSnapshot()
+    resetAt = Date.now()
     readings = []
     messages = []
     matches = []

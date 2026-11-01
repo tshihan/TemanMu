@@ -31,6 +31,7 @@ export const liveApi: Api = {
   getUnit: id => request(`/api/units/${query(id)}`),
   getReadings: (id, since) => request(`/api/units/${query(id)}/readings${since ? `?since=${query(since)}` : ''}`),
   getUnitIncidents: (id, state) => request(`/api/units/${query(id)}/incidents${state ? `?state=${query(state)}` : ''}`),
+  getHistory: (id, days) => request(`/api/units/${query(id)}/history?days=${days}`),
   getIncident: id => request(`/api/incidents/${query(id)}`),
   getNotifications: role => request(`/api/notifications?role=${role}`),
   getActivities: unitId => request(`/api/community/activities${unitId ? `?unit_id=${query(unitId)}` : ''}`),

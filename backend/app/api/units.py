@@ -15,8 +15,10 @@ from app.models import (
     Reading,
     Role,
     Unit,
+    UnitHistory,
     UtcDatetime,
 )
+from app.services import history as history_service
 from app.services import monitoring
 
 router = APIRouter(tags=["units"])
@@ -94,6 +96,22 @@ async def get_unit_readings(unit_id: str, since: UtcDatetime | None = None) -> l
     """
     await require_unit(unit_id)
     return await db_readings.list_readings(unit_id, since)
+
+
+@router.get("/units/{unit_id}/history", response_model=UnitHistory)
+async def get_unit_history(unit_id: str, days: int = 7) -> UnitHistory:
+    """Daily activity history for the caregiver app, newest day first (phase2.md §5).
+
+    `days` is 7 or 30. Days before the last demo reset are labelled `simulated_history`;
+    later days are live.
+    """
+    # A plain int, not Literal[7, 30]: query values arrive as strings and Literal does not coerce them.
+    if days not in (7, 30):
+        raise HTTPException(status_code=422, detail="days must be 7 or 30")
+    history = await history_service.unit_history(unit_id, days)
+    if history is None:
+        raise HTTPException(status_code=404, detail="Unit not found")
+    return history
 
 
 @router.get("/units/{unit_id}/incidents", response_model=list[Incident])

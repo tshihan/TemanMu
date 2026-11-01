@@ -79,6 +79,7 @@ export const sharedMockApi: Api = {
   getUnit: id => call('getUnit', id),
   getReadings: (id, since) => call('getReadings', id, since),
   getUnitIncidents: (id, state) => call('getUnitIncidents', id, state),
+  getHistory: (id, days) => call('getHistory', id, days),
   getIncident: id => call('getIncident', id),
   getNotifications: role => call('getNotifications', role),
   getActivities: unitId => call('getActivities', unitId),

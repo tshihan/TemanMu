@@ -6,6 +6,7 @@ import type { AwayActivityResponse, Notification } from '../api/types'
 import { ConfirmContext, useConfirmAlert } from './ConfirmAlert'
 import { actorName, awaitingAnswer, ctxFor, currentAway, GUARD, isHomeCheck, NOTIFICATION_TARGET, notificationCopy } from './copy'
 import { clock, initials } from './format'
+import { HistoryView } from './HistoryView'
 import { HomeTab } from './HomeTab'
 import { IncidentView, type AckError } from './IncidentView'
 import { SettingsTab, type Theme } from './SettingsTab'
@@ -42,6 +43,9 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
   const unitId = unit?.unit_id
   const [tab, setTab] = useState<Tab>('home')
   const [incidentOpen, setIncidentOpen] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
+  // A past alert opened from the history; the current one opens through incidentOpen.
+  const [pastIncidentId, setPastIncidentId] = useState<string | null>(null)
   const [theme, setTheme] = useState<Theme>(initialTheme)
   const [muted, setMuted] = useState(() => readPref(MUTED_KEY) === 'true')
   const [readIds, setReadIds] = useState<Set<string>>(() => new Set())
@@ -130,7 +134,7 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
   useEffect(() => subscribeAppEvents(event => {
     setLastSync(Date.now())
     if (event.type === 'snapshot') {
-      setIncidentOpen(false); setReadIds(new Set()); setPush(null); setAckError(null); setLiveNote(false)
+      setIncidentOpen(false); setPastIncidentId(null); setReadIds(new Set()); setPush(null); setAckError(null); setLiveNote(false)
       return
     }
     if (event.type !== 'notification.created' || event.data.role !== 'caregiver') return
@@ -158,6 +162,12 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
     if (next === tab && !showIncident) scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
     setTab(next)
     setIncidentOpen(false)
+    setHistoryOpen(false)
+    setPastIncidentId(null)
+  }
+  function openHistoryIncident(id: string) {
+    if (id === incident?.incident_id) openIncident()
+    else setPastIncidentId(id)
   }
   function open(n: Notification) {
     setReadIds(ids => new Set(ids).add(n.notification_id))
@@ -234,6 +244,9 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
   const ackTargetId = incident?.state === 'notified' && latestAlert?.incident_id === incident.incident_id ? latestAlert.notification_id : null
   const pushCopy = push && ctx ? notificationCopy(push, ctx, incidentFor(push)) : null
   const ackWho = incident?.acknowledged_by && ctx ? actorName(ctx, incident.acknowledged_by) : ''
+  const pastIncident = incidents.find(item => item.incident_id === pastIncidentId) ?? null
+  // Today's history row is live, so fetch it again when readings, alerts or away periods change.
+  const historyRevision = `${snapshotRevision}:${unitId ? readingsByUnit[unitId]?.length ?? 0 : 0}:${unitIncidents.map(item => item.state).join()}:${unit?.away_periods.map(item => item.ends_at).join() ?? ''}`
 
   return <div className={`cg-root ${standalone ? 'is-standalone' : 'is-embedded'}`} data-theme={theme} onPointerDown={unlockAudio}>
     <ConfirmContext.Provider value={confirm}>
@@ -270,7 +283,7 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
             awayNotice={awayNotice} answerBusy={answerBusy} answerError={answerError}
             onCheckIn={() => void respond('caregiver_checking_in')}
             onRequestVisit={() => void respond('township_requested')} onOpenIncident={openIncident} onCall={startCall} onConfirmHome={() => void confirmHome()}
-            onAnswerAway={(n, response) => void answerAway(n, response)} />
+            onAnswerAway={(n, response) => void answerAway(n, response)} onOpenHistory={() => setHistoryOpen(true)} />
           : tab === 'updates' ? <UpdatesTab feed={feed} ctx={ctx} now={now} incidentFor={incidentFor} isUnread={isUnread} ackTargetId={ackTargetId}
             ackBusy={ackBusy} onOpen={open} onMarkAllRead={markAllRead} onAck={openIncident} />
           : tab === 'together' ? <TogetherTab unit={unit} ctx={ctx} companion={companion} onToast={showToast} />
@@ -288,6 +301,12 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
           </button>
         })}
       </nav>
+
+      {historyOpen && unit && ctx && <HistoryView unit={unit} ctx={ctx} now={now} revision={historyRevision}
+        onBack={() => setHistoryOpen(false)} onOpenIncident={openHistoryIncident} />}
+
+      {pastIncident && unit && ctx && <IncidentView key={pastIncident.incident_id} incident={pastIncident} unit={unit} ctx={ctx} now={now} liveNote={false}
+        ackBusy={false} ackError={null} onAck={() => {}} onCheckIn={() => {}} onConfirmSafe={() => {}} onBack={() => setPastIncidentId(null)} />}
 
       {showIncident && unit && ctx && <IncidentView key={incident.incident_id} incident={incident} unit={unit} ctx={ctx} now={now} liveNote={liveNote}
         ackBusy={ackBusy} ackError={ackError} onAck={() => void respond('township_requested')} onCheckIn={() => void respond('caregiver_checking_in')} onConfirmSafe={() => void respond('resident_confirmed_safe')} onBack={() => { setIncidentOpen(false); setLiveNote(false) }} />}
