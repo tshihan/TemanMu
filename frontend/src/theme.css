@@ -12,7 +12,8 @@
   --color-emergency: #c62828;
   --shadow-lg: 0 0 20px #00000026;
   --font-financier-display: 'Iowan Old Style', 'Baskerville', Georgia, serif;
-  --font-ftbase: Inter, 'Avenir Next', ui-sans-serif, system-ui, sans-serif;
+  /* Figtree is the caregiver app's face too, so guard and family screens read as one product. */
+  --font-ftbase: Figtree, 'Avenir Next', ui-sans-serif, system-ui, sans-serif;
   --font-fragment-mono: 'IBM Plex Mono', ui-monospace, monospace;
   --font-editorial: var(--font-financier-display);
   font-family: var(--font-ftbase);
@@ -111,11 +112,11 @@ button:focus-visible, select:focus-visible, .divider:focus-visible { outline: 3p
 @media (prefers-reduced-motion: reduce) {
   .home-art-alert .interior-light { animation: none; }
 }
-.detail-hero, .detail-section, .incident-panel { border-color: var(--color-warm-taupe); border-radius: 24px; background: var(--color-aged-paper); }
+.detail-hero, .detail-section { border-color: var(--color-warm-taupe); border-radius: 24px; background: var(--color-aged-paper); }
 .detail-home-art { border-radius: 16px; background: var(--color-parchment); }
 .detail-hero-copy h3 { font-size: 25px; }
 .detail-hero-copy small, .detail-section-title > span, .reason-card small, .detail-hint { color: var(--color-graphite); font-size: 12px; }
-.detail-section h4, .incident-panel-head h4 { color: var(--color-ink); font-size: 16px; font-weight: 600; }
+.detail-section h4 { color: var(--color-ink); font-size: 16px; font-weight: 600; }
 .reason-card > p:not(.eyebrow) { color: var(--color-charcoal); font-size: 14px; }
 .quiet-track { background: #ded3c6; }
 .quiet-track > span, .quiet-track.is-exceeded > span { background: var(--color-terracotta); }
@@ -125,7 +126,7 @@ button:focus-visible, select:focus-visible, .divider:focus-visible { outline: 3p
 .signal-current { color: var(--color-ink); }
 .signal-events { border-color: var(--color-warm-taupe); }
 .signal-events time { color: var(--color-graphite); }
-.reading-error, .action-error { color: var(--color-terracotta-dark); }
+.reading-error { color: var(--color-terracotta-dark); }
 
 /* Caregiver cards and daily chronology */
 .caregiver-status { border-color: var(--color-warm-taupe); border-radius: 24px; background: var(--color-aged-paper); }
@@ -150,22 +151,6 @@ button:focus-visible, select:focus-visible, .divider:focus-visible { outline: 3p
 .notification-acknowledged { border-color: var(--color-warm-taupe); background: var(--color-aged-paper); }
 .empty-state, .loading-state { border-color: var(--color-warm-taupe); border-radius: 16px; color: var(--color-graphite); font-size: 14px; }
 
-/* Incident response: keep every state named, with tonal urgency. */
-.incident-grace, .incident-notified, .incident-acknowledged { border-color: var(--color-warm-taupe); background: var(--color-aged-paper); }
-.incident-notified { border-color: var(--color-terracotta); background: var(--color-terracotta-wash); }
-.incident-state, .incident-notified .incident-state, .incident-state.calm { border-radius: 9999px; background: var(--color-parchment); color: var(--color-charcoal); font-size: 11px; }
-.incident-notified .incident-state { background: var(--color-terracotta); color: var(--color-parchment); }
-.incident-lead, .incident-empty, .incident-hint { color: var(--color-charcoal); font-size: 13px; }
-.incident-lead.urgent { color: var(--color-terracotta-dark); }
-.incident-count, .incident-notified .incident-count { border-radius: 16px; background: var(--color-parchment); font-size: 12px; }
-.response-timeline li { color: var(--color-charcoal); font-size: 13px; }
-.response-timeline time { color: var(--color-graphite); font-size: 12px; }
-.primary-action, .incident-notified .primary-action { border-radius: 40px; background: var(--color-terracotta); color: var(--color-parchment); font-size: 13px; font-weight: 600; }
-.primary-action:hover:not(:disabled), .incident-notified .primary-action:hover:not(:disabled) { background: var(--color-terracotta-dark); }
-.outcome-form { border-color: var(--color-warm-taupe); }
-.outcome-form label { font-size: 13px; }
-.outcome-controls select { border: 1px solid #808988; border-radius: 40px; background: var(--color-parchment); color: var(--color-ink); font-size: 13px; }
-.outcome-controls select:focus-visible { box-shadow: 0 0 0 3px #b05a3633; }
 
 .status-pill, .caregiver-status-indicator { background: var(--color-aged-paper); color: var(--color-ink); font-size: 11px; }
 .status-routine { background: #ede3d6; color: var(--color-charcoal); }

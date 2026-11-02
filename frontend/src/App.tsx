@@ -99,13 +99,11 @@ export default function App() {
     </header>
 
     <main className="workspace workspace-dashboard">
-      <section className="dashboard-panel" aria-label="TemanMu product dashboard">
-        <div className="dashboard-header">
-          <div>
-            <p className="eyebrow">TemanMu product · {role === 'township' ? 'Township operator' : 'Caregiver'}</p>
-            <h1>{role === 'township' ? 'Unit status' : <>Caregiver <em>view</em></>}</h1>
-          </div>
-        </div>
+      <section className={`dashboard-panel ${role === 'township' ? 'is-township' : ''}`} aria-label="TemanMu product dashboard">
+        {/* The township view carries its own compact header so floor 1 stays above the fold. */}
+        {role !== 'township' && <div className="dashboard-header">
+          <h1>Caregiver <em>view</em></h1>
+        </div>}
         <div className="dashboard-content">
           {!loaded ? <p className="loading-state" role="status">Waiting for the first snapshot…</p> : role === 'caregiver' ? <CaregiverApp /> : <TownshipView />}
         </div>

@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-family: Figtree, ui-sans-serif, system-ui, sans-serif;
   color: #172538;
   background: #f4f6f5;
   font-synthesis: none;
@@ -164,10 +164,6 @@ h1, h2, h3, p { margin-top: 0; }
 .signal-events > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 3px; padding: 3px 0; font-size: 10px; }
 .signal-events time { color: #89968a; }
 .reading-error { margin: 0 0 10px; color: #b45045; font-size: 11px; }
-.incident-summary > p:not(.detail-hint) { margin-bottom: 8px; font-size: 12px; }
-.incident-events { margin: 8px 0 0; padding-left: 18px; }
-.incident-events li { padding: 3px 0; color: #4e6053; font-size: 11px; text-transform: capitalize; }
-.incident-events time { margin-right: 8px; color: #839185; }
 
 /* Shared safety response and caregiver view. */
 .caregiver-status { position: relative; min-height: 270px; padding: 24px; margin-bottom: 14px; border: 1px solid #c9e3d0; border-radius: 12px; background: #f1f8f2; }
@@ -198,42 +194,6 @@ h1, h2, h3, p { margin-top: 0; }
 .notification-top time { color: #89958d; font-size: 10px; }
 .notification-alert, .notification-reminder { border-color: #e9b8aa; background: #fff8f5; }
 .notification-acknowledged { border-color: #c7dfce; background: #f7fbf7; }
-.notification-row .incident-action { margin-top: 10px; }
-.incident-panel { margin-top: 14px; padding: 16px; border: 1px solid #dfe9e1; border-radius: 12px; background: #fff; }
-.incident-grace { border-color: #ead9a9; background: #fffdf7; }
-.incident-notified { border-color: #e9ad9f; background: #fff8f6; }
-.incident-acknowledged { border-color: #a5d0b1; background: #f8fcf9; }
-.incident-panel-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; }
-.incident-panel-head h4 { margin: 0; font-size: 14px; }
-.incident-state { padding: 5px 8px; border-radius: 999px; background: #f7e9d8; color: #935e22; font-size: 10px; font-weight: 750; white-space: nowrap; }
-.incident-notified .incident-state { background: #f9e3dd; color: #a44738; }
-.incident-state.calm { background: #eaf4eb; color: #397150; }
-.incident-lead, .incident-empty { margin: 0 0 13px; color: #56685b; font-size: 12px; line-height: 1.45; }
-.incident-lead.urgent { color: #9e473d; font-weight: 650; }
-.incident-count { display: flex; justify-content: space-between; align-items: center; margin: 11px 0; padding: 11px 12px; border-radius: 8px; background: #f4f5ee; font-size: 11px; }
-.incident-notified .incident-count { background: #fceae6; }
-.incident-count strong { font-size: 18px; font-variant-numeric: tabular-nums; }
-.response-timeline { display: grid; gap: 7px; margin: 12px 0 15px; padding: 0; list-style: none; }
-.response-timeline li { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 8px; color: #53645a; font-size: 11px; }
-.response-timeline time { color: #8a978c; font-size: 10px; font-variant-numeric: tabular-nums; }
-.primary-action { padding: 9px 13px; border: 0; border-radius: 8px; background: #28654b; color: #fff; font-size: 11px; font-weight: 750; }
-.primary-action:hover:not(:disabled) { background: #1f523d; }
-.primary-action:disabled { opacity: .5; cursor: default; }
-.incident-notified .primary-action { background: #a84d40; }
-.incident-notified .primary-action:hover:not(:disabled) { background: #893d33; }
-.action-error { margin: 8px 0 0; color: #ad3d34; font-size: 11px; line-height: 1.35; }
-.outcome-form { display: grid; gap: 8px; margin-top: 14px; padding-top: 13px; border-top: 1px solid #e1e9e2; }
-.outcome-form label { font-size: 11px; font-weight: 750; }
-.outcome-hint { margin: 0; color: #53645a; font-size: 12px; line-height: 1.45; }
-.outcome-controls { display: flex; flex-wrap: wrap; gap: 7px; }
-.outcome-controls select { min-width: 155px; flex: 1; padding: 8px; border: 1px solid #bdcfc1; border-radius: 7px; background: #fff; font: inherit; font-size: 11px; }
-.incident-hint { margin: 10px 0 0; color: #738176; font-size: 11px; }
-.emergency-handoff { display: grid; justify-items: start; gap: 9px; margin-top: 14px; padding: 13px; border: 1px solid #e9ad9f; border-radius: 10px; background: #fff8f6; font-size: 12px; line-height: 1.45; }
-.emergency-handoff p { margin: 0; }
-.emergency-handoff ol { display: grid; gap: 6px; margin: 0; padding-left: 24px; list-style: decimal outside; }
-.emergency-handoff li::marker { color: #8e372c; font-weight: 750; }
-.emergency-handoff .primary-action { display: inline-block; background: #a84d40; text-decoration: none; }
-.emergency-handoff button:not(.primary-action) { padding: 8px 10px; border: 1px solid #a84d40; border-radius: 8px; background: transparent; color: #8e372c; font: inherit; cursor: pointer; }
 
 @media (max-width: 1120px) {
   .dashboard-header { align-items: flex-start; flex-direction: column; }

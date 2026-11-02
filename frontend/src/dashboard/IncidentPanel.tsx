@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
+import { Check, ChevronDown, Phone, X } from 'lucide-react'
 import seed from '../../../shared/seed.json'
 import { api } from '../api'
 import { ApiError } from '../api/live'
 import { applyEvent } from '../api/store'
-import type { Incident, Outcome, Role, Unit } from '../api/types'
+import type { Incident, Outcome, Unit } from '../api/types'
 import { HOME_CHECK_OUTCOMES, isHomeCheck, outcomeLabel } from '../caregiver/copy'
 
-type OutcomeOption = { value: Exclude<Outcome, 'resident_activity_detected'>; label: string; help?: string }
+type CloseOutcome = Exclude<Outcome, 'resident_activity_detected'>
+type OutcomeOption = { value: CloseOutcome; label: string; help?: string }
 const outcomes: OutcomeOption[] = [
   { value: 'resident_ok', label: 'Resident OK' },
   { value: 'assistance_provided', label: 'Assistance provided' },
@@ -16,30 +18,23 @@ const outcomes: OutcomeOption[] = [
 // A home check during an away period records what was found at the home, not the resident's condition.
 const outcomesFor = (incident: Incident): OutcomeOption[] => isHomeCheck(incident) ? HOME_CHECK_OUTCOMES : outcomes
 
-function actorName(role: Role, unit: Unit): string {
-  return role === 'caregiver' ? unit.caregiver_name : seed.responders.township
-}
-
-function timeLabel(iso: string): string {
-  return new Intl.DateTimeFormat('en-MY', {
-    timeZone: 'Asia/Kuala_Lumpur', hour: '2-digit', minute: '2-digit', second: '2-digit',
-  }).format(new Date(iso))
-}
+const responder = seed.responders.township
+const actor = { role: 'township' as const, name: responder }
 
 function clockLabel(iso: string): string {
   return new Intl.DateTimeFormat('en-MY', { timeZone: 'Asia/Kuala_Lumpur', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(iso))
 }
 
 function countdown(deadline: string | null, current: number): string {
-  if (!deadline) return '—'
+  if (!deadline) return '–'
   const seconds = Math.max(0, Math.ceil((new Date(deadline).getTime() - current) / 1000))
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
 }
 
 function actionError(error: unknown): string {
-  if (error instanceof ApiError && error.status === 409) return 'This incident changed before your action. Review the latest status and try again if needed.'
-  if (error instanceof ApiError && error.status === 403) return 'Only the person who acknowledged this incident can record this action.'
-  return error instanceof Error ? error.message : 'The action could not be completed.'
+  if (error instanceof ApiError && error.status === 409) return 'This incident changed before your action. Check the latest status, then try again.'
+  if (error instanceof ApiError && error.status === 403) return 'Only the person who said "I\'ll Check Now" can record this.'
+  return error instanceof Error ? error.message : 'That did not go through. Try again.'
 }
 
 async function refreshIncident(id: string): Promise<void> {
@@ -49,51 +44,68 @@ async function refreshIncident(id: string): Promise<void> {
   } catch { /* The original action error remains visible. */ }
 }
 
-export function AcknowledgeButton({ incident, unit, role }: { incident: Incident; unit: Unit; role: Role }) {
+const eventAt = (incident: Incident, type: Incident['events'][number]['type']) => incident.events.find(event => event.type === type)?.at
+
+/** Why the guard is being asked, in the guard's words. The detected detail names what tripped the alert. */
+export function alertReason(incident: Incident, unit: Unit): string {
+  if (isHomeCheck(incident)) return `Activity at home while she is marked away. ${unit.caregiver_name} asked you to check the home`
+  const detected = incident.events.find(event => event.type === 'detected')?.detail
+  const why = detected === 'Outing longer than usual' ? 'She has been out longer than her usual outing'
+    : detected === 'No water activity since confirmed contact' ? 'No water use since she was confirmed okay'
+    : 'No water use for longer than her usual quiet gap'
+  return `${why}, and she did not answer TemanMu's call`
+}
+
+/** Where the incident is on the response path: the same four steps in every state. */
+function Steps({ incident }: { incident: Incident }) {
+  const closedAt = incident.closed_at ?? eventAt(incident, 'closed') ?? eventAt(incident, 'auto_resolved')
+  const steps = [
+    { label: 'Detected', at: eventAt(incident, 'detected') ?? incident.opened_at },
+    { label: 'Alerted', at: eventAt(incident, 'notified') },
+    { label: 'Checking', at: incident.acknowledged_by?.at ?? eventAt(incident, 'acknowledged') },
+    { label: 'Closed', at: closedAt ?? undefined },
+  ]
+  const current = steps.findIndex(step => !step.at)
+  return <ol className="tm-steps" aria-label="Response progress">
+    {steps.map((step, index) => <li key={step.label} className={step.at ? 'is-done' : index === current ? 'is-now' : ''}
+      aria-current={index === current ? 'step' : undefined}>
+      <span className="tm-step-mark" aria-hidden="true">{step.at && <Check size={11} strokeWidth={3} />}</span>
+      <span className="tm-step-label">{step.label}</span>
+      <time className="tm-step-time" dateTime={step.at}>{step.at ? clockLabel(step.at) : index === current ? 'Next' : '–'}</time>
+    </li>)}
+  </ol>
+}
+
+export function Acknowledge({ incident, className = 'tm-resp-primary' }: { incident: Incident; className?: string }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  if (incident.state !== 'notified') return null
-
   async function acknowledge() {
     setBusy(true)
     setError(null)
-    try { await api.acknowledgeIncident(incident.incident_id, { role, name: actorName(role, unit) }) }
+    try { await api.acknowledgeIncident(incident.incident_id, actor) }
     catch (cause) { setError(actionError(cause)); await refreshIncident(incident.incident_id) }
     finally { setBusy(false) }
   }
-
-  return <div className="incident-action">
-    <button type="button" className="primary-action" disabled={busy} onClick={() => void acknowledge()}>{busy ? 'Recording…' : "I'll Check Now"}</button>
-    {error && <p className="action-error" role="alert">{error}</p>}
-  </div>
+  return <>
+    <button type="button" className={className} disabled={busy} onClick={() => void acknowledge()}>{busy ? 'Recording…' : "I'll Check Now"}</button>
+    {error && <p className="tm-resp-error" role="alert">{error}</p>}
+  </>
 }
 
-type CloseOutcome = Exclude<Outcome, 'resident_activity_detected'>
-
-/** The township responder's at-the-door screen: record the outcome; 999 stays one tap away. */
-function TownshipCheck({ incident, unit }: { incident: Incident; unit: Unit }) {
+/** At the door: pick what was found. Recording it closes the incident. */
+function OutcomeForm({ incident }: { incident: Incident }) {
   const [picked, setPicked] = useState<CloseOutcome | ''>('')
   const [noteOpen, setNoteOpen] = useState(false)
   const [note, setNote] = useState('')
-  const [moreOpen, setMoreOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const actor = { role: 'township' as const, name: actorName('township', unit) }
   const unable = incident.events.some(event => event.type === 'unable_to_verify')
-  const calledAt = incident.events.find(event => event.type === 'emergency_called')?.at
+  const called = !!eventAt(incident, 'emergency_called')
   const options = outcomesFor(incident)
   // The backend closes an unverified welfare check only as Resident OK until a 999 call is recorded.
-  const allowed = (value: CloseOutcome) => isHomeCheck(incident) || !unable || !!calledAt || value === 'resident_ok'
+  const allowed = (value: CloseOutcome) => isHomeCheck(incident) || !unable || called || value === 'resident_ok'
   const outcome = picked && allowed(picked) ? picked : ''
-
-  async function escalate(action: 'unable_to_verify' | 'emergency_called') {
-    setMoreOpen(false)
-    setBusy(true)
-    setError(null)
-    try { applyEvent({ type: 'incident.updated', at: new Date().toISOString(), data: await api.escalateIncident(incident.incident_id, { ...actor, action }) }) }
-    catch (cause) { setError(actionError(cause)); await refreshIncident(incident.incident_id) }
-    finally { setBusy(false) }
-  }
+  const titleId = `tm-outcome-${incident.incident_id}`
 
   async function submit() {
     if (!outcome) return
@@ -106,174 +118,137 @@ function TownshipCheck({ incident, unit }: { incident: Incident; unit: Unit }) {
     finally { setBusy(false) }
   }
 
-  return <section className="ir" aria-label="Incident response">
-    <div className="ir-status">
-      <span>You're checking · reminders off</span>
-      {incident.acknowledged_by && <time dateTime={incident.acknowledged_by.at}>since {clockLabel(incident.acknowledged_by.at)}</time>}
+  return <form className="tm-outcome" onSubmit={event => { event.preventDefault(); void submit() }} noValidate>
+    <h3 id={titleId}>{isHomeCheck(incident) ? 'What did you find at the home?' : 'What did you find?'}</h3>
+    <div className="tm-outcome-options" role="radiogroup" aria-labelledby={titleId}>
+      {options.map(item => <button key={item.value} type="button" role="radio" aria-checked={outcome === item.value}
+        className="tm-outcome-option" disabled={busy || !allowed(item.value)} onClick={() => setPicked(item.value)}>
+        <span className="tm-outcome-dot" aria-hidden="true" />
+        <span className="tm-outcome-text"><span>{item.label}</span>{item.help && <small>{item.help}</small>}</span>
+      </button>)}
     </div>
-    {calledAt && <p className="ir-banner" role="status">999 call recorded at {clockLabel(calledAt)}. Keep this open until you know the outcome.</p>}
-    {unable && !calledAt && <p className="ir-banner" role="status">Safety not verified. Contact the duty supervisor and caregiver.</p>}
-
-    <form onSubmit={event => { event.preventDefault(); void submit() }} noValidate>
-      <h3 className="ir-title" id={`ir-outcome-${incident.incident_id}`}>Check outcome</h3>
-      <div className="ir-options" role="group" aria-labelledby={`ir-outcome-${incident.incident_id}`}>
-        {options.map(item => <button key={item.value} type="button" className="ir-option" aria-pressed={outcome === item.value}
-          disabled={busy || !allowed(item.value)} onClick={() => setPicked(item.value)}>
-          <span className="ir-option-dot" aria-hidden="true" />
-          <span className="ir-option-text"><span>{item.label}</span>{item.help && <small>{item.help}</small>}</span>
-        </button>)}
-      </div>
-      {unable && !calledAt && !isHomeCheck(incident) && <p className="ir-hint">Record a 999 call to choose another outcome.</p>}
-      {noteOpen
-        ? <textarea className="ir-note" rows={2} maxLength={500} aria-label="Note" placeholder="Anything the caregiver should know"
-            value={note} onChange={event => setNote(event.target.value)} autoFocus />
-        : <button type="button" className="ir-add-note" onClick={() => setNoteOpen(true)}>+ Add a note (optional)</button>}
-      <button type="submit" className="ir-submit" disabled={busy || !outcome}>{busy ? 'Recording…' : outcome ? 'Submit' : 'Select an outcome'}</button>
-      {error && <p className="ir-error" role="alert">{error}</p>}
-    </form>
-
-    <div className="ir-emergency">
-      <div className="ir-emergency-row">
-        <span>Emergency? Give unit {unit.unit_id}, Block A, and the access route.</span>
-        <a className="ir-call" href="tel:999">Call 999</a>
-        {!calledAt && <button type="button" className="ir-pill" aria-expanded={moreOpen}
-          onClick={() => setMoreOpen(open => !open)}>{moreOpen ? 'Less' : 'More'}</button>}
-      </div>
-      {moreOpen && <div className="ir-more">
-        {!calledAt && <button type="button" className="ir-pill" disabled={busy} onClick={() => void escalate('emergency_called')}>I called 999, record it</button>}
-        {!unable && !calledAt && <button type="button" className="ir-pill" disabled={busy} onClick={() => void escalate('unable_to_verify')}>I can't verify safety</button>}
-      </div>}
-    </div>
-  </section>
+    {unable && !called && !isHomeCheck(incident) && <p className="tm-resp-hint">Record a 999 call to choose another outcome.</p>}
+    {noteOpen
+      ? <textarea className="tm-outcome-note" rows={2} maxLength={500} aria-label="Note for the caregiver" placeholder="Anything the caregiver should know"
+          value={note} onChange={event => setNote(event.target.value)} autoFocus />
+      : <button type="button" className="tm-resp-link" onClick={() => setNoteOpen(true)}>Add a note for the caregiver</button>}
+    <button type="submit" className="tm-resp-primary" disabled={busy || !outcome}>
+      {busy ? 'Recording…' : outcome ? 'Record and close' : 'Choose what you found'}
+    </button>
+    {error && <p className="tm-resp-error" role="alert">{error}</p>}
+  </form>
 }
 
-/** Confirmation after the incident ends, kept on screen until the responder dismisses it. */
-function TownshipDone({ incident, onDone }: { incident: Incident; onDone: () => void }) {
-  const closer = incident.events.find(event => event.type === 'closed')?.actor
-  const label = outcomeLabel(incident.outcome)
-  return <section className="ir-done" aria-label="Incident closed">
-    <span>Closed{incident.closed_at ? ` · ${clockLabel(incident.closed_at)}` : ''}</span>
-    <h3>{label}</h3>
-    <p>{closer ? `Recorded by ${closer.name}.` : 'Closed automatically after activity was detected.'} The caregiver has been told.</p>
-    <button type="button" onClick={onDone} autoFocus>Done</button>
-  </section>
-}
-
-export function IncidentPanel({ incident, unit, role, onDone }: { incident: Incident | null; unit: Unit; role: Role; onDone?: () => void }) {
-  const [clock, setClock] = useState(() => Date.now())
-  const [outcome, setOutcome] = useState<Exclude<Outcome, 'resident_activity_detected'> | ''>('')
-  const [report, setReport] = useState('')
+/** What to say on the 999 call, and (for the responder who acknowledged) recording that it happened. */
+function Emergency({ incident, unit, canRecord }: { incident: Incident; unit: Unit; canRecord: boolean }) {
+  const [moreOpen, setMoreOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const unable = incident.events.some(event => event.type === 'unable_to_verify')
+  const called = !!eventAt(incident, 'emergency_called')
 
   async function escalate(action: 'unable_to_verify' | 'emergency_called') {
-    if (!incident) return
+    setMoreOpen(false)
     setBusy(true)
     setError(null)
-    try { applyEvent({ type: 'incident.updated', at: new Date().toISOString(), data: await api.escalateIncident(incident.incident_id, { role, name: actorName(role, unit), action }) }) }
+    try { applyEvent({ type: 'incident.updated', at: new Date().toISOString(), data: await api.escalateIncident(incident.incident_id, { ...actor, action }) }) }
     catch (cause) { setError(actionError(cause)); await refreshIncident(incident.incident_id) }
     finally { setBusy(false) }
   }
 
+  return <div className="tm-resp-999">
+    <p>On a 999 call, give unit <strong>{unit.unit_id}</strong>, Block A, and the access route.</p>
+    {canRecord && !called && <>
+      <button type="button" className="tm-resp-link tm-resp-more" aria-expanded={moreOpen} onClick={() => setMoreOpen(open => !open)}>
+        Report a 999 call or unverified safety<ChevronDown size={14} aria-hidden="true" />
+      </button>
+      {moreOpen && <div className="tm-resp-more-actions">
+        <button type="button" disabled={busy} onClick={() => void escalate('emergency_called')}>I called 999, record it</button>
+        {!unable && <button type="button" disabled={busy} onClick={() => void escalate('unable_to_verify')}>I can't verify she is safe</button>}
+      </div>}
+    </>}
+    {error && <p className="tm-resp-error" role="alert">{error}</p>}
+  </div>
+}
+
+/** The guard's incident response, docked beside the map: one layout from alert to close. */
+interface PanelProps {
+  incident: Incident; unit: Unit; floor: number; onDone: () => void
+  /** The page's alert bar already carries I'll Check Now and Call 999, so the panel doesn't repeat them. */
+  inAlertBar?: boolean
+  /** 'dialog' is the at-the-door pop-up; the docked 'panel' is hidden while it is open. */
+  variant?: 'panel' | 'dialog'
+  onOpenDialog?: () => void
+  onCloseDialog?: () => void
+}
+
+export function IncidentPanel({ incident, unit, floor, onDone, inAlertBar = false, variant = 'panel', onOpenDialog, onCloseDialog }: PanelProps) {
+  const [clock, setClock] = useState(() => Date.now())
+  const live = ['grace', 'notified'].includes(incident.state)
   useEffect(() => {
-    if (!incident || !['grace', 'notified'].includes(incident.state)) return
+    if (!live) return
     const timer = window.setInterval(() => setClock(Date.now()), 1000)
     return () => window.clearInterval(timer)
-  }, [incident])
+  }, [live])
 
-  async function close() {
-    if (!incident) return
-    if (!outcome) {
-      setError('Select a confirmed outcome before closing the incident.')
-      return
-    }
-    if (role === 'township' && !report.trim()) {
-      setError('Add a short description before closing the incident.')
-      return
-    }
-    setBusy(true)
-    setError(null)
-    try { await api.closeIncident(incident.incident_id, { role, name: actorName(role, unit), outcome, ...(role === 'township' ? { report: report.trim() } : {}) }) }
-    catch (cause) { setError(actionError(cause)); await refreshIncident(incident.incident_id) }
-    finally { setBusy(false) }
-  }
-
-  if (!incident) return <section className="incident-panel" aria-label="Incident response">
-    <div className="incident-panel-head"><h4>Incident response</h4><span className="incident-state calm">No active concern</span></div>
-    <p className="incident-empty">No safety incident has been recorded for this home.</p>
-  </section>
-
-  const canClose = incident.state === 'acknowledged' && incident.acknowledged_by?.role === role && incident.acknowledged_by.name === actorName(role, unit)
-  const unable = incident.events.some(event => event.type === 'unable_to_verify')
-  const called = incident.events.some(event => event.type === 'emergency_called')
   const resolved = incident.state === 'closed' || incident.state === 'auto_resolved'
-  const statusText = incident.state === 'grace' ? 'Checking quietly' : incident.state === 'notified' ? 'Needs response' : incident.state === 'acknowledged' ? called ? '999 called' : unable ? 'Safety unverified' : 'Someone is checking' : 'Resolved'
-  const detectedAt = incident.events.find(event => event.type === 'detected')?.at ?? incident.opened_at
-  const notifiedAt = incident.events.find(event => event.type === 'notified')?.at
-  const acknowledgedAt = incident.acknowledged_by?.at ?? incident.events.find(event => event.type === 'acknowledged')?.at
-  const unableAt = incident.events.find(event => event.type === 'unable_to_verify')?.at
-  const calledAt = incident.events.find(event => event.type === 'emergency_called')?.at
+  const mine = incident.state === 'acknowledged' && incident.acknowledged_by?.role === 'township' && incident.acknowledged_by.name === responder
+  const unable = incident.events.some(event => event.type === 'unable_to_verify')
+  const calledAt = eventAt(incident, 'emergency_called')
   const requested = incident.events.find(event => event.type === 'township_requested')
-  const visitRequested = !!requested
   const homeCheck = isHomeCheck(incident)
   const caregiverCheckingIn = incident.events.some(event => event.type === 'caregiver_checking_in')
-  if (role === 'township' && canClose) return <TownshipCheck incident={incident} unit={unit} />
-  if (resolved && onDone) return <TownshipDone incident={incident} onDone={onDone} />
-  return <section className={`incident-panel incident-${incident.state}`} aria-label="Incident response">
-    <div className="incident-panel-head"><h4>Incident response</h4><span className={`incident-state ${resolved ? 'calm' : ''}`}>{statusText}</span></div>
-    {incident.state === 'grace' && <p className="incident-lead">A possible break in routine was detected. A simulated voice call is being made before anyone is alerted.</p>}
-    {incident.state === 'notified' && !homeCheck && <p className="incident-lead urgent">Resident {unit.unit_id} · {unit.resident_name} did not answer. Caregiver and township have been alerted.</p>}
-    {incident.state === 'notified' && homeCheck && <p className="incident-lead urgent">Home check requested for {unit.unit_id}. {requested?.detail}</p>}
-    {visitRequested && incident.state === 'notified' && !homeCheck && <p className="incident-lead urgent">Caregiver requested a township visit.</p>}
-    {caregiverCheckingIn && incident.state === 'notified' && <p className="incident-lead">Caregiver is checking in remotely. Resident safety is not confirmed.</p>}
-    {incident.state === 'acknowledged' && <p className="incident-lead">{incident.acknowledged_by?.name} is checking. Reminders have stopped.</p>}
-    {unable && !called && !resolved && <p className="incident-lead urgent">Resident safety could not be verified. Contact the duty supervisor and caregiver urgently; call 999 if an emergency is suspected.</p>}
-    {called && !resolved && <p className="incident-lead urgent">{incident.events.find(event => event.type === 'emergency_called')?.actor?.name} reports calling 999. Keep this case open and help responders reach the unit. Dispatch is not confirmed.</p>}
-    {resolved && <p className="incident-lead">Outcome: {outcomeLabel(incident.outcome)}{incident.acknowledged_by ? ` · Checked by ${incident.acknowledged_by.name}` : ''}.</p>}
-    {resolved && incident.report && <p className="incident-report"><strong>Report</strong><span>{incident.report}</span></p>}
+  const closer = incident.events.find(event => event.type === 'closed')?.actor
+  const tone = resolved ? 'is-closed' : incident.state === 'notified' ? 'is-alert' : 'is-checking'
 
-    {incident.state === 'grace' && <div className="incident-count"><span>Grace period remaining</span><strong>{countdown(incident.grace_ends_at, clock)}</strong></div>}
-    {incident.state === 'notified' && <div className="incident-count"><span>Reminder #{incident.reminder_count + 1} in</span><strong>{countdown(incident.next_reminder_at, clock)}</strong></div>}
+  const status = resolved ? `Closed${incident.closed_at ? ` at ${clockLabel(incident.closed_at)}` : ''}`
+    : incident.state === 'grace' ? `Calling the resident · ${countdown(incident.grace_ends_at, clock)} left`
+    : incident.state === 'notified' ? `Needs a responder · reminder ${incident.reminder_count + 1} in ${countdown(incident.next_reminder_at, clock)}`
+    : mine ? `You're checking · reminders off${incident.acknowledged_by ? ` since ${clockLabel(incident.acknowledged_by.at)}` : ''}`
+    : `${incident.acknowledged_by?.name ?? 'Someone'} is checking`
 
-    <dl className="incident-milestones" aria-label="Incident summary">
-      <div><dt>{homeCheck ? 'Activity while away' : 'Inactivity detected'}</dt><dd><time dateTime={detectedAt}>{timeLabel(detectedAt)}</time></dd></div>
-      <div><dt>Caregiver and township notified</dt><dd>{notifiedAt ? <time dateTime={notifiedAt}>{timeLabel(notifiedAt)}</time> : 'Pending'}</dd></div>
-      <div><dt>Response acknowledged</dt><dd>{acknowledgedAt ? <time dateTime={acknowledgedAt}>{timeLabel(acknowledgedAt)}</time> : 'Pending'}</dd></div>
-      {unableAt && <div><dt>Safety not verified</dt><dd><time dateTime={unableAt}>{timeLabel(unableAt)}</time></dd></div>}
-      {calledAt && <div><dt>999 call reported</dt><dd><time dateTime={calledAt}>{timeLabel(calledAt)}</time></dd></div>}
-    </dl>
-
-    {incident.state === 'notified' && <AcknowledgeButton incident={incident} unit={unit} role={role} />}
-    {canClose && <div className="emergency-handoff">
-      <strong>Emergency handoff</strong>
-      <ol>
-        <li>Emergency? Call 999. Request an ambulance.</li>
-        <li>Give the full address, unit {unit.unit_id}, and access route.</li>
-        <li>Follow the operator’s instructions. Guide responders in.</li>
-      </ol>
-      <a className="primary-action" href="tel:999">Call 999</a>
-      {!called && <button type="button" disabled={busy} onClick={() => void escalate('emergency_called')}>I called 999 — record call</button>}
-      {!unable && !called && <button type="button" disabled={busy} onClick={() => void escalate('unable_to_verify')}>Unable to verify safety</button>}
-      {called && <p role="status">999 call recorded. Keep open until the outcome is confirmed.</p>}
-      {error && <p className="action-error" role="alert">{error}</p>}
-    </div>}
-    {canClose && <form className="outcome-form" onSubmit={event => { event.preventDefault(); void close() }}>
-      <label htmlFor={`outcome-${role}`}>Confirmed outcome</label>
-      <p className="outcome-hint">{homeCheck ? 'Choose what you found at the home.' : 'Choose this only after checking the resident.'} Recording the outcome closes the incident.</p>
-      <div className="outcome-controls">
-        <select id={`outcome-${role}`} value={outcome} onChange={event => setOutcome(event.target.value as Exclude<Outcome, 'resident_activity_detected'> | '')} required>
-          <option value="">Select confirmed outcome</option>
-          {outcomesFor(incident).map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
-        </select>
+  const dialog = variant === 'dialog'
+  const titleId = `tm-resp-title-${variant}`
+  return <section className={`tm-resp ${tone} is-${variant}`} aria-labelledby={titleId}>
+    <header className="tm-resp-head">
+      <div className="tm-resp-top">
+        <p className="tm-resp-unit"><span>{unit.unit_id}</span>Floor {floor} · Block A</p>
+        {/* 999 stays one tap away, at the top, for as long as the incident is open. */}
+        <div className="tm-resp-top-actions">
+          {!resolved && !inAlertBar && <a className="tm-call" href="tel:999"><Phone size={15} aria-hidden="true" />Call 999</a>}
+          {dialog && onCloseDialog && <button type="button" className="tm-resp-close" onClick={onCloseDialog}
+            aria-label={resolved ? 'Close' : 'Close the pop-up. The check stays open beside the map.'}><X size={18} aria-hidden="true" /></button>}
+        </div>
       </div>
-      {role === 'township' && <>
-        <label htmlFor={`report-${incident.incident_id}`}>Short report</label>
-        <textarea id={`report-${incident.incident_id}`} value={report} onChange={event => setReport(event.target.value)}
-          required maxLength={500} rows={3} placeholder="Describe what you found and what action was taken." />
+      <h2 id={titleId} tabIndex={-1}>{unit.resident_name}</h2>
+      <p className="tm-resp-status">{status}</p>
+    </header>
+    <Steps incident={incident} />
+
+    <div className="tm-resp-body">
+      {incident.state === 'grace' && <p className="tm-resp-lead">TemanMu noticed a break in her routine and is calling her first. Nobody is alerted yet.</p>}
+      {incident.state === 'notified' && <p className="tm-resp-lead">{alertReason(incident, unit)}.{homeCheck ? '' : ' Her caregiver and you were alerted together.'}</p>}
+      {requested && incident.state === 'notified' && !homeCheck && <p className="tm-resp-note">{unit.caregiver_name} asked the township to visit.</p>}
+      {caregiverCheckingIn && incident.state === 'notified' && <p className="tm-resp-note">{unit.caregiver_name} is checking in remotely. Her safety is not confirmed.</p>}
+      {calledAt && !resolved && <p className="tm-resp-banner" role="status">999 call recorded at {clockLabel(calledAt)}. Keep this open until you know the outcome.</p>}
+      {unable && !calledAt && !resolved && <p className="tm-resp-banner" role="status">Safety not verified. Contact the duty supervisor and caregiver.</p>}
+
+      {incident.state === 'notified' && !inAlertBar && <Acknowledge key={incident.incident_id} incident={incident} />}
+      {mine && dialog && <p className="tm-resp-lead">Go to unit <strong>{unit.unit_id}</strong> on floor {floor}. {alertReason(incident, unit)}.</p>}
+      {mine && <>
+        {!dialog && onOpenDialog && <button type="button" className="tm-resp-link" onClick={onOpenDialog}>Open the check form as a pop-up</button>}
+        <OutcomeForm key={incident.incident_id} incident={incident} />
       </>}
-      <button type="submit" className="primary-action" disabled={busy || !outcome || (role === 'township' && !report.trim())}>{busy ? 'Recording…' : 'Record outcome and close'}</button>
-      {error && <p className="action-error" role="alert">{error}</p>}
-    </form>}
-    {incident.state === 'acknowledged' && !canClose && <p className="incident-hint">{incident.acknowledged_by?.name} will log the outcome.</p>}
+      {incident.state === 'acknowledged' && !mine && <p className="tm-resp-lead">{incident.acknowledged_by?.name} will record the outcome.</p>}
+
+      {resolved && <div className="tm-resp-done">
+        <h3>{outcomeLabel(incident.outcome)}</h3>
+        <p>{closer ? `Recorded by ${closer.name}.` : 'Closed automatically after activity at home.'} The caregiver has been told.</p>
+        {incident.report && incident.report !== outcomeLabel(incident.outcome) && <p className="tm-resp-report">“{incident.report}”</p>}
+        <button type="button" className="tm-resp-secondary" onClick={onDone}>Done</button>
+      </div>}
+    </div>
+
+    {!resolved && incident.state !== 'grace' && !inAlertBar && <Emergency incident={incident} unit={unit} canRecord={mine} />}
   </section>
 }
