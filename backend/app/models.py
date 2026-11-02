@@ -188,6 +188,7 @@ class Incident(ContractModel):
     incident_id: str
     unit_id: UnitId
     state: IncidentState
+    trigger_reason: str | None = None
     opened_at: UtcDatetime
     grace_ends_at: UtcDatetime | None
     next_reminder_at: UtcDatetime | None

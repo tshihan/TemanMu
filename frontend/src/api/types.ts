@@ -76,6 +76,7 @@ export interface IncidentEvent {
 }
 
 export interface Incident {
+  trigger_reason: string | null
   incident_id: string
   unit_id: UnitId
   state: IncidentState

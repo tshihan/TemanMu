@@ -362,6 +362,7 @@ function startGrace(unit: Unit, trigger: 'quiet_gap' | 'outing_timeout' | 'careg
   const detectedDetail = trigger === 'outing_timeout' ? 'Outing longer than usual'
     : trigger === 'caregiver_confirmation' ? 'No water activity since confirmed contact' : 'Water quiet gap exceeded'
   const incident: Incident = {
+    trigger_reason: null,
     incident_id: crypto.randomUUID(), unit_id: unit.unit_id, state: 'grace', opened_at: openedAt,
     grace_ends_at: new Date(Date.now() + graceSeconds * 1000).toISOString(),
     next_reminder_at: null, reminder_count: 0, acknowledged_by: null, outcome: null, closed_at: null,
@@ -375,6 +376,7 @@ function startGrace(unit: Unit, trigger: 'quiet_gap' | 'outing_timeout' | 'careg
   const statusReason = trigger === 'outing_timeout' ? 'Possible outing has lasted longer than usual; checking whether Mum is okay.'
     : trigger === 'caregiver_confirmation' ? 'No water use since Mum was confirmed okay at home; checking again.'
       : `No water use longer than the usual ${unit.baseline.usual_quiet_gap_seconds}-second gap. No door outing; electricity remains at standby.`
+  incident.trigger_reason = statusReason
   updateUnit(unit, 'unusual_inactivity', statusReason)
   publish('incident.updated', clone(incident))
   later(() => {
@@ -648,6 +650,7 @@ export const mockApi: Api = {
       if (latestIncident(unit.unit_id)) throw new ApiError(409, 'This home already has an open alert')
       const detail = `${notice.message} ${body.name} asked township to check the home.`
       const incident: Incident = {
+        trigger_reason: detail,
         incident_id: crypto.randomUUID(), unit_id: unit.unit_id, state: 'notified', opened_at: at, grace_ends_at: null,
         next_reminder_at: new Date(Date.now() + state.config.reminder_interval_seconds * 1000).toISOString(),
         reminder_count: 0, acknowledged_by: null, outcome: null, closed_at: null,

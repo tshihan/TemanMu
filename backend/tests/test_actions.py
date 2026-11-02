@@ -205,6 +205,8 @@ async def test_away_activity_home_check_goes_to_township(client):
     iid = response.json()["incident_id"]
     incident = await incidents.get_incident(iid)
     assert incident.state == "notified"
+    original_trigger = incident.trigger_reason
+    assert original_trigger and name in original_trigger
     assert [e.type for e in incident.events] == ["detected", "township_requested", "notified"]
     assert (await units.get_unit(UNIT)).status == "unresolved_concern"
     [request] = await notes("township_requested")
@@ -216,6 +218,7 @@ async def test_away_activity_home_check_goes_to_township(client):
     # A home check records what was found at the home, not the resident's condition.
     assert (await close(client, iid, outcome="resident_ok")).status_code == 409
     assert (await close(client, iid, outcome="known_person_home", report="Daughter collecting post.")).status_code == 200
+    assert (await incidents.get_incident(iid)).trigger_reason == original_trigger
     assert (await units.get_unit(UNIT)).away_periods != []
     assert (await units.get_unit(UNIT)).status == "routine"
 
@@ -472,3 +475,43 @@ async def test_hospital_transfer_persists_until_caregiver_confirms_return(client
     assert response.json()["care_state"] == "home_monitoring"
     assert response.json()["quiet_gap"]["last_caregiver_confirmation_at"] is not None
     assert (await client.post(path, json={"role": "caregiver", "name": unit.caregiver_name})).status_code == 409
+
+
+@pytest.mark.parametrize("outcome", ["resident_ok", "assistance_provided", "sent_to_hospital", "resident_away"])
+async def test_simple_incident_record_survives_database_reconnect(client, outcome):
+    from app.db import pool as db_pool
+
+    iid = await notified_incident()
+    original = await incidents.get_incident(iid)
+    assert original.trigger_reason
+    assert "No water use" in original.trigger_reason
+    assert (await ack(client, iid)).status_code == 200
+    assert (await ack(client, iid)).status_code == 409
+    note = "Resident checked; false alarm." if outcome == "resident_ok" else "Responder recorded the outcome."
+    assert (await close(client, iid, outcome=outcome, report=note)).status_code == 200
+    assert (await close(client, iid, outcome=outcome, report=note)).status_code == 409
+    # The home's status is mutable; the original incident explanation must not be.
+    await units.update_unit_state(UNIT, status_reason="A later home status")
+    await timers.cancel_all()
+    await db_pool.close_pool()
+    await db_pool.init_pool(os.environ["TEST_DATABASE_URL"])
+
+    response = await client.get(f"/api/incidents/{iid}")
+    assert response.status_code == 200
+    saved = response.json()
+    assert saved["unit_id"] == UNIT
+    assert saved["opened_at"] == original.model_dump(mode="json")["opened_at"]
+    assert saved["trigger_reason"] == original.trigger_reason
+    assert saved["acknowledged_by"]["name"] == ALI["name"]
+    assert saved["acknowledged_by"]["at"]
+    assert saved["outcome"] == outcome
+    assert saved["report"] == note
+    assert saved["closed_at"]
+    types = [event["type"] for event in saved["events"]]
+    assert types.count("detected") == 1
+    assert types.count("acknowledged") == 1
+    assert types.count("closed") == 1
+    assert "notified" in types
+    assert saved["events"][-1]["actor"] == ALI
+    listed = (await client.get(f"/api/units/{UNIT}/incidents", params={"state": "closed"})).json()
+    assert next(item for item in listed if item["incident_id"] == iid) == saved

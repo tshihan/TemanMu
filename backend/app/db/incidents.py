@@ -51,6 +51,7 @@ async def _to_incidents(c: asyncpg.Connection, rows: list[asyncpg.Record]) -> li
             unit_id=r["unit_id"],
             state=r["state"],
             opened_at=r["opened_at"],
+            trigger_reason=r["trigger_reason"],
             grace_ends_at=r["grace_ends_at"],
             next_reminder_at=r["next_reminder_at"],
             reminder_count=r["reminder_count"],
@@ -71,18 +72,21 @@ async def _to_incidents(c: asyncpg.Connection, rows: list[asyncpg.Record]) -> li
 async def create_incident(
     unit_id: str,
     opened_at: datetime,
-    grace_ends_at: datetime,
+    grace_ends_at: datetime | None,
     conn: asyncpg.Connection | None = None,
+    *,
+    trigger_reason: str | None = None,
 ) -> Incident:
     """New incident in state 'grace', with no events yet."""
     async with connection(conn) as c:
         row = await c.fetchrow(
-            """insert into incidents (unit_id, state, opened_at, grace_ends_at)
-               values ($1, 'grace', $2, $3)
+            """insert into incidents (unit_id, state, opened_at, grace_ends_at, trigger_reason)
+               values ($1, 'grace', $2, $3, $4)
                returning *""",
             unit_id,
             opened_at,
             grace_ends_at,
+            trigger_reason,
         )
         return (await _to_incidents(c, [row]))[0]
 

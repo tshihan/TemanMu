@@ -2,7 +2,7 @@
 
 ## Purpose and scope
 
-Phase 2 extends the current simulator-based TemanMu solution with access-card context, improved away management, a personal routine model, structured township reports and caregiver activity history.
+Phase 2 extends the current simulator-based TemanMu solution with access-card context, improved away management, a personal routine model, simple database incident records and caregiver activity history.
 
 Source: the team brief in `SDP Hack.md`, including its two embedded activity-history screenshots. All five features are P0; the source table leaves activity history unassigned, so P0 follows the agreed team scope.
 
@@ -17,7 +17,7 @@ Existing away-mode implementation notes are preserved in [Away-period implementa
 | **Access Card Integration** | Use resident-linked entry and exit events to provide outing context and reduce additional door-sensor installation where township infrastructure supports integration. Cross-check events with water and electricity activity; a card swipe alone does not establish resident presence. | **P0** |
 | **Caregiver App — Mum/Dad Is Away** | Extend existing away periods with return reminders, extension, shared pause visibility and a return-confirmation prompt when household activity occurs. Require an outcome for an existing unresolved alert before pausing. | **P0** |
 | **Machine Learning — Personal Routine Model** | Evaluate Isolation Forest supported by time-of-day historical baselines, initially in shadow mode. Compare with existing rules before allowing model decisions to affect alerts. | **P0** |
-| **Township Welfare-Check Report** | Turn incident events and responder findings into structured reports, including false alarms, for management review and follow-up ownership. | **P0** |
+| **Township Incident Record** | Save the original trigger, responder acceptance, outcome, short note and event timeline in the existing backend database. Keep the current township flow; no visit recording or Reports area. | **P0** |
 | **Caregiver Activity History — 7 / 30 Days** | Add daily activity timelines and selected-day charts, with access events, away periods, welfare-check markers and explicit missing-data labels. | **P0** |
 
 ## 1. Access-card context
@@ -91,27 +91,31 @@ Candidate features:
 - The team can explain what the model uses, what its output means and where it fails.
 - No claim of improved detection or real-world reliability is made without supporting evaluation.
 
-## 4. Township welfare-check report
+## 4. Township incident record
 
-### Report contents
+### Agreed scope
 
-| Field | Required information |
+Keep the current operator flow: accept the alert, select an outcome, optionally add a short note, and submit. Store the record in the backend database using the existing `incidents` and `incident_events` tables. No arrival/visit action, Reports area, document generation, separate report tables or follow-up workflow is required.
+
+| Field | Saved information |
 | --- | --- |
-| Incident | Home, incident identifier, triggering concern and relevant evidence. |
-| Responsibility | Assigned responder and acknowledgement time. |
-| Visit | Arrival and completion times; use explicit responder actions to capture these. |
-| Findings | What was found, assistance provided and final outcome, including false alarms. |
-| Emergency services | Whether contacted, by whom and when, where recorded. Distinguish a reported call from confirmed dispatch. |
-| Follow-up | Required action, owner and completion status. |
+| Incident | Incident ID, home/unit, opened time and current state. |
+| Trigger | Original explanation captured when the incident opens, plus the detected event. |
+| Acceptance | Responder role, name and acceptance timestamp. This is not a visit or arrival timestamp. |
+| Outcome | The selected outcome, including resident okay, assistance provided, sent to hospital and home-check outcomes. |
+| Note | The existing short report field. The current quick form uses the selected outcome label when the optional note is blank. |
+| Completion | Closing timestamp and the actor recorded on the closed event. |
+| Timeline | Detection, simulated-call steps, notification-stage events, reminders, acceptance, caregiver responses, escalation and closure, as applicable. Notification-stage events do not prove external delivery. |
 
 ### Implementation and completion criteria
 
-- Extend the existing incident timeline/outcome flow; automatically populate existing identifiers and timestamps.
-- Have the responder enter findings, assistance and follow-up instead of retyping the event history.
-- Generate a report after every completed welfare check, including false alarms.
-- Make reports available to authorised management staff; prototype role selection must not be described as production authentication.
-- Preserve the distinction between **Resident confirmed okay** and **Resident activity detected**.
-- Never make an automated emergency call or silently resolve an incident awaiting a human outcome.
+- Persist each existing action as it happens, retaining unfinished incidents too.
+- Capture `trigger_reason` on the incident so later home-status changes cannot replace the original explanation. Historical records without the full explanation retain null; their existing detected events remain available.
+- Save outcome, note, closing event and related home-state changes in the existing database transaction. Preserve row-lock/state checks that reject repeated acceptance or closure.
+- Reload records through the existing incident endpoints; no new Reports interface is needed.
+- Keep false-alarm outcomes and automatically resolved episodes in history. Automatic activity recovery is not a completed human visit or confirmation of safety.
+- Keep human-recorded emergency calls distinct from dispatch confirmation. No LLM or external API key is needed.
+- Verify that records survive closing and reopening the database connection pool. Mock-mode history is demonstration state, not persistent database storage; Reset Demo deliberately clears incident history.
 
 ## 5. Caregiver activity history
 
@@ -163,7 +167,7 @@ All features remain P0. This sequence reflects dependencies rather than a change
 1. Define access-event and historical-reading contracts, timestamps and data-quality states.
 2. Extend the simulator and backend history endpoints with reproducible sample history.
 3. Complete away-mode reminders, extension and incident safeguards.
-4. Build caregiver history views and township report capture/review.
+4. Build caregiver history views and verify simple township incident persistence.
 5. Train and evaluate the routine-model candidate in shadow mode using the agreed history contract.
 
 ## Review and demonstration boundaries

@@ -176,3 +176,32 @@ WebSocket: `ws://localhost:8000/ws`. Each message is `{"type", "at", "data"}`; t
 
 The Vite development server proxies `/api` and `/ws` to this service. The caregiver mobile view at `/caregiver` therefore uses the same origin as the frontend, including when opened from a phone on the local network. A production frontend host needs equivalent reverse proxy routes or explicit HTTPS/WSS build URLs.
 | VS Code: "Import pydantic could not be resolved" | Command palette → Python: Select Interpreter → `backend/.venv/bin/python` |
+
+## Simple township incident records
+
+The current accept → outcome → optional note → submit flow writes to `incidents`
+and `incident_events`. No visit/arrival action, separate report table or Reports
+screen is required. The quick township form uses the outcome label when its
+optional note is blank.
+
+- `incidents`: unit, original `trigger_reason`, opened time, state, accepted-by
+  role/name/time, outcome, `report` (the short note), and closing time.
+- `incident_events`: timestamped detection, call/notification-stage events,
+  reminders, responses, acceptance, escalation and closure, with actor/details
+  where applicable. Acceptance does not establish arrival or a visit.
+- Original trigger text is captured at creation and is not changed when the
+  home's status changes. Older records can have a null trigger reason; their
+  recorded detected events remain available.
+- Acceptance and closure retain their existing transaction/row-lock checks.
+  Repeating either action returns a conflict instead of adding another event.
+- Existing `GET /api/incidents/{id}` and
+  `GET /api/units/{unit_id}/incidents?state=closed` reload saved records and events.
+  Ordinary backend restarts retain them; **Reset Demo deliberately deletes them**.
+  Frontend mock mode demonstrates the flow without persistent database writes.
+
+Apply migration `013_incident_trigger_reason.sql` with `python -m app.db.migrate`
+before running this backend version. No LLM API key is used. Database integration
+coverage in `test_simple_incident_record_survives_database_reconnect` checks
+original trigger retention, outcomes/notes, actors, timestamps, duplicate-action
+rejection and reads after the connection pool is reopened. Run it with a separate
+`TEST_DATABASE_URL`; the tests reset that database.

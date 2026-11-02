@@ -311,7 +311,9 @@ async def _open_incident(unit: Unit, decision: rules.TickDecision, now: datetime
     )
     grace_ends_at = now + timedelta(seconds=grace_seconds)
     async with get_pool().acquire() as conn, conn.transaction():
-        incident = await db_incidents.create_incident(unit.unit_id, now, grace_ends_at, conn=conn)
+        incident = await db_incidents.create_incident(
+            unit.unit_id, now, grace_ends_at, conn=conn, trigger_reason=decision.reason
+        )
         await db_incidents.add_incident_event(
             incident.incident_id, "detected", now, detail=decision.detected_detail, conn=conn
         )
@@ -578,7 +580,7 @@ async def respond_to_away_activity(notification_id: str, name: str, response: Aw
                 if unit.active_incident_id is not None:
                     raise IncidentConflict("This home already has an open alert")
                 detail = reasons.home_check_detail(name, notice.message)
-                incident = await db_incidents.create_incident(unit_id, now, None, conn=conn)
+                incident = await db_incidents.create_incident(unit_id, now, None, conn=conn, trigger_reason=detail)
                 await db_incidents.add_incident_event(
                     incident.incident_id, "detected", notice.created_at, detail=reasons.DETECTED_HOME_CHECK, conn=conn
                 )
