@@ -406,7 +406,11 @@ class EscalateRequest(ContractModel):
 class CloseRequest(ContractModel):
     role: Role
     name: str = Field(min_length=1)
-    outcome: Literal["resident_ok", "assistance_provided", "sent_to_hospital", "resident_away"]
+    outcome: Literal[
+        "resident_ok", "assistance_provided", "sent_to_hospital", "resident_away",
+        # Home check during an away period; monitoring.close checks the outcome fits the incident.
+        "home_secure", "known_person_home", "resident_returned", "security_concern",
+    ]
     report: str | None = Field(default=None, min_length=1, max_length=500)
 
     @model_validator(mode="after")

@@ -67,10 +67,24 @@ several checks are due, the earliest one fires.
 
 | Rule | Condition | Default length | Opens an incident with |
 |---|---|---|---|
-| **T1 Quiet gap** | `routine`, no water use since the last water activity or caregiver confirmation | per unit (`usual_quiet_gap_seconds`, seed 30–45 s) | "No water use for X, longer than usual maximum of Y. Last door event … Electricity at standby / in use" (U1) |
+| **T1 Quiet gap** | `routine`, no water use since the last water activity or caregiver confirmation | per unit (`usual_quiet_gap_seconds`, seed 30–50 s; A-105 is 5 s, see below) | "No water use for X, longer than usual maximum of Y. Last door event … Electricity at standby / in use" (U1) |
 | **T2 Outing too long** | `possible_away` longer than the usual outing | per unit (`usual_outing_seconds`, seed 40–60 s) | "Door opened at HH:MM, then no activity for X, longer than usual outing of Y" (U2) |
 | **Continuous water** | Water flowing without a break | `continuous_water_seconds` = 45 s | "Water has continued flowing longer than expected … tap left on or a leak" |
 | **Sustained power** | Power > standby + `high_power_above_standby_kw` (1.0 kW) without a break | `high_power_seconds` = 45 s | "Electricity use has stayed unusually high …" |
+
+### Quiet-gap fast-forward (demo only)
+
+A-105, the unit the simulator controls, has `usual_quiet_gap_seconds` = 5 in
+[`shared/seed.json`](../shared/seed.json). The rules engine waits these real 5 seconds; nothing
+in the backend is sped up.
+
+In the Unusual Inactivity and False Alarm Recovery scenarios, the simulator shows those
+5 seconds as a fast-forward card counting from 0h 00m to 4h 00m, the 4-hour quiet gap of the
+story ([`HomeEnvironment.tsx`](../frontend/src/home/HomeEnvironment.tsx), `QuietGapOverlay`).
+The 4 hours is display-only: it is a fixed constant in the frontend, not read from the backend.
+
+The scenario turns on the demo watch only when it reaches the quiet-gap step, so the walk before
+it does not use up the 5 seconds.
 
 ---
 
