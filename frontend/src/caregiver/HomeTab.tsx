@@ -106,6 +106,7 @@ export function HomeTab({ unit, ctx, incident, hospitalIncident, onOpenHospital,
   const away = currentAway(unit, now)
   const card = statusCard(unit, incident, ctx, now, !!waterAt || !!powerUsed, away, away ? awayReasons[away.period_id] ?? null : null, hospitalIncident)
   const checkingIn = incident?.events.some(event => event.type === 'caregiver_checking_in') ?? false
+  const trackingBlocked = !!unit.active_incident_id || !!(incident && !['closed', 'auto_resolved'].includes(incident.state))
   const visitRequested = incident?.events.some(event => event.type === 'township_requested') ?? false
   const lastReadingAt = readings.at(-1)?.recorded_at
   const lastIncidentAt = incident?.events.at(-1)?.at
@@ -165,6 +166,9 @@ export function HomeTab({ unit, ctx, incident, hospitalIncident, onOpenHospital,
       <h2 className="cg-status-headline">{card.headline}</h2>
       <p className="cg-status-reason">{card.reason}</p>
       {card.variant === 'hospital' && <button type="button" className="cg-hospital-open" aria-label="View hospital transfer details" onClick={onOpenHospital}><span>View hospital details<ChevronRight size={18} aria-hidden="true" /></span></button>}
+      {card.variant === 'hospital' && <div className="cg-status-actions cg-hospital-actions">
+        <TrackingControl unit={unit} relationship={R} away={away} now={now} inCard blocked={trackingBlocked} />
+      </div>}
       {card.grace && <p className="cg-status-grace"><span className="cg-status-timer cg-num">{card.grace}</span>
         <span>left in the simulated call window. You’ll only be alerted if {R} doesn’t answer.</span></p>}
       {unit.status === 'possible_away' && !away && <div className="cg-status-actions">
@@ -217,8 +221,7 @@ export function HomeTab({ unit, ctx, incident, hospitalIncident, onOpenHospital,
 
     <div className="cg-actions">
       <button type="button" className="cg-action is-ink" onClick={onCall}><Phone size={18} aria-hidden="true" />Call {R}</button>
-      <TrackingControl unit={unit} relationship={R} away={away} now={now}
-        blocked={!!unit.active_incident_id || !!(incident && !['closed', 'auto_resolved'].includes(incident.state))} />
+      <TrackingControl unit={unit} relationship={R} away={away} now={now} blocked={trackingBlocked} />
     </div>
   </div>
 }

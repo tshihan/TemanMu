@@ -110,6 +110,14 @@ export function Acknowledge({ incident, className = 'tm-resp-primary' }: { incid
   </>
 }
 
+/** Now as a datetime-local value in Malaysia time, e.g. "2026-11-04T09:30". */
+function malaysiaNow(): string {
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kuala_Lumpur', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date())
+  const get = (type: string) => parts.find(part => part.type === type)?.value ?? ''
+  return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`
+}
+
 /** At the door: pick what was found. Recording it closes the incident. */
 function OutcomeForm({ incident }: { incident: Incident }) {
   const [picked, setPicked] = useState<CloseOutcome | ''>('')
@@ -150,7 +158,11 @@ function OutcomeForm({ incident }: { incident: Incident }) {
     <h3 id={titleId}>{isHomeCheck(incident) ? 'What did you find at the home?' : 'What did you find?'}</h3>
     <div className="tm-outcome-options" role="radiogroup" aria-labelledby={titleId}>
       {options.map(item => <button key={item.value} type="button" role="radio" aria-checked={outcome === item.value}
-        className="tm-outcome-option" disabled={busy || !allowed(item.value)} onClick={() => setPicked(item.value)}>
+        className="tm-outcome-option" disabled={busy || !allowed(item.value)} onClick={() => {
+          setPicked(item.value)
+          // Most transfers are recorded as they happen, so the time starts at now; the guard can change it.
+          if (item.value === 'sent_to_hospital' && !hospitalTime) setHospitalTime(malaysiaNow())
+        }}>
         <span className="tm-outcome-dot" aria-hidden="true" />
         <span className="tm-outcome-text"><span>{item.label}</span>{item.help && <small>{item.help}</small>}</span>
       </button>)}
@@ -158,7 +170,7 @@ function OutcomeForm({ incident }: { incident: Incident }) {
     {outcome === 'sent_to_hospital' && <div className="tm-hospital-fields">
       <label>Hospital name (if known)<input type="text" maxLength={200} value={hospitalName} onChange={event => setHospitalName(event.target.value)} disabled={busy} /></label>
       <label>Time sent to hospital (Malaysia time)<input type="datetime-local" value={hospitalTime} onChange={event => setHospitalTime(event.target.value)} disabled={busy} /></label>
-      <p>Leave unknown details blank. The time you submit this record is saved separately.</p>
+      <p>The time starts at now; change it if the transfer was earlier. Leave the hospital blank if unknown.</p>
     </div>}
     {unable && !called && !isHomeCheck(incident) && <p className="tm-resp-hint">Record a 999 call to choose another outcome.</p>}
     {noteOpen

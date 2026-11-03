@@ -472,7 +472,7 @@ async def confirm_demo_call(incident_id: str) -> Incident:
             )
             unit = await db_units.update_unit_state(
                 unit_id, status="routine", status_reason=report, status_since=now,
-                last_caregiver_confirmation_at=now, conn=conn,
+                last_caregiver_confirmation_at=now, clear_awaiting_arrival=True, conn=conn,
             )
         timers.cancel_incident(incident_id)
         await realtime.broadcast("incident.updated", incident)
@@ -505,6 +505,7 @@ async def confirm_home_after_call(unit_id: str, name: str) -> Unit:
                 status_since=confirmed_at,
                 last_caregiver_confirmation_at=confirmed_at,
                 care_state="home_monitoring",
+                clear_awaiting_arrival=True,
                 conn=conn,
             )
         await _arm_watch_locked(unit_id)
@@ -652,7 +653,7 @@ async def caregiver_response(incident_id: str, name: str, action: str) -> Incide
                 )
                 unit = await db_units.update_unit_state(
                     unit_id, status="routine", status_reason=reasons.closed_reason(name, "resident_ok"),
-                    status_since=now, last_water_activity_at=now, conn=conn
+                    status_since=now, last_water_activity_at=now, clear_awaiting_arrival=True, conn=conn
                 )
             else:
                 if _has_event(incident, action):
@@ -763,6 +764,8 @@ async def close(incident_id: str, role: Role, name: str, outcome: str, report: s
                 status_reason=reasons.closed_reason(name, outcome),
                 status_since=now,
                 last_water_activity_at=None if outcome == "sent_to_hospital" else now,
+                # The tapped-in concern has been dealt with: its clock must not restart later.
+                clear_awaiting_arrival=True,
                 conn=conn,
             )
 

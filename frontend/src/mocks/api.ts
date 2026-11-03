@@ -558,6 +558,7 @@ export const mockApi: Api = {
       // Re-anchor the quiet gap like the backend, or the old silence still reads as overdue.
       unit.quiet_gap.last_water_activity_at = incident.closed_at
       unit.active_incident_id = null
+      unit.awaiting_arrival_since = null
       publish('incident.updated', clone(incident))
       publish('unit.updated', clone(unit))
       for (const role of ['township', 'caregiver'] as Role[]) notify({ role, unit_id: incident.unit_id, kind: 'closed', message: 'Incident closed: Resident OK.', incident_id: id })
@@ -584,6 +585,7 @@ export const mockApi: Api = {
       syncAway(unit)
     }
     unit.care_state = 'home_monitoring'
+    unit.awaiting_arrival_since = null
     unit.quiet_gap.last_caregiver_confirmation_at = now()
     updateUnit(unit, 'routine', `${actor.name} reports speaking directly with ${unit.caregiver_relationship}: home and okay; sensor activity has not been confirmed.`)
     return clone(unit)
@@ -677,6 +679,8 @@ export const mockApi: Api = {
     unit.status_since = incident.closed_at
     if (actor.outcome !== 'sent_to_hospital') unit.quiet_gap.last_water_activity_at = incident.closed_at
     unit.active_incident_id = null
+    // Like the backend: the tapped-in concern has been dealt with, so its clock must not restart later.
+    unit.awaiting_arrival_since = null
     if (actor.outcome === 'resident_returned') {
       // She is back, so the away period ends and the inactivity clock restarts now.
       const item = awayAt(unit.unit_id, incident.closed_at)
@@ -814,6 +818,7 @@ export const mockApi: Api = {
     Object.assign(incident, { state: 'closed', outcome: 'resident_ok', report, closed_at: at, grace_ends_at: null, next_reminder_at: null })
     incident.events.push({ type: 'closed', at, detail: report })
     unit.active_incident_id = null
+    unit.awaiting_arrival_since = null
     unit.quiet_gap.last_caregiver_confirmation_at = at
     updateUnit(unit, 'routine', report)
     publish('incident.updated', clone(incident))

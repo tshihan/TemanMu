@@ -153,3 +153,21 @@ async def test_reset_clears_access_events_and_keeps_home_settings(client):
         "A-101": "door", "A-102": "door", "A-103": "door",
         "A-104": "door", "A-105": "card", "A-106": "door",
     }
+
+
+async def test_closing_a_tapped_in_alert_clears_the_arrival_clock(client):
+    """Otherwise Return home (or the next watch) finds the old clock overdue and alerts at once."""
+    assert (await post(client, direction="out")).status_code == 201
+    assert (await post(client, direction="in")).json()["unit"]["awaiting_arrival_since"] is not None
+    now = utc_now()
+    incident = await incidents.create_incident("A-105", now, now + timedelta(seconds=20))
+    await incidents.update_incident(incident.incident_id, state="notified")
+    ack = await client.post(f"/api/incidents/{incident.incident_id}/acknowledge", json={"role": "township", "name": "Guard Ali"})
+    assert ack.status_code == 200
+    response = await client.post(f"/api/incidents/{incident.incident_id}/close", json={
+        "role": "township", "name": "Guard Ali", "outcome": "sent_to_hospital", "report": "Sent to hospital",
+    })
+    assert response.status_code == 200
+    unit = await units.get_unit("A-105")
+    assert unit.care_state == "in_hospital"
+    assert unit.awaiting_arrival_since is None

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { createPortal } from 'react-dom'
-import { Pause, Play } from 'lucide-react'
+import { House, Pause, Play } from 'lucide-react'
 import { api } from '../api'
 import { ApiError } from '../api/live'
 import { applyEvent } from '../api/store'
@@ -8,9 +8,11 @@ import type { AwayPeriod, Unit } from '../api/types'
 import { DateTimeSheet } from './DateTimeSheet'
 import { dateTime, fromLocalInput, localInput } from './format'
 
-interface Props { unit: Unit; relationship: string; away: AwayPeriod | null; blocked: boolean; now: number }
+/** inCard: the Return home button on the hospital status card. Otherwise the tracking button in the
+ *  actions row, which stays visible but disabled while the resident is in hospital. */
+interface Props { unit: Unit; relationship: string; away: AwayPeriod | null; blocked: boolean; now: number; inCard?: boolean }
 
-export function TrackingControl({ unit, relationship, away, blocked, now }: Props) {
+export function TrackingControl({ unit, relationship, away, blocked, now, inCard = false }: Props) {
   const hospital = unit.care_state === 'in_hospital'
   const dialog = useRef<HTMLDivElement>(null)
   const trigger = useRef<HTMLButtonElement>(null)
@@ -75,11 +77,21 @@ export function TrackingControl({ unit, relationship, away, blocked, now }: Prop
     } finally { setBusy(false) }
   }
 
+  if (inCard && !hospital) return null
+  // In hospital, monitoring is already paused; Return home on the status card is how it ends.
+  if (hospital && !inCard) return <button type="button" className="cg-action is-tile" disabled title={`Paused while ${relationship} is in hospital`}>
+    <Pause size={18} aria-hidden="true" />Stop tracking
+  </button>
+
   return <>
-    <button ref={trigger} type="button" className="cg-action is-tile" onClick={showConfirmation}>
-      {hospital || away ? <Play size={18} aria-hidden="true" /> : <Pause size={18} aria-hidden="true" />}
-      {hospital ? 'Return home' : away ? 'Resume tracking' : 'Stop tracking'}
-    </button>
+    {inCard
+      ? <button ref={trigger} type="button" className="cg-btn cg-btn-outline cg-hospital-return" onClick={showConfirmation}>
+        <House size={18} aria-hidden="true" />Return home
+      </button>
+      : <button ref={trigger} type="button" className="cg-action is-tile" onClick={showConfirmation}>
+        {away ? <Play size={18} aria-hidden="true" /> : <Pause size={18} aria-hidden="true" />}
+        {away ? 'Resume tracking' : 'Stop tracking'}
+      </button>}
     {open && host && createPortal(<div className="cg-scrim" onClick={event => { if (event.target === event.currentTarget && !busy) setOpen(false) }}>
     <div ref={dialog} role="dialog" aria-modal="true" className="cg-bottom-sheet cg-tracking" aria-labelledby="cg-tracking-title" aria-describedby="cg-tracking-description">
       <form onSubmit={event => void submit(event)}>

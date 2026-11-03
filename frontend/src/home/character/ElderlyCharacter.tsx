@@ -4,7 +4,7 @@ import { Html } from '@react-three/drei'
 import { AnimationMixer, Group, MathUtils, type AnimationAction, type Bone } from 'three'
 import { ROOM_LABELS, WAYPOINTS, routeBetween, type RoomId, type Waypoint } from './navigation'
 import { interactionSpot, type InteractionId, type PhoneSpot } from '../interactions/registry'
-import { ROCKETBOX_SCALE, disposeAvatar, inPlace, prepareAvatar, rocketboxLoader } from './rocketbox'
+import { disposeAvatar, inPlace, prepareAvatar, rocketboxLoader } from './rocketbox'
 
 export type CharacterAnimation = 'rest' | 'wake' | 'collapse' | 'recover'
 export type CharacterCommand = { destination: Waypoint | InteractionId | CharacterAnimation | 'reset' | 'resetInBed' | 'resetAtDoor' | 'stop'; id: number; kind?: 'move' | 'interact' | 'animate'; approach?: Waypoint }
@@ -18,8 +18,95 @@ const URGENT_WALK_MULTIPLIER = 1.6
 const TURN_SPEED = 3.1 // radians per second
 // About 1.52 m: shorter than the source avatar, as befits a resident in her late seventies.
 const MUM_SCALE = .00875
-// Lying in bed, the avatar pivots at her feet; slide her so her head stays on the pillow.
-const BED_HEAD_OFFSET = .28 - (ROCKETBOX_SCALE - MUM_SCALE) * 174
+const HIP_HEIGHT = 92 * MUM_SCALE // pelvis above her soles, standing
+const LEG_LENGTH = 83 * MUM_SCALE // hip to sole, in metres
+const FALL_PIVOT = .14 // her left knee, where she meets the floor as she topples sideways
+const FALL_REST_HEIGHT = .04 // lifts her lying body clear of the floor
+
+// Getting in or out of bed she stands at the bedside with her back to the bed. In that frame the bed lies
+// behind her (-z) and its head to her left (+x); these are where her pelvis rests on the right-hand side.
+const BED_FACING = Math.PI / 2
+const BED_LYING: [number, number, number] = [.4, .9, -.86]
+const BED_EDGE: [number, number, number] = [.15, .93, -.42]
+
+type PoseBones = Record<'spine' | 'spine1' | 'neck' | 'lThigh' | 'rThigh' | 'lCalf' | 'rCalf' | 'lUpper' | 'rUpper' | 'lFore' | 'rFore', Bone>
+type BoneOffsets = Partial<Record<keyof PoseBones, { y?: number; z: number }>>
+type BodyPose = { x: number; y: number; z: number; rotX: number; rotY: number; rotZ: number; idleSpeed: number; bones: BoneOffsets }
+const POSE_BONE_NAMES: Record<keyof PoseBones, string> = {
+  spine: 'Bip01_Spine', spine1: 'Bip01_Spine1', neck: 'Bip01_Neck',
+  lThigh: 'Bip01_L_Thigh', rThigh: 'Bip01_R_Thigh', lCalf: 'Bip01_L_Calf', rCalf: 'Bip01_R_Calf',
+  lUpper: 'Bip01_L_UpperArm', rUpper: 'Bip01_R_UpperArm', lFore: 'Bip01_L_Forearm', rFore: 'Bip01_R_Forearm',
+}
+const span = (t: number, from: number, to: number) => MathUtils.clamp((t - from) / (to - from), 0, 1)
+const ease = (s: number) => s * s * (3 - 2 * s)
+
+/**
+ * Bed pose at inBed (1 lying on her back, head on the pillow; 0 standing at the bedside): getting up, she sits up,
+ * swings her legs over the edge, then slides forward onto her feet. Lying down plays the same path backwards.
+ */
+function bedPose(inBed: number): BodyPose {
+  const w = 1 - inBed
+  const sit = ease(span(w, 0, .32)), swing = ease(span(w, .3, .62)), stand = ease(span(w, .6, 1))
+  const rise = ease(span(w, .72, 1)) // her legs straighten only once her weight is over her feet
+  const lerp = MathUtils.lerp
+  const px = lerp(lerp(BED_LYING[0], BED_EDGE[0], swing), 0, stand)
+  const py = lerp(lerp(BED_LYING[1], BED_EDGE[1], sit), HIP_HEIGHT, stand)
+  const pz = lerp(lerp(BED_LYING[2], BED_EDGE[2], swing), 0, stand)
+  const pitch = -Math.PI / 2 * (1 - sit), yaw = -Math.PI / 2 * (1 - swing)
+  const hip = Math.PI / 2 * sit - (Math.PI / 2 - 1) * swing - rise
+  const knee = -.75 * (swing - rise)
+  // Offset the group so her pelvis, rather than her feet, follows the path.
+  return {
+    x: px - HIP_HEIGHT * Math.sin(pitch) * Math.sin(yaw), y: py - HIP_HEIGHT * Math.cos(pitch), z: pz - HIP_HEIGHT * Math.sin(pitch) * Math.cos(yaw),
+    rotX: pitch, rotY: yaw, rotZ: 0, idleSpeed: stand,
+    bones: {
+      lThigh: { z: hip }, rThigh: { z: hip }, lCalf: { z: knee }, rCalf: { z: knee },
+      // She leans forward to sit up and again to rise off the edge.
+      spine: { z: .25 * Math.sin(Math.PI * sit) + .1 * sit * (1 - stand) + .45 * Math.sin(Math.PI * stand) },
+      neck: { z: .1 * sit * (1 - stand) },
+    },
+  }
+}
+
+/**
+ * Collapse pose at progress p (0 standing, 1 lying on her left side): a dizzy sway, the knees give way,
+ * then she topples sideways with gravity and settles curled on the floor. Recovery plays it back smoothly.
+ */
+function fallPose(p: number, falling: boolean, elapsed: number): BodyPose {
+  const sway = ease(span(p, 0, .15)) * (1 - span(p, .3, .45))
+  const buckle = ease(span(p, .12, .45))
+  const tipping = span(p, .4, .72)
+  const tip = falling ? tipping * tipping : ease(tipping) // gravity accelerates the fall; getting up does not
+  const limp = ease(span(p, .62, .92))
+  const impact = falling ? span(p, .72, .86) : 0
+  const hip = 1.05 * buckle - .35 * limp
+  const angle = -Math.PI / 2 * tip
+  // Knees bent this far, she sinks by the leg's lost height; then she rotates about the left knee.
+  const sunk = LEG_LENGTH * (1 - Math.cos(hip)) * (1 - tip)
+  const cos = Math.cos(angle), sin = Math.sin(angle)
+  const x = FALL_PIVOT - FALL_PIVOT * cos + sunk * sin
+  const y = -FALL_PIVOT * sin - sunk * cos + FALL_REST_HEIGHT * tip + Math.sin(Math.PI * impact) * .035 * (1 - impact)
+  return {
+    x, y, z: 0, rotX: 0, rotY: 0, rotZ: angle, idleSpeed: 1 - ease(span(p, .35, .7)),
+    bones: {
+      spine: { y: Math.sin(elapsed * 7) * .09 * sway - .12 * limp, z: .3 * buckle + .15 * limp },
+      spine1: { z: .15 * buckle },
+      neck: { y: -.3 * limp, z: .35 * buckle - .1 * limp },
+      lThigh: { z: hip }, rThigh: { z: hip + .2 * limp },
+      lCalf: { z: -1.95 * buckle + .65 * limp }, rCalf: { z: -1.95 * buckle + .45 * limp },
+      // Right hand to her chest as she feels faint; left arm flung out to catch herself, then both fall slack.
+      lUpper: { y: -.6 * tip * (1 - limp), z: -.7 * tip },
+      lFore: { z: -.4 * tip * (1 - limp) },
+      rUpper: { z: -.9 * sway * (1 - tip) - .8 * limp },
+      rFore: { z: -1.5 * sway * (1 - tip) - .5 * limp },
+    },
+  }
+}
+
+function placeBody(group: Group, body: BodyPose | null) {
+  group.position.set(body?.x ?? 0, body?.y ?? 0, body?.z ?? 0)
+  group.rotation.set(body?.rotX ?? 0, body?.rotY ?? 0, body?.rotZ ?? 0, 'YXZ')
+}
 
 /** Self-contained actor: loaded once, animated in the render loop, navigated on authored clear paths. */
 export function ElderlyCharacter({ command, pose, speech, visible, paused, urgent, phoneSpot, onStatus, onReached, onArrived, onAnimationComplete }: {
@@ -44,8 +131,10 @@ export function ElderlyCharacter({ command, pose, speech, visible, paused, urgen
   const reachStrength = useRef(0)
   const arm = useRef<{ upper: Bone; lower: Bone } | null>(null)
   const motion = useRef<{ id: number; kind: CharacterAnimation; elapsed: number; duration: number } | null>(null)
-  const restPose = useRef(0)
-  const fallPose = useRef(0)
+  const bedState = useRef(0)
+  const fallProgress = useRef(0)
+  const poseBones = useRef<PoseBones | null>(null)
+  const appliedBones = useRef<BoneOffsets>({})
   const { invalidate } = useThree()
   useEffect(() => { if (!paused) invalidate() }, [paused, invalidate])
 
@@ -65,6 +154,8 @@ export function ElderlyCharacter({ command, pose, speech, visible, paused, urgen
       const upper = avatar.getObjectByName('Bip01 R UpperArm')
       const lower = avatar.getObjectByName('Bip01 R Forearm')
       if (upper && lower) arm.current = { upper: upper as Bone, lower: lower as Bone }
+      const bones = Object.fromEntries(Object.entries(POSE_BONE_NAMES).map(([key, name]) => [key, avatar.getObjectByName(name)]))
+      if (Object.values(bones).every(Boolean)) poseBones.current = bones as PoseBones
       animationMixer = new AnimationMixer(avatar)
       const idle = animationMixer.clipAction(inPlace(idleFile.animations[0]))
       const walk = animationMixer.clipAction(inPlace(walkFile.animations[0]))
@@ -103,17 +194,14 @@ export function ElderlyCharacter({ command, pose, speech, visible, paused, urgen
       pausedNext.current = null
       interaction.current = null
       motion.current = null
-      restPose.current = inBed ? 1 : 0
-      fallPose.current = 0
+      bedState.current = inBed ? 1 : 0
+      fallProgress.current = 0
       anchor.current = start
       lastRoom.current = room
       destination.current = null
       shell.current.position.set(WAYPOINTS[start][0], .045, WAYPOINTS[start][1])
-      shell.current.rotation.y = 0
-      if (poseGroup.current) {
-        if (inBed) { poseGroup.current.position.set(-1.4, .82, BED_HEAD_OFFSET); poseGroup.current.rotation.set(-Math.PI / 2, 0, 0) }
-        else { poseGroup.current.position.set(0, 0, 0); poseGroup.current.rotation.set(0, 0, 0) }
-      }
+      shell.current.rotation.y = inBed ? BED_FACING : 0
+      if (poseGroup.current) placeBody(poseGroup.current, inBed ? bedPose(1) : null)
       onStatus({ room, destination: null, phase: 'idle' })
       invalidate()
       return
@@ -230,32 +318,45 @@ export function ElderlyCharacter({ command, pose, speech, visible, paused, urgen
       const t = Math.min(1, current.elapsed / current.duration)
       const smooth = t * t * (3 - 2 * t)
       if (current.kind === 'rest') {
-        shellGroup.rotation.y = MathUtils.damp(shellGroup.rotation.y, 0, 7, frame)
-        const settling = Math.max(0, (t - .3) / .7)
-        restPose.current = settling * settling * (3 - 2 * settling)
+        // Turn her back to the bed by the shorter way round, then sit and lie down.
+        const turn = Math.atan2(Math.sin(BED_FACING - shellGroup.rotation.y), Math.cos(BED_FACING - shellGroup.rotation.y))
+        shellGroup.rotation.y = MathUtils.damp(shellGroup.rotation.y, shellGroup.rotation.y + turn, 7, frame)
+        bedState.current = t
       }
-      if (current.kind === 'wake') restPose.current = 1 - smooth
+      if (current.kind === 'wake') bedState.current = 1 - t
       if (current.kind === 'collapse') {
-        const falling = Math.max(0, (t - .22) / .78)
-        fallPose.current = falling * falling * (3 - 2 * falling)
+        fallProgress.current = t
         shellGroup.rotation.y = MathUtils.damp(shellGroup.rotation.y, 0, 3, frame)
       }
-      if (current.kind === 'recover') fallPose.current = 1 - smooth
+      if (current.kind === 'recover') fallProgress.current = 1 - smooth
       if (t === 1) {
         motion.current = null
         onAnimationComplete(current.id, current.kind)
         onStatus({ room: lastRoom.current, destination: null, phase: 'idle' })
       }
     }
-    if (poseGroup.current) {
-      const rest = restPose.current, fall = fallPose.current
-      poseGroup.current.position.set(-1.4 * rest, .82 * rest + .23 * fall, BED_HEAD_OFFSET * rest)
-      poseGroup.current.rotation.set(-Math.PI / 2 * rest, 0, -Math.PI / 2 * fall)
-      if (motion.current?.kind === 'collapse' && motion.current.elapsed < .7)
-        poseGroup.current.rotation.z += Math.sin(motion.current.elapsed * 16) * .07 * (1 - motion.current.elapsed / .7)
-    }
+    const body = bedState.current > 0 ? bedPose(bedState.current)
+      : fallProgress.current > 0 ? fallPose(fallProgress.current, motion.current?.kind !== 'recover', motion.current?.elapsed ?? 0) : null
+    if (poseGroup.current) placeBody(poseGroup.current, body)
     animation.walk.timeScale = WALK_ANIMATION_SPEED * (urgent ? URGENT_WALK_MULTIPLIER : 1)
-    if (fallPose.current < .99) mixer.current?.update(frame)
+    animation.idle.timeScale = body?.idleSpeed ?? 1 // lying still, the idle clip freezes
+    // The mixer skips writing bones whose animated value is unchanged, so last frame's offsets must be undone
+    // before it runs; otherwise a frozen clip lets them pile up and she jitters on the floor.
+    const bones = poseBones.current
+    if (bones) for (const [key, offset] of Object.entries(appliedBones.current) as [keyof PoseBones, { y?: number; z: number }][]) {
+      bones[key].rotation.y -= offset.y ?? 0
+      bones[key].rotation.z -= offset.z
+    }
+    appliedBones.current = {}
+    mixer.current?.update(frame)
+    if (body && bones) {
+      for (const [key, offset] of Object.entries(body.bones) as [keyof PoseBones, { y?: number; z: number }][]) {
+        bones[key].rotation.y += offset.y ?? 0
+        bones[key].rotation.z += offset.z
+      }
+      appliedBones.current = body.bones
+    }
+
     reachStrength.current = MathUtils.damp(reachStrength.current, pose === 'none' ? 0 : 1, 6, frame)
     if (arm.current) {
       const { upper, lower } = arm.current

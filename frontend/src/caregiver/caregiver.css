@@ -151,6 +151,9 @@
 .cg-hospital-open span { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; }
 .cg-hospital-open:hover { background: #8b442908; }
 .cg-hospital-open:active { background: #8b442914; }
+/* Above the card-wide details button, so both stay tappable. */
+.cg-hospital-actions { position: relative; z-index: 2; }
+.cg-action:disabled { opacity: .45; cursor: not-allowed; }
 .cg-sheet.cg-hospital-details { z-index: 30; padding: var(--cg-safe-top) 0 0; color: var(--ink); }
 .cg-hospital-details-body { flex: 1; min-height: 0; padding: 0 20px max(24px, env(safe-area-inset-bottom)); overflow-y: auto; overscroll-behavior: contain; }
 .cg-hospital-details header, .cg-hospital-details header > div { display: flex; align-items: center; gap: 12px; }
