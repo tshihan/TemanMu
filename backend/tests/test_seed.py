@@ -30,6 +30,8 @@ def test_real_seed_matches_prd():
     units = {u.unit_id: u for u in seed.units}
 
     a105 = units["A-105"]
+    assert a105.outing_signal == "card"
+    assert all(u.outing_signal == "door" for u in seed.units if u.unit_id != "A-105")
     assert a105.last_water_activity_offset_seconds == 0
     assert a105.interests == ["gardening", "cooking"]
     assert a105.latest.model_dump() == {"water_lpm": 0, "power_kw": 0.15, "door": "closed"}
@@ -90,6 +92,12 @@ def test_unknown_near_unit_rejected(raw_seed, tmp_path):
 def test_invalid_status_rejected(raw_seed, tmp_path):
     raw_seed["units"][0]["status"] = "sleeping"
     with pytest.raises(SeedError, match="status"):
+        load_seed(write(tmp_path, raw_seed))
+
+
+def test_invalid_outing_signal_rejected(raw_seed, tmp_path):
+    raw_seed["units"][0]["outing_signal"] = "both"
+    with pytest.raises(SeedError, match="outing_signal"):
         load_seed(write(tmp_path, raw_seed))
 
 

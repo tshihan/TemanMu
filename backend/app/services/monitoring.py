@@ -15,6 +15,7 @@ from zoneinfo import ZoneInfo
 import asyncpg
 
 from app import rules, timers
+from app.db import access_events as db_access
 from app.db import away_periods as db_away
 from app.db import incidents as db_incidents
 from app.db import notifications as db_notifications
@@ -23,6 +24,8 @@ from app.db import units as db_units
 from app.db.pool import get_pool
 from app.models import (
     HOME_CHECK_OUTCOMES,
+    AccessEvent,
+    AccessEventIn,
     Actor,
     AwayActivityResponse,
     Incident,
@@ -51,6 +54,12 @@ class UnitNotFound(MonitoringError): ...
 
 
 class UnitNotControllable(MonitoringError): ...
+
+
+class UnitNotCardHome(MonitoringError): ...
+
+
+class InvalidAccessEvent(MonitoringError): ...
 
 
 class IncidentNotFound(MonitoringError): ...
@@ -794,7 +803,37 @@ async def escalate(incident_id: str, role: Role, name: str, action: str) -> Inci
         return incident
 
 
-# --- readings ----------------------------------------------------------------------------
+# --- readings and access events ----------------------------------------------------------
+
+
+async def ingest_access_event(body: AccessEventIn) -> tuple[AccessEvent, Unit]:
+    """Store a tap separately from sensor readings, then broadcast after commit.
+
+    A tap alone is not proof of safety. Status decisions are added in the card-home rules.
+    """
+    async with _unit_lock(body.unit_id):
+        unit = await db_units.get_unit(body.unit_id)
+        if unit is None:
+            raise UnitNotFound(body.unit_id)
+        if not unit.controllable:
+            raise UnitNotControllable(body.unit_id)
+        if unit.outing_signal != "card":
+            raise UnitNotCardHome(body.unit_id)
+        if body.card_holder != unit.resident_name:
+            raise InvalidAccessEvent("Card holder must be the resident of this unit")
+
+        event = AccessEvent(
+            unit_id=body.unit_id,
+            card_holder=body.card_holder,
+            direction=body.direction,
+            access_point=body.access_point,
+            at=body.at or utc_now(),
+        )
+        async with get_pool().acquire() as conn, conn.transaction():
+            event = await db_access.insert_access_event(event, conn=conn)
+
+        await realtime.broadcast("access.received", event)
+        return event, unit
 
 
 async def ingest_reading(body: ReadingIn) -> Unit:

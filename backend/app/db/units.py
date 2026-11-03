@@ -5,7 +5,7 @@ import asyncpg
 
 from app.db import NotFoundError
 from app.db.pool import connection
-from app.models import AwayPeriod, Baseline, DoorState, QuietGap, Status, Unit, UnitLatest
+from app.models import AwayPeriod, Baseline, DoorState, OutingSignal, QuietGap, Status, Unit, UnitLatest
 
 _UNIT_SELECT = """
 select u.*,
@@ -40,6 +40,7 @@ def _row_to_unit(row: asyncpg.Record) -> Unit:
         caregiver_name=row["caregiver_name"],
         caregiver_relationship=row["caregiver_relationship"],
         controllable=row["controllable"],
+        outing_signal=row["outing_signal"],
         care_state=row["care_state"],
         status=row["status"],
         status_reason=row["status_reason"],
@@ -89,6 +90,7 @@ async def update_unit_state(
     unit_id: str,
     *,
     status: Status | None = None,
+    outing_signal: OutingSignal | None = None,
     care_state: str | None = None,
     status_reason: str | None = None,
     status_since: datetime | None = None,
@@ -107,6 +109,7 @@ async def update_unit_state(
     # Column names come from this fixed mapping, never from caller input.
     fields = {
         "status": status,
+        "outing_signal": outing_signal,
         "care_state": care_state,
         "status_reason": status_reason,
         "status_since": status_since,

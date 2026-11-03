@@ -113,6 +113,7 @@ function initialSnapshot(): Snapshot {
       caregiver_name: item.caregiver_name,
       caregiver_relationship: item.caregiver_relationship,
       controllable: item.controllable,
+      outing_signal: ('outing_signal' in item ? item.outing_signal : 'door') as Unit['outing_signal'],
       status: item.status as Unit['status'],
       status_reason: item.status_reason.replace('{door_time}', new Date(resetAt.getTime() + (item.last_door_event_offset_seconds || 0) * 1000).toLocaleTimeString('en-MY', { timeZone: 'Asia/Kuala_Lumpur', hour: '2-digit', minute: '2-digit' })),
       status_since: resetAt.toISOString(),

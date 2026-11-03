@@ -19,6 +19,8 @@ UnitId: TypeAlias = str
 Role: TypeAlias = Literal["township", "caregiver"]
 Sensor: TypeAlias = Literal["water", "electricity", "door"]
 DoorState: TypeAlias = Literal["open", "closed"]
+OutingSignal: TypeAlias = Literal["card", "door"]
+AccessDirection: TypeAlias = Literal["out", "in"]
 Status: TypeAlias = Literal["routine", "possible_away", "unusual_inactivity", "unresolved_concern"]
 IncidentState: TypeAlias = Literal["grace", "notified", "acknowledged", "closed", "auto_resolved"]
 Outcome: TypeAlias = Literal[
@@ -91,6 +93,16 @@ class Reading(ContractModel):
         return self
 
 
+class AccessEvent(ContractModel):
+    """A resident's access-card tap, separate from household sensor readings."""
+
+    unit_id: UnitId
+    card_holder: str = Field(min_length=1, max_length=200, pattern=r".*\S.*")
+    direction: AccessDirection
+    access_point: str = Field(min_length=1, max_length=200, pattern=r".*\S.*")
+    at: UtcDatetime
+
+
 def check_value_matches_sensor(sensor: Sensor, value: float | DoorState) -> None:
     """Shared by Reading and ReadingIn: door takes "open"/"closed", water/electricity a number >= 0."""
     if sensor == "door":
@@ -144,6 +156,7 @@ class Unit(ContractModel):
     caregiver_name: str
     caregiver_relationship: str
     controllable: bool
+    outing_signal: OutingSignal = "door"
     care_state: Literal["home_monitoring", "in_hospital"] = "home_monitoring"
     status: Status
     status_reason: str
@@ -345,6 +358,22 @@ class ReadingIn(ContractModel):
 
 class ReadingAccepted(ContractModel):
     accepted: Literal[True] = True
+    unit: Unit
+
+
+class AccessEventIn(ContractModel):
+    """POST /api/access-events body. An omitted timestamp uses server time."""
+
+    unit_id: UnitId
+    card_holder: str = Field(min_length=1, max_length=200, pattern=r".*\S.*")
+    direction: AccessDirection
+    access_point: str = Field(min_length=1, max_length=200, pattern=r".*\S.*")
+    at: UtcDatetime | None = None
+
+
+class AccessEventAccepted(ContractModel):
+    accepted: Literal[True] = True
+    event: AccessEvent
     unit: Unit
 
 

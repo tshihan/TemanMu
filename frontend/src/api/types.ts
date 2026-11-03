@@ -3,6 +3,7 @@ export type UnitId = string
 export type Role = 'township' | 'caregiver'
 export type Sensor = 'water' | 'electricity' | 'door'
 export type DoorState = 'open' | 'closed'
+export type OutingSignal = 'card' | 'door'
 export type Status = 'routine' | 'possible_away' | 'unusual_inactivity' | 'unresolved_concern'
 export type IncidentState = 'grace' | 'notified' | 'acknowledged' | 'closed' | 'auto_resolved'
 export type Outcome = 'resident_ok' | 'assistance_provided' | 'sent_to_hospital' | 'resident_away' | 'resident_activity_detected'
@@ -43,6 +44,7 @@ export interface Unit {
   caregiver_name: string
   caregiver_relationship: string
   controllable: boolean
+  outing_signal: OutingSignal
   care_state: 'home_monitoring' | 'in_hospital'
   status: Status
   status_reason: string

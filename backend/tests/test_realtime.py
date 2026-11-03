@@ -5,7 +5,7 @@ import os
 
 import pytest
 
-from app.models import Actor, IncidentEvent
+from app.models import AccessEvent, Actor, IncidentEvent
 from app.realtime.broadcast import ConnectionManager
 from app.timeutil import utc_now
 
@@ -44,6 +44,18 @@ async def test_envelope_shape():
     assert msg["type"] == "demo.event"
     assert msg["at"].endswith("Z")
     assert msg["data"] == {"x": 1}
+
+
+async def test_access_event_wire_format():
+    ws = FakeSocket()
+    event = AccessEvent(
+        unit_id="A-105", card_holder="Madam Lee Mei Ling", direction="out",
+        access_point="Block B lift lobby", at=utc_now(),
+    )
+    await _manager_with(ws).broadcast("access.received", event)
+    [message] = ws.sent
+    assert message["type"] == "access.received"
+    assert message["data"] == event.model_dump(mode="json")
 
 
 async def test_lists_of_models_are_serialised():
@@ -114,3 +126,12 @@ def test_ws_sends_snapshot_on_connect(migrated):
         assert msg["type"] == "snapshot"
         assert msg["at"].endswith("Z")
         assert len(msg["data"]["units"]) == 6
+
+        response = client.post("/api/access-events", json={
+            "unit_id": "A-105", "card_holder": "Madam Lee Mei Ling",
+            "direction": "out", "access_point": "Block B lift lobby",
+        })
+        assert response.status_code == 201
+        event = ws.receive_json()
+        assert event["type"] == "access.received"
+        assert event["data"] == response.json()["event"]

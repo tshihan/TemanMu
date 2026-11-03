@@ -50,7 +50,7 @@ async def reset_demo() -> list[Unit]:
             unit_rows.append((
                 u.unit_id, u.resident_name, u.caregiver_name, u.caregiver_relationship,
                 u.controllable, u.status, _status_reason(u, door_at), now, water_at, door_at,
-                u.latest.water_lpm, u.latest.power_kw, u.latest.door,
+                u.latest.water_lpm, u.latest.power_kw, u.latest.door, u.outing_signal,
             ))  # fmt: skip
             profile_rows.append((
                 u.unit_id, u.baseline.usual_quiet_gap_seconds,
@@ -65,7 +65,7 @@ async def reset_demo() -> list[Unit]:
         async with get_pool().acquire() as conn, conn.transaction():
             # 3. Wipe runtime data.
             await conn.execute(
-                """truncate readings, incident_events, incidents, notifications,
+                """truncate readings, access_events, incident_events, incidents, notifications,
                             community_responses, companion_messages, buddy_matches,
                             neighbour_introductions, neighbour_consents, away_periods
                    restart identity cascade"""
@@ -81,8 +81,8 @@ async def reset_demo() -> list[Unit]:
                 """insert into units (unit_id, resident_name, caregiver_name, caregiver_relationship,
                                       controllable, status, status_reason, status_since,
                                       last_water_activity_at, last_door_event_at,
-                                      latest_water_lpm, latest_power_kw, latest_door)
-                   values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)""",
+                                      latest_water_lpm, latest_power_kw, latest_door, outing_signal)
+                   values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)""",
                 unit_rows,
             )
             await conn.executemany(

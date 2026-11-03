@@ -11,7 +11,7 @@ from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
-from app.models import Status
+from app.models import OutingSignal, Status
 from app.settings import settings
 
 Weekday = Literal["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
@@ -74,6 +74,7 @@ class SeedUnit(_Strict):
     caregiver_name: str
     caregiver_relationship: str
     controllable: bool
+    outing_signal: OutingSignal = "door"
     status: Status
     status_reason: str
     latest: SeedLatest

@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app import timers
-from app.api import community, companion, config, demo, incidents, notifications, readings, units
+from app.api import access_events, community, companion, config, demo, incidents, notifications, readings, units
 from app.db import pool
 from app.realtime import ws
 from app.services import monitoring
@@ -67,6 +67,7 @@ def create_app() -> FastAPI:
     # Backend 1: POST /api/readings, and the WebSocket at /ws (no /api prefix).
     # Acknowledge and close live in app/api/incidents.py.
     app.include_router(readings.router, prefix="/api")
+    app.include_router(access_events.router, prefix="/api")
     app.include_router(ws.router)
 
     return app

@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from pydantic import ValidationError
 
-from app.models import Actor, CaregiverResponseRequest, CloseRequest, CompanionMessage, Incident, IncidentEvent, Reading
+from app.models import AccessEvent, AccessEventIn, Actor, CaregiverResponseRequest, CloseRequest, CompanionMessage, Incident, IncidentEvent, Reading
 
 T = datetime(2026, 10, 15, 1, 2, 3, 123456, tzinfo=timezone.utc)
 
@@ -22,6 +22,15 @@ def test_timestamp_accepts_z_suffix():
 def test_naive_timestamp_rejected():
     with pytest.raises(ValidationError, match="timezone"):
         Reading.model_validate({"unit_id": "A-105", "sensor": "water", "value": 6, "recorded_at": "2026-10-15T08:00:00"})
+
+
+def test_access_timestamp_serialises_as_utc_and_input_can_omit_it():
+    body = dict(unit_id="A-105", card_holder="Madam Lee Mei Ling", direction="out", access_point="Block B lift lobby")
+    assert AccessEventIn(**body).at is None
+    event = AccessEvent(**body, at=T.astimezone(timezone(timedelta(hours=8))))
+    assert event.model_dump(mode="json") == {**body, "at": "2026-10-15T01:02:03.123Z"}
+    with pytest.raises(ValidationError, match="timezone"):
+        AccessEventIn(**body, at="2026-11-03T10:12:00")
 
 
 @pytest.mark.parametrize(

@@ -91,6 +91,7 @@
       "caregiver_name": "Sarah Lee",
       "caregiver_relationship": "Mum",
       "controllable": true,
+      "outing_signal": "card",
       "status": "routine",
       "status_reason": "No activity yet today",
       "latest": { "water_lpm": 0, "power_kw": 0.15, "door": "closed" },
