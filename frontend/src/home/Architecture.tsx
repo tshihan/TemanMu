@@ -48,7 +48,7 @@ function EntranceDoor({ interaction }: { interaction?: InteractionBindings }) {
   </InteractiveObject> : model
 }
 
-/** Block B lift lobby: a pillar at the end of the shared corridor carries the township access-card reader. */
+/** Block A lift lobby: a pillar at the end of the shared corridor carries the township access-card reader. */
 function LobbyCardReader({ tap }: { tap?: InteractionBindings['cardTap'] }) {
   const m = getMaterials()
   const [faded, setFaded] = useState(0)
@@ -65,8 +65,9 @@ function LobbyCardReader({ tap }: { tap?: InteractionBindings['cardTap'] }) {
     <Box at={[-1.975, 1.12, 7.4]} size={[.03, .2, .13]} mat={m.dark} radius={.01} />
     <Box at={[-1.958, 1.17, 7.4]} size={[.008, .05, .07]} mat={flash ? m.readerOk : m.readerIdle} radius={0} />
     <Box at={[-1.975, 1.55, 7.4]} size={[.02, .16, .3]} mat={m.cream} radius={.008} />
-    {flash && <Html position={[-1.95, 1.75, 7.25]} center style={{ pointerEvents: 'none' }} zIndexRange={[30, 0]}>
-      <span className="home-card-tap">Card tapped · {flash === 'out' ? 'Out' : 'In'}</span>
+    {/* Mounted from the first tap and then only hidden: unmounting an Html root mid-render warns. */}
+    {tap && <Html position={[-1.95, 1.75, 7.25]} center style={{ pointerEvents: 'none' }} zIndexRange={[30, 0]}>
+      <span key={tap.id} className="home-card-tap" hidden={!flash}>Card tapped · {tap.direction === 'out' ? 'Out' : 'In'}</span>
     </Html>}
   </group>
 }
@@ -74,7 +75,7 @@ function LobbyCardReader({ tap }: { tap?: InteractionBindings['cardTap'] }) {
 /** Mounted by the scene once the home has loaded, like the sensor beacons. */
 export function LobbySign() {
   return <Html position={[-2.85, 2.05, 7.05]} center style={{ pointerEvents: 'none' }} zIndexRange={[10, 0]}>
-    <span className="home-place-tag">Lift lobby · Block B</span>
+    <span className="home-place-tag">Lift lobby · Block A</span>
   </Html>
 }
 

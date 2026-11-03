@@ -50,7 +50,7 @@ async def test_access_event_wire_format():
     ws = FakeSocket()
     event = AccessEvent(
         unit_id="A-105", card_holder="Madam Lee Mei Ling", direction="out",
-        access_point="Block B lift lobby", at=utc_now(),
+        access_point="Block A lift lobby", at=utc_now(),
     )
     await _manager_with(ws).broadcast("access.received", event)
     [message] = ws.sent
@@ -129,7 +129,7 @@ def test_ws_sends_snapshot_on_connect(migrated):
 
         response = client.post("/api/access-events", json={
             "unit_id": "A-105", "card_holder": "Madam Lee Mei Ling",
-            "direction": "out", "access_point": "Block B lift lobby",
+            "direction": "out", "access_point": "Block A lift lobby",
         })
         assert response.status_code == 201
         event = ws.receive_json()

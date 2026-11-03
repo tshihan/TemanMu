@@ -19,7 +19,7 @@ BODY = {
     "unit_id": "A-105",
     "card_holder": "Madam Lee Mei Ling",
     "direction": "out",
-    "access_point": "Block B lift lobby",
+    "access_point": "Block A lift lobby",
 }
 
 
@@ -28,17 +28,20 @@ async def post(client, **changes):
 
 
 async def test_access_event_is_stored_separately_from_readings(client, broadcasts):
-    before = (await units.get_unit("A-105")).model_dump(mode="json")
     at = iso(utc_now())
     response = await post(client, at=at)
     assert response.status_code == 201
     body = response.json()
-    assert body == {"accepted": True, "event": {**BODY, "at": at}, "unit": before}
+    assert body["accepted"] is True
+    assert body["event"] == {**BODY, "at": at}
+    # The card-home rules apply: a tap out with a quiet home is a possible outing.
+    assert body["unit"]["status"] == "possible_away"
+    assert body["unit"]["last_access"] == {"direction": BODY["direction"], "access_point": BODY["access_point"], "at": at}
     assert [event.model_dump(mode="json") for event in await access_events.list_access_events("A-105")] == [body["event"]]
     assert await readings.list_readings("A-105") == []
     assert await incidents.list_incidents() == []
     assert await notifications.list_notifications() == []
-    assert [kind for kind, _ in broadcasts] == ["access.received"]
+    assert [kind for kind, _ in broadcasts] == ["access.received", "unit.updated"]
     assert broadcasts[0][1].model_dump(mode="json") == body["event"]
 
 
@@ -91,13 +94,22 @@ async def test_broadcast_only_after_event_is_committed(client, monkeypatch):
 
     async def record(kind, event):
         # A separate pool connection must already see the row when clients are notified.
-        assert kind == "access.received"
-        assert await access_events.list_access_events("A-105") == [event]
-        received.append(event)
+        if kind == "access.received":
+            assert await access_events.list_access_events("A-105") == [event]
+            received.append(event)
 
     monkeypatch.setattr(realtime, "broadcast", record)
     assert (await post(client, direction="in")).status_code == 201
     assert len(received) == 1
+
+
+async def test_tap_in_waits_for_activity_at_home(client):
+    assert (await post(client, direction="out")).status_code == 201
+    unit = (await post(client, direction="in")).json()["unit"]
+    assert unit["status"] == "routine"
+    assert unit["awaiting_arrival_since"] is not None
+    reading = await client.post("/api/readings", json={"unit_id": "A-105", "sensor": "electricity", "value": 1.8})
+    assert reading.json()["unit"]["awaiting_arrival_since"] is None
 
 
 async def test_failed_insert_does_not_broadcast(client, broadcasts, monkeypatch):

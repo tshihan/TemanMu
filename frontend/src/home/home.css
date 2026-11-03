@@ -15,6 +15,7 @@
 .home-object-tip, .home-character-speech { display: block; padding: 7px 10px; border: 1px solid var(--color-warm-taupe); border-radius: 10px; background: #fef9eff2; box-shadow: 0 3px 12px #4a35261c; color: var(--color-ink); font: 600 11px var(--font-ftbase); white-space: nowrap; }
 .home-place-tag { display: block; padding: 4px 8px; border-radius: 999px; background: #fef9efd9; color: var(--color-graphite); font: 600 10px var(--font-ftbase); letter-spacing: .02em; white-space: nowrap; }
 .home-card-tap { display: block; padding: 6px 10px; border: 1px solid #8cc596; border-radius: 10px; background: #f1fbf1f2; box-shadow: 0 3px 12px #2a4a2e24; color: #23542e; font: 700 11px var(--font-ftbase); white-space: nowrap; animation: beacon-pop .4s ease-out; }
+.home-card-tap[hidden] { display: none; }
 .home-object-tip.is-selected { border-color: #d8ae97; color: var(--color-terracotta-dark); }
 .home-character-speech { padding: 9px 13px; font-size: 12px; }
 .home-responder-label { display: block; padding: 7px 10px; border: 1px solid #d1bf89; border-radius: 10px; background: #fff9e9f2; box-shadow: 0 3px 12px #4a35261c; color: #233e54; font: 700 11px var(--font-ftbase); white-space: nowrap; }

@@ -75,6 +75,49 @@ def back_home_activity(door_clock: str | None, sensor: Sensor) -> str:  # B2
     return f"Door opened at {door_clock} and {signal} use detected: back home"
 
 
+# Card homes: an access-card tap at the lift lobby or gate, never proof of safety.
+
+
+def tapped_out(point: str, clock: str) -> str:  # C1
+    return f"Tapped out at {point}, {clock}, then no water use and electricity at standby: probably out"
+
+
+def tapped_out_at_home(point: str, clock: str) -> str:  # C2
+    return f"Card tapped out at {point}, {clock}, but water or electricity is in use at home"
+
+
+def tapped_in(point: str, clock: str) -> str:  # C3
+    return f"Tapped in at {point}, {clock}: on the way home"
+
+
+def tapped_in_at_home(point: str, clock: str) -> str:  # C4
+    return f"Tapped in at {point}, {clock}, with activity at home: back home"
+
+
+def home_after_tap_in(point: str, clock: str, sensor: Sensor) -> str:  # C5
+    signal = "water" if sensor == "water" else "electricity"
+    return f"Tapped in at {point}, {clock}, and {signal} use detected: back home"
+
+
+def not_back_reason(point: str, clock: str, away_seconds: float, usual_outing_seconds: int) -> str:  # U4
+    return (
+        f"Tapped out at {point}, {clock}, and not back yet: out for {format_duration(away_seconds)}, "
+        f"longer than usual outing of {format_duration(usual_outing_seconds)}"
+    )
+
+
+def arrival_reason(point: str, clock: str, quiet_seconds: float) -> str:  # U5
+    return (
+        f"Tapped in at {point}, {clock}, then no activity at home for {format_duration(quiet_seconds)}. "
+        "She may not have reached the flat."
+    )
+
+
+def access_away_message(relationship: str, direction: str, point: str, clock: str) -> str:
+    action = "tapped in" if direction == "in" else "tapped out"
+    return f"{relationship} {action} at {point} at {clock} while marked away."
+
+
 def quiet_gap_reason(
     quiet_seconds: float,
     usual_gap_seconds: int,
@@ -133,6 +176,8 @@ def closed_reason(name: str, outcome: str) -> str:
 
 DETECTED_QUIET_GAP = "Water quiet gap exceeded"
 DETECTED_OUTING = "Outing longer than usual"
+DETECTED_NOT_BACK = "Not back yet"
+DETECTED_ARRIVAL = "Tapped in, no activity at home"
 DETECTED_AFTER_AWAY = "No water activity since away period ended"
 DETECTED_CONTINUOUS_WATER = "Continuous water flow longer than expected"
 DETECTED_SUSTAINED_POWER = "Sustained high electricity use"

@@ -127,11 +127,22 @@ class SceneBoundary extends Component<{ children: ReactNode }, { failed: boolean
 const ready = () => { /* Stable callback: resizing must not create a render loop. */ }
 
 const QUIET_GAP_STORY_MINUTES = 4 * 60
+/** Mirrors the backend's ARRIVAL_WINDOW_SECONDS (rules/engine.py): the demo tapped-in clock. */
+const ARRIVAL_WINDOW_SECONDS = 20
 /** Mock mode only: seconds of playback to wait for a township click before Guard Ali acknowledges. */
 const MOCK_AUTO_ACK_SECONDS = 20
 
-/** Plays the learned 4-hour quiet gap as a fast-forward over the real demo gap (5 seconds for A-105). */
-function QuietGapOverlay({ endsAt, seconds }: { endsAt: number; seconds: number }) {
+type WatchGap = 'quiet' | 'outing' | 'arrival'
+/** Story length and wording for each fast-forward. Card-home clocks: her usual outing, and the walk from the lobby. */
+const GAP_COPY: Record<WatchGap, { minutes: number; active: string; done: string; unit: string; note: string }> = {
+  quiet: { minutes: QUIET_GAP_STORY_MINUTES, active: 'Fast-forward · water quiet gap', done: 'Longer than her usual quiet gap', unit: 'without water use', note: 'Her usual quiet gap of 4 hours is learned from her past history' },
+  outing: { minutes: 3 * 60, active: 'Fast-forward · out since tapping out', done: 'Longer than her usual outing', unit: 'with no tap back in', note: 'Her usual outing of 3 hours is learned from her past card taps' },
+  arrival: { minutes: 20, active: 'Fast-forward · since tapping in', done: 'Still no activity at home', unit: 'with no water or power used', note: 'She usually reaches the flat within a few minutes of tapping in' },
+}
+
+/** Plays a learned gap (4-hour quiet gap, 3-hour outing, 20-minute walk home) as a fast-forward over the short demo clock. */
+function QuietGapOverlay({ endsAt, seconds, gap = 'quiet' }: { endsAt: number; seconds: number; gap?: WatchGap }) {
+  const copy = GAP_COPY[gap]
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 50)
@@ -143,10 +154,10 @@ function QuietGapOverlay({ endsAt, seconds }: { endsAt: number; seconds: number 
   return <div className={`live-fast-forward ${done ? 'is-done' : ''}`} role="status" aria-live="polite">
     <span className="live-fast-forward-icon" aria-hidden="true"><FastForward size={20} /></span>
     <div>
-      <small>{done ? 'Longer than her usual quiet gap' : 'Fast-forward · water quiet gap'}</small>
-      <strong>{storyTime(Math.floor(progress * QUIET_GAP_STORY_MINUTES))} <em>/ {storyTime(QUIET_GAP_STORY_MINUTES)} without water use</em></strong>
+      <small>{done ? copy.done : copy.active}</small>
+      <strong>{storyTime(Math.floor(progress * copy.minutes))} <em>/ {storyTime(copy.minutes)} {copy.unit}</em></strong>
       <span className="live-fast-forward-bar"><i style={{ width: `${progress * 100}%` }} /></span>
-      <span className="live-fast-forward-note">Her usual quiet gap of 4 hours is learned from her past history</span>
+      <span className="live-fast-forward-note">{copy.note}</span>
     </div>
   </div>
 }
@@ -218,7 +229,7 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
   const [picked, setPicked] = useState<ScenarioId>('normalMorning')
   const [callCard, setCallCard] = useState<'ringing' | 'noAnswer' | null>(null)
   const [autoAcknowledged, setAutoAcknowledged] = useState(false)
-  const [quietGap, setQuietGap] = useState<{ endsAt: number; seconds: number } | null>(null)
+  const [quietGap, setQuietGap] = useState<{ endsAt: number; seconds: number; gap?: WatchGap } | null>(null)
   const [sensorView, setSensorView] = useState(false)
   const [toolsOpen, setToolsOpen] = useState(false)
   const [soundOn, setSoundOn] = useState(() => { try { return localStorage.getItem('temanmu.home.sound') !== 'off' } catch { return true } })
@@ -341,6 +352,8 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
   const sendObjectState = async (target: Exclude<InteractionId, 'telephone' | 'cardReader'>, on: boolean) => {
     const unit = latestUnit.current
     if (!unit) throw new Error('A-105 has not loaded from the backend')
+    // A card home has no door sensor: the door just opens and closes.
+    if (target === 'mainDoor' && unit.outing_signal === 'card') { setVisualStates({ ...localStates.current, mainDoor: on }); return }
     const reading = readingForObject(target, on, unit, localStates.current)
     setTransmission('sending')
     setIntegrationError(null)
@@ -387,9 +400,21 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
         await actionClock.wait(.7, aborter.signal)
         setVisualStates({ ...localStates.current, telephone: 'idle' })
       } else if (target === 'cardReader') {
-        // Visual only for now: the access-card event is not sent to the backend yet.
-        setCardTap({ direction: cardDirection.current, id: Date.now() })
+        const direction = cardDirection.current
+        setCardTap({ direction, id: Date.now() })
         sound.current.play('cardTap')
+        const unit = latestUnit.current
+        if (!unit) throw new Error('A-105 has not loaded from the backend')
+        setTransmission('sending')
+        try {
+          syncUnit(await gateway.current.sendAccessEvent(direction, unit.resident_name))
+          setTransmission('confirmed')
+        } catch (error) {
+          if (error instanceof DOMException && error.name === 'AbortError') throw error
+          setTransmission('error')
+          setIntegrationError(error instanceof Error ? error.message : 'Card tap failed')
+          throw error
+        }
         await actionClock.wait(.9, aborter.signal)
       } else {
         await sendObjectState(target, desired ?? !localStates.current[target])
@@ -489,6 +514,18 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
     const endsAt = Date.now() + seconds * 1000
     setQuietGap({ endsAt, seconds })
     try { await quietGapIncident(endsAt, signal) } finally { setQuietGap(null) }
+    setVisualStates({ ...localStates.current, telephone: 'ringing' })
+  }
+  // Card homes: the watch runs from here, so the outing or tapped-in clock starts fresh, then the
+  // backend (or mock) raises the concern itself when that clock runs out.
+  const waitForWatchGap = async (gap: 'outing' | 'arrival', signal: AbortSignal) => {
+    if (signal.aborted) throw new DOMException('Scenario stopped', 'AbortError')
+    const callTiming = scenarioRef.current ? SCENARIO_CALL_TIMING[scenarioRef.current] : undefined
+    try { await switchMonitoring(true, callTiming) } catch { throw new Error('Could not start A-105 monitoring on the backend') }
+    if (signal.aborted) throw new DOMException('Scenario stopped', 'AbortError')
+    const seconds = gap === 'outing' ? latestUnit.current?.baseline.usual_outing_seconds ?? 45 : ARRIVAL_WINDOW_SECONDS
+    setQuietGap({ endsAt: Date.now() + seconds * 1000, seconds, gap })
+    try { await waitForGrace(signal) } finally { setQuietGap(null) }
     setVisualStates({ ...localStates.current, telephone: 'ringing' })
   }
   const quietGapIncident = async (endsAt: number, signal: AbortSignal) => {
@@ -627,9 +664,10 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
     setVisible(true)
     setPaused(false)
     // Every scenario starts from a fixed spot; Unusual Inactivity otherwise leaves her lying on the floor.
-    // Normal Morning starts with her already asleep in bed.
+    // Normal Morning starts with her already asleep in bed; the outing scenarios start by the front door.
     setPose('none')
-    nextCharacterCommand(id === 'normalMorning' ? 'resetInBed' : 'reset')
+    const outing = id === 'goingOut' || id === 'notBackYet' || id === 'tappedInNoActivity'
+    nextCharacterCommand(id === 'normalMorning' ? 'resetInBed' : outing ? 'resetAtDoor' : 'reset')
     const steps = scenarioSteps(id, timing)
     const controller = new ScenarioController()
     runner.current = controller
@@ -650,8 +688,9 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
       },
       playAnimation,
       interactWith: (object, value, approach, signal) => interactWith(object, false, approach, signal, value),
-      setCharacterVisible: setVisible, setObject,
-      tapCard: (direction, signal) => { cardDirection.current = direction; return interactWith('cardReader', false, undefined, signal) }, waitForQuietGap, waitForResolution, waitForOutcome,
+      setCharacterVisible: setVisible, setObject, waitForWatchGap,
+      // Tap out from the corridor (inside the block), tap in from the lift-lobby side (outside).
+      tapCard: (direction, signal) => { cardDirection.current = direction; return interactWith('cardReader', false, direction === 'in' ? 'readerOutside' : undefined, signal) }, waitForQuietGap, waitForResolution, waitForOutcome,
       // The phone tag stays up from the first ring until the caregiver and township alert goes out.
       waitForNoAnswer: async signal => {
         setCallCard('ringing')
@@ -668,7 +707,7 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
       moveResponder, checkResident: () => setResponderChecking(true),
     }
     // A stopped Going Out can leave the door open or the unit "possibly away", which blocks the quiet gap.
-    const settle = usingMock && (id === 'unusualInactivity' || id === 'falseAlarmRecovery')
+    const settle = usingMock && (id === 'unusualInactivity' || id === 'falseAlarmRecovery' || id === 'notBackYet' || id === 'tappedInNoActivity')
       ? settleSharedMockHome().then(unit => { if (runner.current === controller) syncUnit(unit) })
       : Promise.resolve()
     // Wait a frame so the reset command commits before the first step replaces it.
@@ -1016,7 +1055,7 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
       </div>
     </div>}
 
-    {quietGap && <QuietGapOverlay endsAt={quietGap.endsAt} seconds={quietGap.seconds} />}
+    {quietGap && <QuietGapOverlay endsAt={quietGap.endsAt} seconds={quietGap.seconds} gap={quietGap.gap} />}
 
     <div className="live-top-right">
       <p className="live-demo-badge"><b>Demo only</b>Real homes are sensed, never seen.</p>
@@ -1051,7 +1090,7 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
         </button>
         <div className="live-player-body">
           <div className="live-player-caption" role="status" aria-live="polite">
-            <strong>{scenarioProgress?.kind === 'quietGap' && scenarioActive && <FastForward size={14} className="live-caption-ff" aria-hidden="true" />}{caption}</strong>
+            <strong>{(scenarioProgress?.kind === 'quietGap' || scenarioProgress?.kind === 'watchGap') && scenarioActive && <FastForward size={14} className="live-caption-ff" aria-hidden="true" />}{caption}</strong>
             <span>{SCENARIO_LABELS[shownScenario]} · {stepIndex ? `Step ${stepIndex} of ${timelineSteps.length}` : `${timelineSteps.length} steps`} · <em className={`live-playback-${scenarioState}`}>{playback}</em></span>
           </div>
           <div className="live-timeline-track">
@@ -1060,7 +1099,7 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
               {timelineSteps.map((step, index) => <i key={index} title={step.label} className={index < stepIndex ? 'is-done' : ''}
                 style={{ left: `${(index + 1) / timelineSteps.length * 100}%` }} />)}
             </div>
-            {timelineSteps.map((step, index) => step.kind === 'quietGap' && <span key={index} className={`live-timeline-ff ${index < stepIndex ? 'is-done' : ''} ${index === stepIndex - 1 && scenarioActive ? 'is-current' : ''}`}
+            {timelineSteps.map((step, index) => (step.kind === 'quietGap' || step.kind === 'watchGap') && <span key={index} className={`live-timeline-ff ${index < stepIndex ? 'is-done' : ''} ${index === stepIndex - 1 && scenarioActive ? 'is-current' : ''}`}
               title="Quiet gap (demo fast-forward)" style={{ left: `${(index + .5) / timelineSteps.length * 100}%` }}><FastForward size={10} aria-hidden="true" /></span>)}
           </div>
           <p className="live-player-note">{demoNote ?? SCENARIO_DESCRIPTIONS[shownScenario]}</p>

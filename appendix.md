@@ -11,20 +11,22 @@
 
 | Page | Address | Who it stands for |
 | --- | --- | --- |
-| 3D simulator (demo only) | `/simulator` | Madam Lee's flat (Unit A-105), with clickable tap, shower, kettle, TV, lamp and door |
+| 3D simulator (demo only) | `/simulator` | Madam Lee's flat (Unit A-105), with clickable tap, shower, kettle, TV, lamp and door, and a lift-lobby card reader outside |
 | Township dashboard | `/dashboard` | Guard Ali's view of Block A |
 | Caregiver app | `/caregiver` | Her daughter Sarah's phone (installable PWA) |
 
 All pages share one live state. Open the simulator side by side with the caregiver app or township dashboard to see each action appear in real time.
 
-**Four one-click scenarios in the 3D simulator:**
+**Six one-click scenarios in the 3D simulator:**
 
 1. **Normal Morning:** first water use of the day, and Sarah receives "Mum's day has started."
-2. **Going Out:** the door opens, then the home goes quiet. Status becomes *Possible Away*, and no alert is raised while she is within her usual outing time.
-3. **Unusual Inactivity:** no water use for longer than her usual quiet gap. TemanMu calls her, there is no answer, and the family and township guard are alerted together. The guard taps *I'll Check Now*, walks to the flat and records an outcome.
-4. **False Alarm Recovery:** she is napping, answers the check-in call, and the concern resolves without anyone being sent.
+2. **Going Out:** she taps her access card out at the lift lobby, and the home goes quiet. Status becomes *Possible Away*, with no alert while she is within her usual outing time. She taps back in, and the kettle confirms she is home.
+3. **Not Back Yet:** she taps out and does not come back. After her usual outing time, TemanMu calls her, and the family and guard are alerted that she is *not back yet*. The guard's steps point to searching outside.
+4. **Tapped In, Home Quiet:** she taps back in but never reaches the flat. With no water or power used at home, TemanMu calls her and alerts the family and guard to check the way home.
+5. **Unusual Inactivity:** no water use for longer than her usual quiet gap. TemanMu calls her, there is no answer, and the family and township guard are alerted together. The guard taps *I'll Check Now*, walks to the flat and records an outcome.
+6. **False Alarm Recovery:** she is napping, answers the check-in call, and the concern resolves without anyone being sent.
 
-> **About the 3D simulator.** The 3D simulator was created only for demo purposes and is not part of the TemanMu prototype. It shows how the sensors pick up Madam Lee's daily activities and how that information flows into our system. Each click in the simulator sends the same data a smart meter or door sensor would. Everything after that, including the rules, timers, alerts, township dashboard and caregiver app, is the TemanMu prototype.
+> **About the 3D simulator.** The 3D simulator was created only for demo purposes and is not part of the TemanMu prototype. It shows how the sensors pick up Madam Lee's daily activities and how that information flows into our system. Each click in the simulator sends the same data a smart meter, door sensor or access-card reader would. Everything after that, including the rules, timers, alerts, township dashboard and caregiver app, is the TemanMu prototype.
 >
 > In a real home there is no screen and nothing for the resident to do. The sensors run quietly in the background while the resident goes about daily life as usual.
 
@@ -38,7 +40,8 @@ All pages share one live state. Open the simulator side by side with the caregiv
 | --- | --- |
 | **Water** | Main sign of life. Silence longer than *her* usual quiet gap starts a concern. |
 | **Electricity** | Tells an outing apart from inactivity. Standby after the door opens means she is probably out; usage means she is at home. Any electricity use during the check-in cancels the alert. |
-| **Door** | Marks a possible outing, so an empty home is not mistaken for inactivity. |
+| **Access card** (card homes) | Her taps at the lift lobby or gate mark an outing and a return. Card homes need no door sensor. A tap is never proof she is safe. |
+| **Door** (door homes) | Where card taps aren't available, marks a possible outing, so an empty home is not mistaken for inactivity. |
 
 **Activity** means water flow above zero, electricity above the household's standby level, or the front door opening. A meter repeating the same reading for an appliance that is still on does not count as new activity.
 
@@ -47,8 +50,8 @@ All pages share one live state. Open the simulator side by side with the caregiv
 | Status | Enters when | Leaves when | What happens |
 | --- | --- | --- | --- |
 | **Routine** | Default. Also after any activity, after a caregiver confirms she is home and okay, or when an incident is closed | A rule below fires | The first activity of the day sends the family a morning reassurance |
-| **Possible Away** | The door opens while no water or electricity is in use | Any activity or another door event returns to Routine. Longer than her usual outing moves to Unusual Inactivity | Silent. The family can choose to call her |
-| **Unusual Inactivity** | No water use for longer than her usual quiet gap, or an outing ran longer than usual | Any activity resolves it | An incident opens, a grace period starts, and TemanMu calls the resident |
+| **Possible Away** | She taps out (card homes), or the door opens (door homes), while no water or electricity is in use | Any activity or another door event returns to Routine. Longer than her usual outing moves to Unusual Inactivity | Silent. The family can choose to call her |
+| **Unusual Inactivity** | No water use for longer than her usual quiet gap, an outing ran longer than usual (*Not back yet* in card homes), or she tapped in but nothing was used at home soon after | Any activity resolves it | An incident opens, a grace period starts, and TemanMu calls the resident |
 | **Unresolved Concern** | The grace period ends with no activity and no answer | Someone acknowledges and closes it, or activity resolves it | Family **and** township are notified together. Reminders repeat until someone taps *I'll Check Now* |
 
 The prototype also raises a concern for **continuous water flow** or **sustained high electricity use** lasting far longer than expected, such as a tap left running after a fall.
@@ -79,21 +82,12 @@ Each status carries a plain-language reason generated by the rules engine, so ca
 ```
 Smart water meter  ─┐
 Electricity meter  ─┼─► IoT gateway ─► Readings API ─► FastAPI backend ─► Supabase (Postgres)
-Door sensor        ─┘   (3D simulator      │   • rules engine
+Door sensor / card ─┘   (3D simulator      │   • rules engine
                          for the demo)     │   • server-side timers
                                            └─► WebSocket ─► Township dashboard + Caregiver app
 ```
 
-| Layer | Technology |
-| --- | --- |
-| Frontend | React 19, TypeScript, Vite, Tailwind CSS |
-| Caregiver app | Installable Progressive Web App (no app-store install needed) |
-| 3D simulator (demo only) | Three.js with React Three Fiber, Microsoft Rocketbox avatars |
-| Backend | Python 3.11, FastAPI |
-| Real-time updates | WebSocket |
-| Timers | Server-side, so alerts keep running even with every browser closed |
-| Database | Supabase (Postgres), accessed only by the backend |
-| Hosting | Vercel |
+**Built with** established, open-source tools: React and TypeScript for the township dashboard and caregiver app (installable on any phone, no app store needed), Python FastAPI for the backend, and Supabase (Postgres) for the database. Alert timers run on the server, so alerts keep going even when every app is closed.
 
 **Ready for real hardware.** The rules engine is pure logic: readings go in, decisions come out, with no database or network code inside it. The demo simulator sends the same reading format a real gateway would (unit, sensor, value, timestamp), so real meters can replace it without changing the backend.
 
@@ -108,6 +102,7 @@ Door sensor        ─┘   (3D simulator      │   • rules engine
 | Data | Collected? |
 | --- | --- |
 | Household water flow, electricity use, front door open/closed | Yes |
+| The resident's own access-card taps at the lift lobby or gate (card homes) | Yes. The guard sees where and when only while an alert is open; the family sees times only |
 | Cameras, microphones, wearables | **No** |
 | Room-by-room location or movement | **No** |
 
@@ -125,6 +120,7 @@ The township dashboard covers a whole block but never shows who is home, who is 
 
 - **Neighbour matching** requires consent from both families. Only coarse labels are shared (for example, "both early walkers"), never exact times or unit numbers, because knowing when someone leaves home every day is a security risk. A community coordinator makes the introduction in person; the app never contacts the other family.
 - **Community Buddies** are screened volunteers matched on shared interests.
+- **How matching works:** neighbours are matched when their usual outing times overlap by at least 30 minutes, or both are early risers. Buddies are matched on a shared interest. The resident stays tech-free: anything that reaches her comes through a real person.
 
 ### D4. Before real deployment
 
@@ -135,19 +131,7 @@ The township dashboard covers a whole block but never shows who is home, who is 
 
 ---
 
-## Appendix E: Companion matching
-
-| Feature | How it matches | What the family sees |
-| --- | --- | --- |
-| **Community Buddy** | A volunteer who shares one of the resident's interests (e.g. gardening, tai chi, cooking, chess), plus the next township activity on that theme | The buddy's name, the shared interest and an upcoming activity |
-| **Same-hour neighbours** | Residents whose usual outing times overlap by at least 30 minutes, or who are both early risers | "A neighbour on the same routine", with no times or unit numbers |
-| **Community activities** | Nearby township events | Options to invite the resident or join together |
-
-The resident stays tech-free. The family acts on their behalf, and anything that reaches the resident comes through a real person.
-
----
-
-## Appendix F: Pilot evaluation plan
+## Appendix E: Pilot evaluation plan
 
 | Measure | Method | Target |
 | --- | --- | --- |
@@ -165,27 +149,15 @@ These are proposed pilot targets, not results already achieved.
 
 ---
 
-## Appendix G: Prototype scope and next steps
-
-| In the prototype | For real deployment |
-| --- | --- |
-| Sensor data comes from the 3D simulator (demo only) | Smart water and electricity meters, door sensor and IoT gateway, running quietly in the background |
-| Each resident's usual routine is pre-filled | Learned from the first few weeks of each resident's own activity and adjusted as habits change |
-| Check-in call to the resident is simulated | Automated voice call to the resident |
-| Floor 1 of the dashboard is live; other floors show sample data | Live data for every unit |
-| A door opening suggests, but cannot prove, that she went out | With consent, township access-card taps at gates or lift lobbies can add stronger evidence |
-
----
-
-## Appendix H: Cost and business model
+## Appendix F: Cost and business model
 
 *All figures are indicative estimates for planning, based on public retail prices of off-the-shelf devices and cloud services, converted to ringgit. Actual costs would be confirmed through supplier quotes before the pilot.*
 
-### H1. One-time cost per home
+### F1. One-time cost per home
 
 | Item | Example | Estimated cost (RM) |
 | --- | --- | --- |
-| Door sensor | Zigbee door/window contact sensor | 40 – 70 |
+| Door sensor (door homes only) | Zigbee door/window contact sensor. Not needed where township access cards are used | 40 – 70 |
 | Electricity monitor | Clamp-on energy monitor at the distribution board (e.g. Shelly EM class) | 200 – 320 |
 | Water monitor | Pulse-output water sub-meter with wireless reader | 300 – 600 |
 | Home gateway | Zigbee/Wi-Fi hub with battery backup | 100 – 250 |
@@ -196,7 +168,7 @@ No custom hardware is needed. Every device is an existing, widely available prod
 
 **Lower cost over time:** TNB has installed over 5 million smart electricity meters in Peninsular Malaysia and plans to cover most homes in the coming years. With a data partnership, TemanMu could read electricity use from these meters directly instead of installing a separate monitor, saving about RM 200 – 320 per home. Smart water meters could offer the same saving as they roll out.
 
-### H2. Monthly running cost per home
+### F2. Monthly running cost per home
 
 | Item | Estimated cost (RM / month) |
 | --- | --- |
@@ -208,7 +180,7 @@ No custom hardware is needed. Every device is an existing, widely available prod
 
 Township response uses existing security and management staff, so TemanMu does not need a new response team.
 
-### H3. Pilot budget (Q1–Q2 2027, 20 homes)
+### F3. Pilot budget (Q1–Q2 2027, 20 homes)
 
 | Item | Estimated cost (RM) |
 | --- | --- |
@@ -219,7 +191,7 @@ Township response uses existing security and management staff, so TemanMu does n
 | Contingency (10%) | 2,200 – 4,500 |
 | **Total pilot budget** | **≈ RM 24,000 – 49,500** |
 
-### H4. Who pays
+### F4. Who pays
 
 | Model | How it works | Best fit |
 | --- | --- | --- |
@@ -227,87 +199,46 @@ Township response uses existing security and management staff, so TemanMu does n
 | **Family subscription** | Families of existing residents pay a monthly fee (indicatively RM 39 – 59) covering monitoring, alerts and companion features. Hardware is installed at a one-time fee or spread over the contract | Existing townships |
 | **Township service** | Offered as a value-added service through township management, with the response side delivered by existing security teams | Townships with active management |
 
-### H5. Value to Sime Darby Property
-
-- **Sales appeal:** a visible, practical answer for families buying homes with ageing parents in mind.
-- **Resident retention:** older residents can stay longer in homes and communities they know.
-- **Brand:** positions Sime Darby Property townships as caring, age-friendly communities.
-- **Repeatable service:** the same package can expand across future developments (Roadmap Phase 5).
-
 ---
 
-## Appendix I: Risks and how TemanMu handles them
+## Appendix G: Risks and how TemanMu handles them
 
 *Status: ✅ handled in the current prototype · 🔜 planned before or during the pilot*
 
-### I1. Technical risks
+### G1. Technical risks
 
 | Risk | What could happen | How TemanMu handles it | Status |
 | --- | --- | --- | --- |
-| Meter reading arrives late | A delayed reading could make the home look quiet | The check-in period is longer than normal meter delay, and readings are recorded at the time the usage happened, not when they arrived | ✅ |
 | A sensor stops sending data | A silent sensor could look like a quiet home, or hide a real concern | Each device sends a regular heartbeat. A missing heartbeat is flagged to the support team as a device fault, separate from resident alerts | 🔜 |
 | Home internet goes down | Readings cannot reach TemanMu | The gateway stores readings and sends them when the connection returns. A 4G backup SIM is used for homes without reliable Wi-Fi | 🔜 |
 | Power cut | Electricity reads zero and the gateway may switch off | The gateway has battery backup. Water and door signals keep working, and a building-wide outage is recognised as an outage, not resident inactivity | 🔜 |
-| Server failure | Alerts could stop | Alert timers run on the server, not in anyone's browser, so they keep running when every app is closed. Production hosting adds redundancy and uptime monitoring | ✅ / 🔜 |
-| Appliance left running after a fall | Steady water or power use could look like normal activity | Continuous water flow or sustained high power use far longer than expected raises its own concern | ✅ |
 
-### I2. Resident and household risks
+### G2. Resident and household risks
 
 | Risk | What could happen | How TemanMu handles it | Status |
 | --- | --- | --- | --- |
-| Resident goes out | An empty home could trigger an alert | Door + electricity at standby is recognised as a possible outing, and stays silent for her usual outing time | ✅ |
-| Resident naps or sleeps in | A long quiet period could trigger an alert | Alerts compare against her own usual quiet gap. TemanMu calls her first, and any activity cancels the alert | ✅ |
 | Resident travels or is in hospital | Days of silence would raise repeated alerts | The caregiver can pause monitoring with an "away" period, and it resumes automatically | 🔜 |
 | Visitor or helper is in the home | Their activity could hide a problem with the resident | Known limitation: TemanMu monitors the household, not the individual. Caregivers can mark regular helpers' visits, and companion check-ins add a human touchpoint | 🔜 |
 | Routine changes (illness, new habits) | Old patterns could cause false alarms or missed concerns | Usual patterns keep updating from recent activity, and caregiver feedback on each alert helps tune them | 🔜 |
-| Resident cannot answer the check-in call | The call alone cannot confirm she is safe | No answer means escalation, not closure: family and township are alerted together | ✅ |
 
-### I3. Response risks
+### G3. Response risks
 
 | Risk | What could happen | How TemanMu handles it | Status |
 | --- | --- | --- | --- |
 | Nobody responds to an alert | A concern goes unanswered | Family and township are alerted at the same time, and reminders repeat until someone taps *I'll Check Now* | ✅ |
 | Responder cannot confirm she is safe | A case could be closed too early | A case where safety could not be verified cannot be closed by accident. The responder records the result, and a 999 handoff is one tap away | ✅ |
-| Guard is busy with another incident | Response is delayed | The dashboard shows every unit needing attention in one place, and family is alerted in parallel so either side can act | ✅ |
 | Too many false alarms | Families and guards start ignoring alerts | Personal patterns, three-signal cross-checking and the check-in call filter most false alarms before anyone is notified. The pilot tracks the false alert rate (target below 20%) | ✅ / 🔜 |
 
-### I4. Privacy, consent and community risks
+### G4. Privacy, consent and community risks
 
 | Risk | What could happen | How TemanMu handles it | Status |
 | --- | --- | --- | --- |
-| Resident feels watched | Low adoption or withdrawal | No cameras, microphones or wearables, and no room-by-room tracking. Participation is opt-in and can be stopped at any time | ✅ |
-| Routine data reveals when a home is empty | A security risk if exposed | Township staff never see routines or home/away status. Neighbour matching shares only coarse labels, never times or unit numbers | ✅ |
 | Data breach | Personal data exposed | Only the backend accesses the database. Production adds role-based access, encryption and a PDPA-aligned retention policy | ✅ / 🔜 |
 | Volunteer safety | Risk to residents from unvetted volunteers | Community Buddies are screened before activation, and introductions are made by a community coordinator | 🔜 |
 
 ---
 
-## Appendix J: Frequently asked questions
-
-**What data does TemanMu use?**
-Only household water, electricity and front door data. There are no cameras, microphones or wearables in the home.
-
-**Why not CCTV or wearables?**
-Many older residents do not want a camera in their home. Wearables must be worn, charged and pressed, and are often forgotten or removed to shower. TemanMu needs nothing from the resident: their daily routine is the input.
-
-**How does TemanMu know what is normal for each resident?**
-It learns from each resident's own routine: when water and electricity are normally used, how long quiet stretches usually last (such as overnight or an afternoon nap), and how long usual outings take. Alerts are based on that personal pattern, not a fixed rule for everyone.
-
-**How does TemanMu avoid false alarms?**
-Three signals cross-check each other, so an outing is recognised and stays silent. Before anyone is notified, TemanMu calls the resident, and any water, electricity or door activity cancels the alert.
-
-**A door opening does not prove someone went out. How is that handled?**
-If the door opens while nothing is in use, TemanMu treats it as a *possible* outing and stays silent for her usual outing time. Any water or electricity use shows she is home. If the home stays quiet for longer than her usual outing, TemanMu checks in. With township integration and consent, access-card taps could add stronger evidence.
-
-**Smart meters report with a delay. Does that slow down alerts?**
-The check-in period is longer than the meter delay, so a late reading cannot trigger a false alert. Late readings are recorded at the time the usage actually happened, so the resident's routine is not distorted.
-
-**Who gets alerted, and when?**
-If the resident does not answer and there is no activity, the caregiver and township responder are notified together. Reminders continue until someone taps *I'll Check Now*, and every alert ends with a recorded outcome.
-
----
-
-## Appendix K: References
+## Appendix H: References
 
 - Institute for Public Health. *National Health and Morbidity Survey 2018: Elderly Health Factsheet.* https://iku.nih.gov.my/images/IKU/Document/REPORT/NHMS2018/FactsheetElderlyAged60yearsorMorefinal.pdf
 - Institute for Public Health. *National Health and Morbidity Survey 2025: Key Findings.* https://iku.nih.gov.my/images/nhms-2025/infographic-eng.pdf

@@ -1,9 +1,9 @@
 import seed from '../../../shared/seed.json'
 import { ApiError } from '../api/live'
-import { HOME_CHECK_DETECTED, HOME_CHECK_OUTCOMES, isHomeCheck, outcomeLabel } from '../caregiver/copy'
+import { ARRIVAL_DETECTED, HOME_CHECK_DETECTED, HOME_CHECK_OUTCOMES, NOT_BACK_DETECTED, isHomeCheck, outcomeLabel } from '../caregiver/copy'
 import { buildHistory } from './history'
 import type {
-  Api, AwayPeriod, AwayPeriodDetail, BuddyMatch, CallTiming, CommunityActivity, CompanionMessage, Config, Incident,
+  AccessEvent, Api, AwayPeriod, AwayPeriodDetail, BuddyMatch, CallTiming, CommunityActivity, CompanionMessage, Config, Incident,
   MessagePreset, NeighbourMatch, NeighbourState, Notification, Reading, RealtimeEvent, Role, Snapshot, Unit,
 } from '../api/types'
 
@@ -132,6 +132,8 @@ function initialSnapshot(): Snapshot {
       active_incident_id: null,
       care_state: 'home_monitoring',
       away_periods: [],
+      last_access: null,
+      awaiting_arrival_since: null,
     })),
     incidents: [],
     notifications: [],
@@ -143,6 +145,7 @@ let state = initialSnapshot()
 // Activity history is live from here on and simulated for the days before.
 let resetAt = Date.now()
 let readings: Reading[] = []
+let accessEvents: AccessEvent[] = []
 let messages: CompanionMessage[] = []
 let matches: BuddyMatch[] = []
 let responses: { activity_id: string; action: string }[] = []
@@ -200,10 +203,11 @@ export function primeMockInactivity(): Incident {
 export function settleMockHome(): Unit {
   const unit = unitOrThrow('A-105')
   if (latestIncident(unit.unit_id)) return clone(unit)
-  const unsettled = unit.status !== 'routine' || unit.latest.door !== 'closed'
+  const unsettled = unit.status !== 'routine' || unit.latest.door !== 'closed' || unit.awaiting_arrival_since !== null
     || unit.latest.water_lpm > 0 || unit.latest.power_kw > unit.baseline.standby_power_kw
   if (!unsettled) return clone(unit)
   unit.latest.door = 'closed'
+  unit.awaiting_arrival_since = null
   unit.latest.water_lpm = 0
   unit.latest.power_kw = unit.baseline.standby_power_kw
   updateUnit(unit, 'routine', 'At home')
@@ -265,6 +269,11 @@ function applyActivity(unit: Unit, reading: Reading): void {
   }
   // Staying routine keeps status_since; any other status returns to routine like coming home.
   const toRoutine = (reason: string) => unit.status === 'routine' ? updateUnit(unit, 'routine', reason, unit.status_since) : backHome(reason)
+  const card = unit.outing_signal === 'card'
+  // Card homes: the door is activity at home only and never decides an outing.
+  if (card && reading.sensor === 'door') { publish('unit.updated', clone(unit)); return }
+  const arrived = card && reading.sensor !== 'door' && unit.awaiting_arrival_since !== null
+  if (arrived) unit.awaiting_arrival_since = null
   if (reading.sensor === 'door') {
     const clock = localHHMM(at)
     const waterOn = unit.latest.water_lpm > 0
@@ -275,10 +284,34 @@ function applyActivity(unit: Unit, reading: Reading): void {
     else toRoutine(`Door opened at ${clock} while ${waterOn && powerOn ? 'water and electricity were' : waterOn ? 'water was' : 'electricity was'} in use: at home`)
   } else if (unit.status === 'possible_away') {
     const signal = reading.sensor === 'water' ? 'water' : 'electricity'
-    const doorAt = unit.latest.last_door_event_at
+    const doorAt = card ? null : unit.latest.last_door_event_at
     backHome(doorAt ? `Door opened at ${localHHMM(doorAt)} and ${signal} use detected: back home`
       : `${signal[0].toUpperCase()}${signal.slice(1)} use detected: back home`)
+  } else if (arrived && unit.last_access) {
+    const tap = unit.last_access
+    toRoutine(`Tapped in at ${tap.access_point}, ${localHHMM(tap.at)}, and ${reading.sensor === 'water' ? 'water' : 'electricity'} use detected: back home`)
   } else toRoutine(reading.sensor === 'water' ? 'Water activity within usual routine' : 'Water and electricity activity within usual routine')
+}
+
+// Mirrors rules/engine.py ARRIVAL_WINDOW_SECONDS.
+const ARRIVAL_WINDOW_SECONDS = 20
+
+// A card tap with no open incident. Mirrors rules/engine.py on_access (C1-C4).
+function applyAccess(unit: Unit, event: AccessEvent): void {
+  if (unit.care_state === 'in_hospital' || latestIncident(unit.unit_id)) { publish('unit.updated', clone(unit)); return }
+  const clock = localHHMM(event.at)
+  const inUse = unit.latest.water_lpm > 0 || unit.latest.power_kw > unit.baseline.standby_power_kw
+  if (event.direction === 'out') {
+    unit.awaiting_arrival_since = null
+    if (inUse) updateUnit(unit, 'routine', `Card tapped out at ${event.access_point}, ${clock}, but water or electricity is in use at home`,
+      unit.status === 'routine' ? unit.status_since : event.at)
+    else updateUnit(unit, 'possible_away', `Tapped out at ${event.access_point}, ${clock}, then no water use and electricity at standby: probably out`, event.at)
+    return
+  }
+  unit.quiet_gap.last_water_activity_at = event.at
+  unit.awaiting_arrival_since = inUse ? null : event.at
+  updateUnit(unit, 'routine', inUse ? `Tapped in at ${event.access_point}, ${clock}, with activity at home: back home`
+    : `Tapped in at ${event.access_point}, ${clock}: on the way home`, event.at)
 }
 
 function latestIncident(unitId: string): Incident | undefined {
@@ -292,14 +325,16 @@ function scheduleMockWatch(unit: Unit): void {
   const confirmed = unit.quiet_gap.last_caregiver_confirmation_at
   const water = unit.quiet_gap.last_water_activity_at
   const possibleAway = unit.status === 'possible_away'
-  const confirmedHome = unit.status === 'routine' && !!confirmed && (!water || confirmed > water)
-  if (!possibleAway && !confirmedHome) return
-  const anchor = possibleAway ? unit.status_since : confirmed!
-  const seconds = possibleAway ? unit.baseline.usual_outing_seconds : unit.baseline.usual_quiet_gap_seconds
+  const arriving = unit.outing_signal === 'card' && unit.status === 'routine' && unit.awaiting_arrival_since !== null
+  const confirmedHome = !arriving && unit.status === 'routine' && !!confirmed && (!water || confirmed > water)
+  if (!possibleAway && !confirmedHome && !arriving) return
+  const anchor = possibleAway ? unit.status_since : arriving ? unit.awaiting_arrival_since! : confirmed!
+  const seconds = possibleAway ? unit.baseline.usual_outing_seconds : arriving ? ARRIVAL_WINDOW_SECONDS : unit.baseline.usual_quiet_gap_seconds
   watchTimer = setTimeout(() => {
     watchTimer = null
     if (!monitoringActive || latestIncident(unit.unit_id) || unit.status !== (possibleAway ? 'possible_away' : 'routine')) return
-    if (possibleAway && unit.status_since === anchor) startGrace(unit, 'outing_timeout')
+    if (possibleAway && unit.status_since === anchor) startGrace(unit, unit.outing_signal === 'card' && unit.last_access?.direction === 'out' ? 'not_back' : 'outing_timeout')
+    if (arriving && unit.awaiting_arrival_since === anchor) startGrace(unit, 'arrival')
     if (confirmedHome && unit.quiet_gap.last_caregiver_confirmation_at === anchor
       && (!unit.quiet_gap.last_water_activity_at || unit.quiet_gap.last_water_activity_at <= anchor))
       startGrace(unit, 'caregiver_confirmation')
@@ -317,6 +352,7 @@ function autoResolve(unit: Unit, incident: Incident): void {
   incident.next_reminder_at = null
   incident.events.push({ type: 'auto_resolved', at: incident.closed_at, detail: 'Resident activity detected' })
   unit.active_incident_id = null
+  unit.awaiting_arrival_since = null
   updateUnit(unit, 'routine', 'Resolved: resident activity detected during the check')
   publish('incident.updated', clone(incident))
   if (alreadyNotified) for (const role of ['caregiver', 'township'] as Role[]) {
@@ -345,6 +381,8 @@ function notifyConcern(unit: Unit, incident: Incident): void {
   const detected = incident.events.find(event => event.type === 'detected')?.detail
   const reason = detected === 'Outing longer than usual'
     ? 'Possible outing lasted longer than usual. Mum did not answer the simulated call.'
+    : detected === NOT_BACK_DETECTED || detected === ARRIVAL_DETECTED
+      ? `${unit.status_reason.replace(/\.$/, '')}. Mum did not answer the simulated call.`
     : detected === 'No water activity since confirmed contact'
       ? 'No water use since Mum was confirmed okay at home. Mum did not answer the simulated call.'
       : `No water use beyond the usual ${unit.baseline.usual_quiet_gap_seconds}-second gap; no door outing and electricity at standby. Mum did not answer the simulated call.`
@@ -356,11 +394,12 @@ function notifyConcern(unit: Unit, incident: Incident): void {
   later(() => sendReminder(incident), state.config.reminder_interval_seconds * 1000)
 }
 
-function startGrace(unit: Unit, trigger: 'quiet_gap' | 'outing_timeout' | 'caregiver_confirmation' = 'quiet_gap'): Incident {
+function startGrace(unit: Unit, trigger: 'quiet_gap' | 'outing_timeout' | 'not_back' | 'arrival' | 'caregiver_confirmation' = 'quiet_gap'): Incident {
   const openedAt = now()
   const graceSeconds = callTiming?.grace_period_seconds ?? state.config.grace_period_seconds
   const ringMilliseconds = callTiming ? callTiming.voice_call_ring_seconds * 1000 : Math.min(18000, graceSeconds * 900)
   const detectedDetail = trigger === 'outing_timeout' ? 'Outing longer than usual'
+    : trigger === 'not_back' ? NOT_BACK_DETECTED : trigger === 'arrival' ? ARRIVAL_DETECTED
     : trigger === 'caregiver_confirmation' ? 'No water activity since confirmed contact' : 'Water quiet gap exceeded'
   const incident: Incident = {
     trigger_reason: null,
@@ -374,7 +413,11 @@ function startGrace(unit: Unit, trigger: 'quiet_gap' | 'outing_timeout' | 'careg
   }
   state.incidents.unshift(incident)
   unit.active_incident_id = incident.incident_id
+  const tap = unit.last_access
+  const tapClock = tap ? localHHMM(tap.at) : ''
   const statusReason = trigger === 'outing_timeout' ? 'Possible outing has lasted longer than usual; checking whether Mum is okay.'
+    : trigger === 'not_back' ? `Tapped out at ${tap?.access_point}, ${tapClock}, and not back yet: out longer than her usual ${unit.baseline.usual_outing_seconds}-second outing.`
+    : trigger === 'arrival' ? `Tapped in at ${tap?.access_point}, ${tapClock}, then no activity at home for ${ARRIVAL_WINDOW_SECONDS} seconds. She may not have reached the flat.`
     : trigger === 'caregiver_confirmation' ? 'No water use since Mum was confirmed okay at home; checking again.'
       : `No water use longer than the usual ${unit.baseline.usual_quiet_gap_seconds}-second gap. No door outing; electricity remains at standby.`
   incident.trigger_reason = statusReason
@@ -410,6 +453,7 @@ export const mockApi: Api = {
       away: awayPeriods.filter(item => item.unit_id === id && !item.cancelled)
         .map(item => [Date.parse(item.period.starts_at), Date.parse(item.period.ends_at)]),
       incidents: state.incidents.filter(incident => incident.unit_id === id),
+      card: unit.outing_signal === 'card', taps: accessEvents.filter(event => event.unit_id === id),
     })
   },
   async getIncident(id) { return clone(incidentOrThrow(id)) },
@@ -462,6 +506,24 @@ export const mockApi: Api = {
       notify({ role: 'caregiver', unit_id: unit.unit_id, kind: 'morning_reassurance', message: `${unit.caregiver_relationship}'s day has started. ${activityMessage(reading.sensor)}`, incident_id: null })
     }
     return { accepted: true, unit: clone(unit) }
+  },
+  async postAccessEvent(input) {
+    const unit = unitOrThrow(input.unit_id)
+    if (!unit.controllable) throw new ApiError(403, 'Only the controllable unit accepts access events')
+    if (unit.outing_signal !== 'card') throw new ApiError(409, 'This unit uses a door sensor, not an access card')
+    if (input.card_holder !== unit.resident_name) throw new ApiError(422, 'Card holder must be the resident of this unit')
+    const event: AccessEvent = { ...input, at: input.at || now() }
+    accessEvents.push(event)
+    unit.last_access = { direction: event.direction, access_point: event.access_point, at: event.at }
+    publish('access.received', clone(event))
+    applyAccess(unit, event)
+    const away = awayAt(unit.unit_id, event.at)
+    if (away && unit.care_state !== 'in_hospital' && !away.notified) {
+      away.notified = true
+      notify({ role: 'caregiver', unit_id: unit.unit_id, kind: 'away_activity', incident_id: null,
+        message: `${unit.caregiver_relationship} tapped ${event.direction} at ${event.access_point} at ${localHHMM(event.at)} while marked away.` })
+    }
+    return { accepted: true, event: clone(event), unit: clone(unit) }
   },
   async acknowledgeIncident(id, actor) {
     if (actor.role !== 'township') throw new ApiError(409, 'Only township can take the in-person visit')
@@ -758,6 +820,7 @@ export const mockApi: Api = {
     state = initialSnapshot()
     resetAt = Date.now()
     readings = []
+    accessEvents = []
     messages = []
     matches = []
     responses = []
@@ -779,6 +842,7 @@ export const mockApi: Api = {
       const at = now()
       unit.quiet_gap.last_water_activity_at = at
       if (unit.status === 'possible_away') unit.status_since = at
+      if (unit.awaiting_arrival_since) unit.awaiting_arrival_since = at
       publish('unit.updated', clone(unit))
     }
     scheduleMockWatch(unit)

@@ -100,7 +100,7 @@
       "interests": ["gardening", "cooking"],
       "baseline": {
         "usual_quiet_gap_seconds": 5,
-        "usual_outing_seconds": 45,
+        "usual_outing_seconds": 20,
         "standby_power_kw": 0.15
       },
       "rhythm": { "wake": "06:00", "outings": [{ "start": "07:00", "end": "08:15" }] },

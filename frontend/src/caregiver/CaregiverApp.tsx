@@ -38,7 +38,7 @@ const initialTheme = (): Theme => {
 
 /** The caregiver's mobile app. `standalone` fills the screen (the installed app); otherwise it sits in a phone frame. */
 export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
-  const { connected, loaded, units, incidents, notifications, readingsByUnit, snapshotRevision } = useAppState()
+  const { connected, loaded, units, incidents, notifications, readingsByUnit, accessByUnit, snapshotRevision } = useAppState()
   const unit = units.find(item => item.controllable)
   const unitId = unit?.unit_id
   const [tab, setTab] = useState<Tab>('home')
@@ -246,7 +246,7 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
   const ackWho = incident?.acknowledged_by && ctx ? actorName(ctx, incident.acknowledged_by) : ''
   const pastIncident = incidents.find(item => item.incident_id === pastIncidentId) ?? null
   // Today's history row is live, so fetch it again when readings, alerts or away periods change.
-  const historyRevision = `${snapshotRevision}:${unitId ? readingsByUnit[unitId]?.length ?? 0 : 0}:${unitIncidents.map(item => item.state).join()}:${unit?.away_periods.map(item => item.ends_at).join() ?? ''}`
+  const historyRevision = `${snapshotRevision}:${unitId ? readingsByUnit[unitId]?.length ?? 0 : 0}:${unitId ? accessByUnit[unitId]?.length ?? 0 : 0}:${unitIncidents.map(item => item.state).join()}:${unit?.away_periods.map(item => item.ends_at).join() ?? ''}`
 
   return <div className={`cg-root ${standalone ? 'is-standalone' : 'is-embedded'}`} data-theme={theme} onPointerDown={unlockAudio}>
     <ConfirmContext.Provider value={confirm}>
@@ -277,7 +277,7 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
           <div /><div /><div /><div />
           <p>{connectionTimedOut ? 'Cannot reach TemanMu. Check the backend connection and retry.' : 'Connecting to TemanMu…'}</p>
         </div> : !unit || !ctx ? <p className="cg-card-lead cg-pad">The resident’s home is unavailable.</p>
-          : tab === 'home' ? <HomeTab unit={unit} ctx={ctx} incident={incident} readings={readingsByUnit[unit.unit_id] || []} now={now} awayReasons={awayReasons}
+          : tab === 'home' ? <HomeTab unit={unit} ctx={ctx} incident={incident} readings={readingsByUnit[unit.unit_id] || []} taps={accessByUnit[unit.unit_id] || []} now={now} awayReasons={awayReasons}
             ackBusy={ackBusy} responseError={ackError?.kind === 'failed'} confirmBusy={confirmBusy} confirmError={confirmError}
             muted={muted} onToggleMute={() => setMuted(value => !value)}
             awayNotice={awayNotice} answerBusy={answerBusy} answerError={answerError}

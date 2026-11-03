@@ -1,10 +1,10 @@
 import type { CSSProperties } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { ArrowRight, ChevronRight, CircleCheck, Clock3, DoorClosed, DoorOpen, Droplets, Hospital, Luggage, Phone, PhoneOutgoing, ShieldCheck, TriangleAlert, Volume2, VolumeX, Zap } from 'lucide-react'
-import type { AwayActivityResponse, AwayPeriod, Incident, Notification, Reading, Unit } from '../api/types'
+import type { AccessEvent, AwayActivityResponse, AwayPeriod, Incident, Notification, Reading, Unit } from '../api/types'
 import { AwayActivityChoices } from './AwayActivityChoices'
 import { ResidentAvatar } from './Avatar'
-import { actorName, currentAway, GUARD, isHomeCheck, isOuting, outcomeLabel, STATUS_LABELS, type Ctx } from './copy'
+import { actorName, cardConcern, currentAway, GUARD, isHomeCheck, isOuting, outcomeLabel, STATUS_LABELS, type Ctx } from './copy'
 import { clock, dayFraction, dayLabel, isToday, until, when } from './format'
 import { TrackingControl } from './TrackingControl'
 
@@ -14,6 +14,11 @@ interface Card { variant: Variant; Icon: LucideIcon; badge: string; headline: st
 function statusCard(unit: Unit, incident: Incident | null, ctx: Ctx, now: number, hasRoutineEvidence: boolean, away: AwayPeriod | null, awayReason: string | null): Card {
   const { R } = ctx
   const doorAt = unit.latest.last_door_event_at
+  // Card homes: the family sees when she tapped out or in, never which gate.
+  const tap = unit.outing_signal === 'card' ? unit.last_access : null
+  const concern = cardConcern(incident)
+  const cardCause = concern === 'not_back' ? `${R} tapped out${tap ? ` at ${clock(tap.at)}` : ''} and hasn’t come back`
+    : concern === 'arrival' ? `${R} tapped back in${tap ? ` at ${clock(tap.at)}` : ''}, but there’s no activity at home` : null
   if (isHomeCheck(incident) && (incident?.state === 'notified' || incident?.state === 'acknowledged')) {
     const taken = incident.state === 'acknowledged' && incident.acknowledged_by
     return { variant: taken ? 'checking' : 'alarm', Icon: ShieldCheck, badge: 'Home check', open: 'View details',
@@ -22,9 +27,10 @@ function statusCard(unit: Unit, incident: Incident | null, ctx: Ctx, now: number
         : `You asked ${GUARD} to check the home. Waiting for them to take it.${incident.reminder_count ? ` Reminder #${incident.reminder_count}.` : ''}` }
   }
   if (incident?.state === 'notified') {
-    const cause = isOuting(incident) ? `${R} has been out longer than usual` : 'No water use for longer than the usual gap'
+    const cause = cardCause ?? (isOuting(incident) ? `${R} has been out longer than usual` : 'No water use for longer than the usual gap')
     const reminder = incident.reminder_count ? ` Reminder #${incident.reminder_count}.` : ''
-    return { variant: 'alarm', Icon: TriangleAlert, badge: STATUS_LABELS[unit.status], headline: 'Unusual inactivity', ack: true,
+    const headline = concern === 'not_back' ? 'Not back yet' : concern === 'arrival' ? 'Tapped in, no activity at home' : 'Unusual inactivity'
+    return { variant: 'alarm', Icon: TriangleAlert, badge: STATUS_LABELS[unit.status], headline, ack: true,
       reason: `${cause}. The simulated call went unanswered. You and the township operator have been alerted.${reminder}` }
   }
   if (incident?.state === 'acknowledged' && incident.acknowledged_by) {
@@ -40,7 +46,7 @@ function statusCard(unit: Unit, incident: Incident | null, ctx: Ctx, now: number
   }
   if (incident?.state === 'grace' || unit.status === 'unusual_inactivity') {
     const lastWater = unit.quiet_gap.last_water_activity_at
-    const cause = isOuting(incident) && doorAt ? `${R} has been out since ${clock(doorAt)}, longer than usual.`
+    const cause = cardCause ? `${cardCause}.` : isOuting(incident) && doorAt ? `${R} has been out since ${clock(doorAt)}, longer than usual.`
       : lastWater ? `No water use since ${clock(lastWater)}, longer than the usual gap.` : 'No water use for longer than the usual gap.'
     return { variant: 'quiet', Icon: PhoneOutgoing, badge: STATUS_LABELS.unusual_inactivity, headline: `Checking on ${R} quietly`,
       reason: `${cause} TemanMu is calling ${R} now (simulated).`, grace: incident?.state === 'grace' ? until(incident.grace_ends_at, now) : undefined }
@@ -49,8 +55,14 @@ function statusCard(unit: Unit, incident: Incident | null, ctx: Ctx, now: number
     reason: 'A responder recorded a hospital transfer. Inactivity checks are paused until you confirm a return home. Water and power safety alerts remain active.' }
   if (away) return { variant: 'away', Icon: Luggage, badge: 'Tracking paused', headline: 'Monitoring paused',
     reason: `${awayReason ? `${awayReason.replace(/[.!]+$/, '')}. ` : ''}Until ${when(away.ends_at, now)}. Inactivity alerts are paused until then; you’ll still be alerted if water or power is left running.` }
+  if (unit.status === 'possible_away' && tap?.direction === 'out') return { variant: 'away', Icon: DoorOpen, badge: STATUS_LABELS.possible_away, headline: `${R} went out`,
+    reason: `${R} tapped out at ${clock(tap.at)}, then the home went quiet. An outing is likely, but ${R}’s safety isn’t confirmed. You can call ${R} to check.` }
   if (unit.status === 'possible_away') return { variant: 'away', Icon: DoorOpen, badge: STATUS_LABELS.possible_away, headline: `${R} may be out`,
     reason: `${doorAt ? `Door opened at ${clock(doorAt)}` : 'The door opened'}, then the home went quiet. An outing is possible, but not confirmed. You can call ${R} to check.` }
+
+  if (unit.status === 'routine' && tap?.direction === 'in' && unit.awaiting_arrival_since)
+    return { variant: 'calm', Icon: DoorOpen, badge: 'On the way home', headline: `${R} tapped back in`,
+      reason: `${R} tapped in at ${clock(tap.at)}. TemanMu is waiting for activity at home to confirm ${R} is back.` }
 
   if (unit.status === 'routine' && unit.status_reason.startsWith(`${unit.caregiver_name} reports speaking directly`))
     return { variant: 'calm', Icon: CircleCheck, badge: 'Caregiver confirmed', headline: `${R} is home and okay`,
@@ -71,7 +83,7 @@ function statusCard(unit: Unit, incident: Incident | null, ctx: Ctx, now: number
 }
 
 interface Props {
-  unit: Unit; ctx: Ctx; incident: Incident | null; readings: Reading[]; now: number; awayReasons: Record<string, string | null>
+  unit: Unit; ctx: Ctx; incident: Incident | null; readings: Reading[]; taps: AccessEvent[]; now: number; awayReasons: Record<string, string | null>
   ackBusy: boolean; responseError: boolean; confirmBusy: boolean; confirmError: boolean
   muted: boolean; onToggleMute: () => void
   awayNotice: Notification | null; answerBusy: boolean; answerError: boolean
@@ -79,7 +91,7 @@ interface Props {
   onAnswerAway: (n: Notification, response: AwayActivityResponse) => void; onOpenHistory: () => void
 }
 
-export function HomeTab({ unit, ctx, incident, readings, now, awayReasons, ackBusy, responseError, confirmBusy, confirmError, muted, onToggleMute, awayNotice, answerBusy, answerError,
+export function HomeTab({ unit, ctx, incident, readings, taps, now, awayReasons, ackBusy, responseError, confirmBusy, confirmError, muted, onToggleMute, awayNotice, answerBusy, answerError,
   onCheckIn, onRequestVisit, onOpenIncident, onCall, onConfirmHome, onAnswerAway, onOpenHistory }: Props) {
   const { R } = ctx
   const today = readings.filter(reading => isToday(reading.recorded_at, now))
@@ -106,19 +118,24 @@ export function HomeTab({ unit, ctx, incident, readings, now, awayReasons, ackBu
   const powerMarks = marks('electricity')
   const paused = !!away || unit.care_state === 'in_hospital'
   const lastDoor = doorMarks.at(-1)
+  const cardHome = unit.outing_signal === 'card'
+  const tapsToday = taps.filter(tap => isToday(tap.at, now))
+  const lastTap = cardHome ? unit.last_access : null
   const tiles: Tile[] = [
     { key: 'water', Icon: Droplets, value: waterAt ? clock(waterAt).replace(/\s?[AP]M$/, '') : '—', label: waterAt ? 'used' : 'no use yet' },
     { key: 'power', Icon: Zap, value: unit.latest.power_kw > unit.baseline.standby_power_kw ? 'In use' : powerUsed ? 'Used today' : 'Standby',
       label: powerUsed ? `${clock(powerUsed.recorded_at)}` : power ? `${clock(power.recorded_at)}` : 'no use yet' },
     unit.care_state === 'in_hospital' ? { key: 'door', Icon: DoorClosed, value: 'Hospital', label: 'in hospital' }
       : away ? { key: 'door', Icon: DoorOpen, value: 'Away', label: 'away period' }
+      : cardHome && lastTap?.direction === 'out' ? { key: 'door', Icon: DoorOpen, value: 'Out', label: `since ${clock(lastTap.at)}` }
+      : cardHome ? { key: 'door', Icon: DoorClosed, value: 'Home', label: lastTap?.direction === 'in' && isToday(lastTap.at, now) ? `back ${clock(lastTap.at)}` : 'no outing' }
       : unit.status === 'possible_away' ? { key: 'door', Icon: DoorOpen, value: 'Out?', label: `${unit.latest.last_door_event_at ? clock(unit.latest.last_door_event_at) : 'opened'}` }
       : { key: 'door', Icon: DoorClosed, value: 'Home', label: lastDoor ? `${clock(lastDoor)}` : 'no outing' },
   ]
   const tracks: { key: string; label: string; at: string[] }[] = [
     { key: 'water', label: 'Water', at: waterMarks.length || !waterAt ? waterMarks : [waterAt] },
     { key: 'power', label: 'Power', at: powerMarks },
-    { key: 'door', label: 'Door', at: doorMarks },
+    cardHome ? { key: 'door', label: 'Card', at: tapsToday.map(tap => tap.at) } : { key: 'door', label: 'Door', at: doorMarks },
   ]
   const nowAt = dayFraction(now)
 
@@ -182,7 +199,7 @@ export function HomeTab({ unit, ctx, incident, readings, now, awayReasons, ackBu
     <section className="cg-day" aria-labelledby="cg-day-heading">
       <div className="cg-day-head">
         <h2 id="cg-day-heading">{R}’s day</h2>
-        <span>{paused ? 'Tracking paused' : 'Water, power & door only'}</span>
+        <span>{paused ? 'Tracking paused' : `Water, power & ${cardHome ? 'card taps' : 'door'} only`}</span>
       </div>
       <div className="cg-day-strip-chart" role="img" aria-label={tracks.map(track => `${track.label}: ${track.at.length ? track.at.map(at => clock(at)).join(', ') : 'none'}`).join('. ')}
         style={{ '--now': nowAt } as CSSProperties}>

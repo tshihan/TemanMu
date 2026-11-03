@@ -8,6 +8,7 @@ export type ScenarioActions = {
   tapCard: (direction: Extract<ScenarioStep, { kind: 'tapCard' }>['direction'], signal: AbortSignal) => Promise<void>
   setObject: (object: Extract<ScenarioStep, { kind: 'object' }>['object'], value: boolean) => Promise<void>
   waitForQuietGap: (signal: AbortSignal) => Promise<void>
+  waitForWatchGap: (gap: Extract<ScenarioStep, { kind: 'watchGap' }>['gap'], signal: AbortSignal) => Promise<void>
   waitForNoAnswer: (signal: AbortSignal) => Promise<void>
   waitForCaregiverAlert: (signal: AbortSignal) => Promise<void>
   dispatchResponder: (signal: AbortSignal) => Promise<void>
@@ -81,6 +82,7 @@ export class ScenarioController {
         case 'tapCard': await actions.tapCard(step.direction, this.signal); break
         case 'object': await actions.setObject(step.object, step.value); break
         case 'quietGap': await actions.waitForQuietGap(this.signal); break
+        case 'watchGap': await actions.waitForWatchGap(step.gap, this.signal); break
         case 'noAnswer': await actions.waitForNoAnswer(this.signal); break
         case 'alert': await actions.waitForCaregiverAlert(this.signal); break
         case 'dispatchResponder': await actions.dispatchResponder(this.signal); break

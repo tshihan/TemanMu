@@ -23,6 +23,8 @@ export const SCENARIO_DESCRIPTIONS: Record<ScenarioId, string> = {
  * for the nap, the ring outlasts her waking and answering the bedside phone (about 12s). */
 export const SCENARIO_CALL_TIMING: Partial<Record<ScenarioId, CallTiming>> = {
   unusualInactivity: { grace_period_seconds: 15, voice_call_ring_seconds: 2 },
+  notBackYet: { grace_period_seconds: 15, voice_call_ring_seconds: 2 },
+  tappedInNoActivity: { grace_period_seconds: 15, voice_call_ring_seconds: 2 },
   falseAlarmRecovery: { grace_period_seconds: 16, voice_call_ring_seconds: 14 },
 }
 
@@ -35,6 +37,8 @@ export type ScenarioStep =
   | { kind: 'tapCard'; direction: 'out' | 'in'; label: string }
   | { kind: 'object'; object: InteractionId; value: boolean; label: string }
   | { kind: 'quietGap'; label: string }
+  /** Card homes: the backend watch runs the outing or the tapped-in clock until it raises a concern. */
+  | { kind: 'watchGap'; gap: 'outing' | 'arrival'; label: string }
   | { kind: 'noAnswer'; label: string }
   | { kind: 'alert'; label: string }
   | { kind: 'dispatchResponder'; label: string }
@@ -89,18 +93,26 @@ export function scenarioSteps(id: ScenarioId, timing: ScenarioTiming): ScenarioS
       { kind: 'interact', object: 'mainDoor', value: true, approach: 'porch', label: 'Opening the door from outside' },
       { kind: 'move', to: 'mainDoor', label: 'Walking back inside' },
       { kind: 'interact', object: 'mainDoor', value: false, label: 'Closing the main door' },
-      { kind: 'move', to: 'dining', label: 'Settling back inside' },
+      { kind: 'interact', object: 'kitchenKettle', value: true, label: 'Switching on the kettle: activity at home confirms she is back' },
+      { kind: 'wait', seconds: 1.5, label: 'Making a drink' },
+      { kind: 'interact', object: 'kitchenKettle', value: false, label: 'Switching off the kettle' },
     ]
     case 'notBackYet': return [
       ...leaveViaLobby(timing),
-      { kind: 'wait', seconds: 3, label: 'Her usual outing time passes with no tap back in' },
+      { kind: 'watchGap', gap: 'outing', label: 'Fast-forward: out longer than her usual outing, with no tap back in' },
+      { kind: 'noAnswer', label: 'Simulated call to Mum; waiting for an answer' },
+      { kind: 'alert', label: 'No answer; caregiver and township alerted: not back yet' },
+      { kind: 'hold', label: 'Township searches outside; outcome awaits a human report' },
     ]
     case 'tappedInNoActivity': return [
       ...leaveViaLobby(timing),
       ...returnViaLobby(),
       { kind: 'move', to: 'corridor', label: 'Walking back along the corridor' },
       { kind: 'animate', animation: 'collapse', label: 'Audience-only fall in the corridor; no sensor event' },
-      { kind: 'wait', seconds: 3, label: 'Tapped in, but no water or power is used at home' },
+      { kind: 'watchGap', gap: 'arrival', label: 'Fast-forward: tapped in, but no water or power used at home' },
+      { kind: 'noAnswer', label: 'Simulated call to Mum; waiting for an answer' },
+      { kind: 'alert', label: 'No answer; caregiver and township alerted: tapped in, no activity' },
+      { kind: 'hold', label: 'Township checks the corridor and lift; outcome awaits a human report' },
     ]
     case 'unusualInactivity': return [
       { kind: 'move', to: 'collapseSpot', label: 'Walking beside the sofa' },

@@ -1,7 +1,9 @@
-import type { Api, DoorState, Sensor, Unit } from '../../api/types'
+import type { AccessDirection, Api, DoorState, Sensor, Unit } from '../../api/types'
 import type { InteractionId, ObjectStates } from '../interactions/registry'
 
 export const HOME_UNIT_ID = 'A-105'
+/** Where Madam Lee taps her card in the 3D scene. */
+export const LOBBY_ACCESS_POINT = 'Block A lift lobby'
 export type SensorValue = { water: number; electricity: number; door: DoorState }
 
 export function valuesFromUnit(unit: Unit): SensorValue {
@@ -37,12 +39,27 @@ export class SensorGateway {
   private tail: Promise<unknown> = Promise.resolve()
   private generation = 0
   private values: SensorValue | null = null
-  private readonly api: Pick<Api, 'postReading'>
-  constructor(api: Pick<Api, 'postReading'>) { this.api = api }
+  private readonly api: Pick<Api, 'postReading' | 'postAccessEvent'>
+  constructor(api: Pick<Api, 'postReading' | 'postAccessEvent'>) { this.api = api }
 
   sync(unit: Unit): void { this.values = valuesFromUnit(unit) }
   cancelQueued(): void { this.generation++ }
   async drain(): Promise<void> { await this.tail }
+
+  /** A card tap, queued behind any readings so the backend sees them in the order they happened. */
+  sendAccessEvent(direction: AccessDirection, cardHolder: string): Promise<Unit> {
+    const generation = this.generation
+    const job = this.tail.then(async () => {
+      if (generation !== this.generation) throw new DOMException('Access event cancelled', 'AbortError')
+      const result = await this.api.postAccessEvent({ unit_id: HOME_UNIT_ID, card_holder: cardHolder, direction, access_point: LOBBY_ACCESS_POINT })
+      if (!result.accepted || result.unit.unit_id !== HOME_UNIT_ID) throw new Error('Backend did not confirm the card tap for A-105')
+      if (generation !== this.generation) throw new DOMException('Access event cancelled after reset', 'AbortError')
+      this.sync(result.unit)
+      return result.unit
+    })
+    this.tail = job.catch(() => undefined)
+    return job
+  }
 
   sendSensorReading(sensor: Sensor, value: number | DoorState): Promise<Unit | null> {
     validateReading(sensor, value)

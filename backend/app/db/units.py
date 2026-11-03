@@ -5,7 +5,7 @@ import asyncpg
 
 from app.db import NotFoundError
 from app.db.pool import connection
-from app.models import AwayPeriod, Baseline, DoorState, OutingSignal, QuietGap, Status, Unit, UnitLatest
+from app.models import AwayPeriod, Baseline, DoorState, LastAccess, OutingSignal, QuietGap, Status, Unit, UnitLatest
 
 _UNIT_SELECT = """
 select u.*,
@@ -18,7 +18,11 @@ select u.*,
                   'created_at', a.created_at
                 ) order by a.starts_at), '[]')
           from away_periods a
-         where a.unit_id = u.unit_id and a.cancelled_at is null and a.ends_at > now()) as away_periods
+         where a.unit_id = u.unit_id and a.cancelled_at is null and a.ends_at > now()) as away_periods,
+       (select json_build_object('direction', e.direction, 'access_point', e.access_point, 'at', e.at)
+          from access_events e
+         where e.unit_id = u.unit_id
+         order by e.at desc, e.id desc limit 1) as last_access
   from units u
   join resident_profiles p on p.unit_id = u.unit_id
 """
@@ -59,6 +63,8 @@ def _row_to_unit(row: asyncpg.Record) -> Unit:
         baseline=baseline,
         active_incident_id=row["active_incident_id"],
         away_periods=[AwayPeriod(**p) for p in json.loads(row["away_periods"])],
+        last_access=LastAccess(**json.loads(row["last_access"])) if row["last_access"] else None,
+        awaiting_arrival_since=row["awaiting_arrival_since"],
     )
 
 
@@ -100,9 +106,13 @@ async def update_unit_state(
     latest_water_lpm: float | None = None,
     latest_power_kw: float | None = None,
     latest_door: DoorState | None = None,
+    awaiting_arrival_since: datetime | None = None,
+    clear_awaiting_arrival: bool = False,
     conn: asyncpg.Connection | None = None,
 ) -> Unit:
     """Update only the fields that are not None, and return the updated Unit.
+
+    clear_awaiting_arrival sets awaiting_arrival_since back to null.
 
     Raises NotFoundError if the unit does not exist.
     """
@@ -119,8 +129,11 @@ async def update_unit_state(
         "latest_water_lpm": latest_water_lpm,
         "latest_power_kw": latest_power_kw,
         "latest_door": latest_door,
+        "awaiting_arrival_since": awaiting_arrival_since,
     }
     changes = {k: v for k, v in fields.items() if v is not None}
+    if clear_awaiting_arrival and awaiting_arrival_since is None:
+        changes["awaiting_arrival_since"] = None
 
     async with connection(conn) as c:
         if changes:

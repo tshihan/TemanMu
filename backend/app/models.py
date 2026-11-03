@@ -150,6 +150,14 @@ class AwayPeriodDetail(AwayPeriod):
     reason: str | None
 
 
+class LastAccess(ContractModel):
+    """The latest card tap for a card home. Screens decide who may see it and when."""
+
+    direction: AccessDirection
+    access_point: str
+    at: UtcDatetime
+
+
 class Unit(ContractModel):
     unit_id: UnitId
     resident_name: str
@@ -167,6 +175,9 @@ class Unit(ContractModel):
     active_incident_id: str | None
     # Current and upcoming away periods, earliest first. Ended or cancelled ones are left out.
     away_periods: list[AwayPeriod] = []
+    # Card homes only: the latest tap, and when she tapped in with no activity at home since.
+    last_access: LastAccess | None = None
+    awaiting_arrival_since: UtcDatetime | None = None
 
 
 class Actor(ContractModel):
@@ -318,6 +329,11 @@ class HistoryIncident(ContractModel):
     outcome: Outcome | None
 
 
+class HistoryCardTap(ContractModel):
+    at: UtcDatetime
+    direction: AccessDirection
+
+
 class HistoryDay(ContractModel):
     date: str  # local YYYY-MM-DD
     starts_at: UtcDatetime
@@ -326,7 +342,8 @@ class HistoryDay(ContractModel):
     source: Literal["simulated_history", "live"]
     hours: list[HistoryHour]
     first_water_at: UtcDatetime | None
-    door_opened_at: list[UtcDatetime]
+    door_opened_at: list[UtcDatetime]  # door homes only
+    card_taps: list[HistoryCardTap] = []  # card homes only
     away: list[HistoryInterval]  # clipped to the day
     missing: list[MissingInterval]  # clipped to the day
     incidents: list[HistoryIncident]  # opened on this day

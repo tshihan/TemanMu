@@ -7,9 +7,26 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Literal
 
-from app.models import ACTIVE_INCIDENT_STATES, Baseline, DoorState, IncidentState, Reading, Sensor, Status, Unit
+from app.models import (
+    ACTIVE_INCIDENT_STATES,
+    AccessDirection,
+    Baseline,
+    DoorState,
+    IncidentState,
+    LastAccess,
+    OutingSignal,
+    Reading,
+    Sensor,
+    Status,
+    Unit,
+)
 from app.rules import reasons
 from app.rules.reasons import ClockText
+
+
+# Card homes: how long after a tap in, with no water or electricity use, before a concern opens.
+# Demo-length, like the other baselines; a real home would use minutes.
+ARRIVAL_WINDOW_SECONDS = 20
 
 
 def utc_hhmm(dt: datetime) -> str:
@@ -34,6 +51,10 @@ class UnitFacts:
     # (starts_at, ends_at) of caregiver-declared away periods, past ones included.
     away_windows: tuple[tuple[datetime, datetime], ...] = ()
     in_hospital: bool = False
+    # Card homes decide outings from card taps; the door never does.
+    outing_signal: OutingSignal = "door"
+    last_access: LastAccess | None = None
+    awaiting_arrival_since: datetime | None = None
 
 
 @dataclass(frozen=True)
@@ -48,9 +69,11 @@ class UnitChanges:
     latest_water_lpm: float | None = None
     latest_power_kw: float | None = None
     latest_door: DoorState | None = None
+    awaiting_arrival_since: datetime | None = None
+    clear_awaiting_arrival: bool = False
 
     def as_kwargs(self) -> dict:
-        return {k: v for k, v in self.__dict__.items() if v is not None}
+        return {k: v for k, v in self.__dict__.items() if v is not None and v is not False}
 
 
 @dataclass(frozen=True)
@@ -63,8 +86,8 @@ class ReadingDecision:
 
 @dataclass(frozen=True)
 class TickDecision:
-    kind: Literal["quiet_gap", "outing_timeout", "continuous_water", "sustained_power"]
-    reason: str  # U1 / U2
+    kind: Literal["quiet_gap", "outing_timeout", "arrival_timeout", "continuous_water", "sustained_power"]
+    reason: str  # U1 / U2 / U4 / U5
     detected_detail: str  # "Water quiet gap exceeded" / "Outing longer than usual"
 
 
@@ -102,6 +125,11 @@ def on_reading(facts: UnitFacts, reading: Reading, clock_text: ClockText = utc_h
         latest["last_door_event_at"] = at
 
     activity = is_activity(reading.sensor, value, facts.baseline)
+    card_home = facts.outing_signal == "card"
+    # Card homes: water or electricity use after a tap in means she reached the flat.
+    arrived = card_home and activity and reading.sensor != "door" and facts.awaiting_arrival_since is not None
+    if arrived:
+        latest["clear_awaiting_arrival"] = True
     # A repeated meter sample of an unchanged load is not new resident activity.
     new_activity = activity and (
         (reading.sensor == "door" and facts.door != "open") or
@@ -140,6 +168,10 @@ def on_reading(facts: UnitFacts, reading: Reading, clock_text: ClockText = utc_h
             resolve_reason=reason,
         )
 
+    # Card homes: the door is activity at home only and never decides an outing.
+    if reading.sensor == "door" and card_home:
+        return decide()
+
     if reading.sensor == "door":
         clock = clock_text(at)
         # R2: door open while possibly away → back home.
@@ -155,12 +187,50 @@ def on_reading(facts: UnitFacts, reading: Reading, clock_text: ClockText = utc_h
 
     # R4: water or electricity activity while possibly away → back home.
     if facts.status == "possible_away":
-        door_clock = clock_text(facts.last_door_event_at) if facts.last_door_event_at else None
+        door_clock = clock_text(facts.last_door_event_at) if facts.last_door_event_at and not card_home else None
         return decide(**back_home, status_reason=reasons.back_home_activity(door_clock, reading.sensor))
+
+    # C5: first water or electricity use after a tap in.
+    if arrived and facts.last_access is not None:
+        reason = reasons.home_after_tap_in(facts.last_access.access_point, clock_text(facts.last_access.at), reading.sensor)
+        return decide(**_to_routine(facts, at), status_reason=reason)
 
     # R5: any other activity → routine, refresh the reason line.
     reason = reasons.routine_water() if reading.sensor == "water" else reasons.routine_electricity()
     return decide(**_to_routine(facts, at), status_reason=reason)
+
+
+def on_access(
+    facts: UnitFacts, direction: AccessDirection, access_point: str, at: datetime, clock_text: ClockText = utc_hhmm
+) -> UnitChanges:
+    """A card tap in a card home. A tap suggests an outing or a return; it never proves safety,
+    so it does not resolve an open incident, and activity at home outweighs it."""
+    if facts.in_hospital or _has_active_incident(facts):
+        return UnitChanges()
+    clock = clock_text(at)
+    in_use = facts.water_lpm > 0 or facts.power_kw > facts.baseline.standby_power_kw
+    if direction == "out":
+        if in_use:  # C2: someone is home; a lent card or a missed tap must not mark her out
+            return UnitChanges(
+                **_to_routine(facts, at),
+                status_reason=reasons.tapped_out_at_home(access_point, clock),
+                clear_awaiting_arrival=True,
+            )
+        return UnitChanges(  # C1
+            status="possible_away",
+            status_since=at,
+            status_reason=reasons.tapped_out(access_point, clock),
+            clear_awaiting_arrival=True,
+        )
+    # Tap in: back in the building. The quiet-gap clock restarts, as when coming home.
+    back = dict(status="routine", status_since=at, last_water_activity_at=at)
+    if in_use:  # C4
+        return UnitChanges(**back, status_reason=reasons.tapped_in_at_home(access_point, clock), clear_awaiting_arrival=True)
+    return UnitChanges(**back, status_reason=reasons.tapped_in(access_point, clock), awaiting_arrival_since=at)  # C3
+
+
+def _awaiting_arrival(facts: UnitFacts) -> bool:
+    return facts.outing_signal == "card" and facts.status == "routine" and facts.awaiting_arrival_since is not None
 
 
 def _to_routine(facts: UnitFacts, at: datetime) -> dict:
@@ -193,7 +263,9 @@ def _clock(facts: UnitFacts) -> tuple[datetime, int, bool] | None:
     """(start, length in seconds, moved by an away period) of the T1 or T2 clock now running."""
     if facts.in_hospital or _has_active_incident(facts):
         return None
-    if facts.status == "routine":
+    if _awaiting_arrival(facts):
+        seconds, anchor = ARRIVAL_WINDOW_SECONDS, facts.awaiting_arrival_since
+    elif facts.status == "routine":
         seconds, anchor = facts.baseline.usual_quiet_gap_seconds, _quiet_anchor(facts)
     elif facts.status == "possible_away":
         seconds, anchor = facts.baseline.usual_outing_seconds, facts.status_since
@@ -225,6 +297,15 @@ def on_tick(facts: UnitFacts, now: datetime, clock_text: ClockText = utc_hhmm) -
             detected_detail=reasons.DETECTED_AFTER_AWAY if facts.status == "routine" else reasons.DETECTED_OUTING,
         )
 
+    if _awaiting_arrival(facts) and facts.last_access is not None:  # T3: tapped in, flat still quiet
+        return TickDecision(
+            kind="arrival_timeout",
+            reason=reasons.arrival_reason(
+                facts.last_access.access_point, clock_text(start), (now - start).total_seconds()
+            ),
+            detected_detail=reasons.DETECTED_ARRIVAL,
+        )
+
     if facts.status == "routine":  # T1
         anchor = _quiet_anchor(facts)
         door = facts.last_door_event_at
@@ -250,6 +331,16 @@ def on_tick(facts: UnitFacts, now: datetime, clock_text: ClockText = utc_hhmm) -
         )
 
     # T2: possible_away for longer than the usual outing.
+    tap = facts.last_access
+    if facts.outing_signal == "card" and tap is not None and tap.direction == "out":
+        return TickDecision(
+            kind="outing_timeout",
+            reason=reasons.not_back_reason(
+                tap.access_point, clock_text(tap.at),
+                (now - facts.status_since).total_seconds(), facts.baseline.usual_outing_seconds,
+            ),
+            detected_detail=reasons.DETECTED_NOT_BACK,
+        )
     door_clock = clock_text(facts.last_door_event_at or facts.status_since)
     return TickDecision(
         kind="outing_timeout",
@@ -284,4 +375,7 @@ def facts_from(
         incident_state=incident_state if incident_state in ACTIVE_INCIDENT_STATES else None,
         away_windows=away_windows,
         in_hospital=unit.care_state == "in_hospital",
+        outing_signal=unit.outing_signal,
+        last_access=unit.last_access,
+        awaiting_arrival_since=unit.awaiting_arrival_since,
     )

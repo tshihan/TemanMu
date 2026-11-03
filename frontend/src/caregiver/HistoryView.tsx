@@ -52,6 +52,9 @@ function summary(day: HistoryDay, now: number): string[] {
   const doors = day.door_opened_at.map(time => clock(time))
   if (doors.length > 4) lines.push(`Door opened ${doors.length} times, first at ${doors[0]}.`)
   else if (doors.length) lines.push(`Door opened at ${list(doors)}.`)
+  const taps = (direction: 'out' | 'in') => day.card_taps.filter(tap => tap.direction === direction).map(tap => clock(tap.at))
+  if (taps('out').length) lines.push(`Tapped out at ${list(taps('out'))}.`)
+  if (taps('in').length) lines.push(`Tapped in at ${list(taps('in'))}.`)
   for (const away of day.away) lines.push(`Monitoring paused ${span(day, away)}.`)
   for (const incident of day.incidents) {
     const open = ['grace', 'notified', 'acknowledged'].includes(incident.state)
@@ -60,7 +63,7 @@ function summary(day: HistoryDay, now: number): string[] {
   return lines
 }
 
-/** The day's water, electricity and door activity as lanes, with away, missing and alert bands. */
+/** The day's water, electricity and door (or card tap) activity as lanes, with away, missing and alert bands. */
 function Lanes({ day, standby, now, compact = false }: { day: HistoryDay; standby: number; now: number; compact?: boolean }) {
   const isToday = day.date === dayKey(now)
   const band = (interval: HistoryInterval) => ({ left: `${at(day, interval.starts_at) * 100}%`, width: `${(at(day, interval.ends_at) - at(day, interval.starts_at)) * 100}%` })
@@ -73,13 +76,14 @@ function Lanes({ day, standby, now, compact = false }: { day: HistoryDay; standb
       {poweredHour(hour.energy_kwh, standby) && <i className="is-power" style={{ left: `${hour.hour / 24 * 100}%` }} />}
     </span>)}
     {day.door_opened_at.map(time => <i key={time} className="is-door" style={{ left: `${at(day, time) * 100}%` }} />)}
+    {day.card_taps.map(tap => <i key={tap.at} className="is-door" style={{ left: `${at(day, tap.at) * 100}%` }} />)}
     {day.incidents.map(incident => <em key={incident.incident_id} style={{ left: `${at(day, incident.opened_at) * 100}%` }} />)}
   </span>
 }
 
-function Legend() {
+function Legend({ card }: { card: boolean }) {
   return <div className="cg-legend cg-hist-legend" aria-hidden="true">
-    <span className="is-water">Water</span><span className="is-power">Power</span><span className="is-door">Door</span>
+    <span className="is-water">Water</span><span className="is-power">Power</span><span className="is-door">{card ? 'Card tap' : 'Door'}</span>
     <span className="is-away">Paused</span><span className="is-missing">No data</span><span className="is-alert">Alert</span>
   </div>
 }
@@ -111,7 +115,7 @@ function HourChart({ kind, title, values, format, selected, onSelect, now, day, 
   </section>
 }
 
-function DayDetail({ day, history, ctx, now, onOpenIncident }: { day: HistoryDay; history: UnitHistory; ctx: Ctx; now: number; onOpenIncident: (id: string) => void }) {
+function DayDetail({ day, history, ctx, now, card, onOpenIncident }: { day: HistoryDay; history: UnitHistory; ctx: Ctx; now: number; card: boolean; onOpenIncident: (id: string) => void }) {
   const [hour, setHour] = useState<number | null>(null)
   const selected = hour === null ? null : day.hours[hour]
   const water = day.hours.map(item => item.water_litres)
@@ -136,7 +140,7 @@ function DayDetail({ day, history, ctx, now, onOpenIncident }: { day: HistoryDay
         <h3>Through the day</h3>
         <Lanes day={day} standby={history.standby_power_kw} now={now} />
         <div className="cg-axis" aria-hidden="true">{AXIS.map((label, index) => <span key={index}>{label}</span>)}</div>
-        <Legend />
+        <Legend card={card} />
       </div>
       {day.incidents.length > 0 && <ul className="cg-hist-alerts">
         {day.incidents.map(incident => <li key={incident.incident_id}>
@@ -159,13 +163,14 @@ function DayDetail({ day, history, ctx, now, onOpenIncident }: { day: HistoryDay
         </table>
       </details>
     </section>
-    <p className="cg-fineprint">Household water, electricity and door activity only. TemanMu can’t tell who used them or how {ctx.R} is feeling.</p>
+    <p className="cg-fineprint">Household water and electricity, and {card ? 'lobby card taps' : 'door activity'}, only. TemanMu can’t tell who used them or how {ctx.R} is feeling.</p>
   </>
 }
 
 /** 7- or 30-day activity history for the caregiver (phase2.md §5). */
 export function HistoryView({ unit, ctx, now, revision, onBack, onOpenIncident }: Props) {
   const [range, setRange] = useState<HistoryRange>(7)
+  const card = unit.outing_signal === 'card'
   const [history, setHistory] = useState<UnitHistory | null>(null)
   const [failed, setFailed] = useState(false)
   const [date, setDate] = useState<string | null>(null)
@@ -210,20 +215,20 @@ export function HistoryView({ unit, ctx, now, revision, onBack, onOpenIncident }
     <div className="cg-sheet-body">
       {failed && !history ? <p className="cg-card-lead cg-pad" role="alert">Couldn’t load the history. Check the connection and try again.</p>
         : !history ? <div className="cg-loading" role="status"><div /><div /><p>Loading history…</p></div>
-        : day ? <DayDetail key={day.date} day={day} history={history} ctx={ctx} now={now} onOpenIncident={onOpenIncident} />
+        : day ? <DayDetail key={day.date} day={day} history={history} ctx={ctx} now={now} card={card} onOpenIncident={onOpenIncident} />
         : <>
           <div role="radiogroup" aria-label="Range" className="cg-segmented cg-hist-range">
             {([7, 30] as const).map(value => <button key={value} type="button" role="radio" aria-checked={range === value} onClick={() => setRange(value)}>{value} days</button>)}
           </div>
           <section className="cg-card">
-            <div className="cg-day-head"><h2>Daily activity</h2><span>Water, power &amp; door only</span></div>
+            <div className="cg-day-head"><h2>Daily activity</h2><span>Water, power &amp; {card ? 'card taps' : 'door'} only</span></div>
             <div className="cg-axis cg-hist-axis" aria-hidden="true">{AXIS.map((label, index) => <span key={index}>{label}</span>)}</div>
             {range === 7 ? <ol className="cg-hist-rows">{days.map(item => row(item, false))}</ol>
               : weeks.map(week => <section key={week.label} aria-label={week.label}>
                 <h3 className="cg-hist-week">{week.label}</h3>
                 <ol className="cg-hist-rows">{week.days.map(item => row(item, true))}</ol>
               </section>)}
-            <Legend />
+            <Legend card={card} />
           </section>
           <p className="cg-fineprint">Days marked Simulated are generated for this demo, not measured. Live days start at the last demo reset. Tap a day for hourly detail.</p>
         </>}

@@ -5,7 +5,7 @@ import { api } from '../api'
 import { ApiError } from '../api/live'
 import { applyEvent } from '../api/store'
 import type { Incident, Outcome, Unit } from '../api/types'
-import { HOME_CHECK_OUTCOMES, isHomeCheck, outcomeLabel } from '../caregiver/copy'
+import { HOME_CHECK_OUTCOMES, cardConcern, isHomeCheck, outcomeLabel } from '../caregiver/copy'
 
 type CloseOutcome = Exclude<Outcome, 'resident_activity_detected'>
 type OutcomeOption = { value: CloseOutcome; label: string; help?: string }
@@ -49,11 +49,29 @@ const eventAt = (incident: Incident, type: Incident['events'][number]['type']) =
 /** Why the guard is being asked, in the guard's words. The detected detail names what tripped the alert. */
 export function alertReason(incident: Incident, unit: Unit): string {
   if (isHomeCheck(incident)) return `Activity at home while she is marked away. ${unit.caregiver_name} asked you to check the home`
+  const card = cardConcern(incident)
+  if (card === 'not_back') return 'She tapped out at the lobby and has not come back, and she did not answer TemanMu\'s call'
+  if (card === 'arrival') return 'She tapped in at the lobby but nothing has been used in the flat since, and she did not answer TemanMu\'s call'
   const detected = incident.events.find(event => event.type === 'detected')?.detail
   const why = detected === 'Outing longer than usual' ? 'She has been out longer than her usual outing'
     : detected === 'No water activity since confirmed contact' ? 'No water use since she was confirmed okay'
     : 'No water use for longer than her usual quiet gap'
   return `${why}, and she did not answer TemanMu's call`
+}
+
+/** Privacy: a card home's last tap is shown to the guard only while a concern is open. */
+function LastTap({ unit }: { unit: Unit }) {
+  const tap = unit.last_access
+  if (unit.outing_signal !== 'card' || !tap) return null
+  return <p className="tm-resp-tap"><strong>Last card tap</strong> {tap.access_point} · {tap.direction === 'out' ? 'Out' : 'In'} · {clockLabel(tap.at)}</p>
+}
+
+/** Where to look first: outside for "not back yet", the way home for a tap in with no activity. */
+function whereToLook(incident: Incident, unit: Unit, floor: number) {
+  const card = cardConcern(incident)
+  if (card === 'not_back') return <>She is not at home. Call her, check CCTV and search the township, starting near the <strong>{unit.last_access?.access_point ?? 'lobby'}</strong>.</>
+  if (card === 'arrival') return <>Check the lift, stairs and corridor between the <strong>{unit.last_access?.access_point ?? 'lobby'}</strong> and unit <strong>{unit.unit_id}</strong> on floor {floor}.</>
+  return <>Go to unit <strong>{unit.unit_id}</strong> on floor {floor}. {alertReason(incident, unit)}.</>
 }
 
 /** Where the incident is on the response path: the same four steps in every state. */
@@ -200,6 +218,7 @@ export function IncidentPanel({ incident, unit, floor, onDone, inAlertBar = fals
   const caregiverCheckingIn = incident.events.some(event => event.type === 'caregiver_checking_in')
   const closer = incident.events.find(event => event.type === 'closed')?.actor
   const tone = resolved ? 'is-closed' : incident.state === 'notified' ? 'is-alert' : 'is-checking'
+  const card = cardConcern(incident)
 
   const status = resolved ? `Closed${incident.closed_at ? ` at ${clockLabel(incident.closed_at)}` : ''}`
     : incident.state === 'grace' ? `Calling the resident · ${countdown(incident.grace_ends_at, clock)} left`
@@ -221,6 +240,7 @@ export function IncidentPanel({ incident, unit, floor, onDone, inAlertBar = fals
         </div>
       </div>
       <h2 id={titleId} tabIndex={-1}>{unit.resident_name}</h2>
+      {card && !resolved && <p className={`tm-resp-kind is-${card}`}>{card === 'not_back' ? 'Not back yet · search outside' : 'Tapped in, no activity · check the way home'}</p>}
       <p className="tm-resp-status">{status}</p>
     </header>
     <Steps incident={incident} />
@@ -228,13 +248,14 @@ export function IncidentPanel({ incident, unit, floor, onDone, inAlertBar = fals
     <div className="tm-resp-body">
       {incident.state === 'grace' && <p className="tm-resp-lead">TemanMu noticed a break in her routine and is calling her first. Nobody is alerted yet.</p>}
       {incident.state === 'notified' && <p className="tm-resp-lead">{alertReason(incident, unit)}.{homeCheck ? '' : ' Her caregiver and you were alerted together.'}</p>}
+      {!resolved && <LastTap unit={unit} />}
       {requested && incident.state === 'notified' && !homeCheck && <p className="tm-resp-note">{unit.caregiver_name} asked the township to visit.</p>}
       {caregiverCheckingIn && incident.state === 'notified' && <p className="tm-resp-note">{unit.caregiver_name} is checking in remotely. Her safety is not confirmed.</p>}
       {calledAt && !resolved && <p className="tm-resp-banner" role="status">999 call recorded at {clockLabel(calledAt)}. Keep this open until you know the outcome.</p>}
       {unable && !calledAt && !resolved && <p className="tm-resp-banner" role="status">Safety not verified. Contact the duty supervisor and caregiver.</p>}
 
       {incident.state === 'notified' && !inAlertBar && <Acknowledge key={incident.incident_id} incident={incident} />}
-      {mine && dialog && <p className="tm-resp-lead">Go to unit <strong>{unit.unit_id}</strong> on floor {floor}. {alertReason(incident, unit)}.</p>}
+      {mine && (dialog || card) && <p className="tm-resp-lead">{whereToLook(incident, unit, floor)}</p>}
       {mine && <>
         {!dialog && onOpenDialog && <button type="button" className="tm-resp-link" onClick={onOpenDialog}>Open the check form as a pop-up</button>}
         <OutcomeForm key={incident.incident_id} incident={incident} />

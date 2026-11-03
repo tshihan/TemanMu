@@ -55,12 +55,30 @@ export const HOME_CHECK_DETECTED = 'Activity at home during an away period'
 export const isHomeCheck = (incident: Incident | null | undefined) =>
   !!incident?.events.some(event => event.type === 'detected' && event.detail === HOME_CHECK_DETECTED)
 
+/** Mirror reasons.DETECTED_NOT_BACK and DETECTED_ARRIVAL: concerns that only card homes raise. */
+export const NOT_BACK_DETECTED = 'Not back yet'
+export const ARRIVAL_DETECTED = 'Tapped in, no activity at home'
+export type CardConcern = 'not_back' | 'arrival'
+export const cardConcern = (incident: Incident | null | undefined): CardConcern | null => {
+  const detected = incident?.events.find(event => event.type === 'detected')?.detail
+  return detected === NOT_BACK_DETECTED ? 'not_back' : detected === ARRIVAL_DETECTED ? 'arrival' : null
+}
+
 /** An away-activity notice still waiting for the caregiver's answer, raised during the current away period. */
 export const awaitingAnswer = (n: Notification, away: AwayPeriod | null) =>
   n.kind === 'away_activity' && !n.response && !!away && n.created_at >= away.starts_at
 
-const cause = (ctx: Ctx, incident: Incident | null | undefined) =>
-  isOuting(incident) ? `${ctx.R} has been out longer than usual` : 'No water use for longer than usual'
+const cause = (ctx: Ctx, incident: Incident | null | undefined) => {
+  const card = cardConcern(incident)
+  if (card === 'not_back') return `${ctx.R} tapped out at the lobby and hasn’t come back`
+  if (card === 'arrival') return `${ctx.R} tapped in at the lobby, but there’s no activity at home`
+  return isOuting(incident) ? `${ctx.R} has been out longer than usual` : 'No water use for longer than usual'
+}
+const ALERT_TITLE: Record<CardConcern, string> = { not_back: 'Not back yet', arrival: 'Tapped in, no activity at home' }
+const alertTitle = (incident: Incident | null | undefined) => {
+  const card = cardConcern(incident)
+  return card ? ALERT_TITLE[card] : 'Unusual inactivity'
+}
 
 export function notificationCopy(n: Notification, ctx: Ctx, incident: Incident | null | undefined): Copy {
   const { R } = ctx
@@ -68,7 +86,7 @@ export function notificationCopy(n: Notification, ctx: Ctx, incident: Incident |
     case 'morning_reassurance':
       return { title: `${R}’s day has started.`, body: n.message.match(/day has started\.\s*(.+)$/)?.[1] || 'Activity detected at home.', Icon: Sunrise, tone: 'calm' }
     case 'alert':
-      return { title: 'Unusual inactivity', body: `${cause(ctx, incident)}. The simulated call went unanswered. You and the township operator have been alerted.`, Icon: TriangleAlert, tone: 'alarm' }
+      return { title: alertTitle(incident), body: `${cause(ctx, incident)}. The simulated call went unanswered. You and the township operator have been alerted.`, Icon: TriangleAlert, tone: 'alarm' }
     case 'reminder': {
       const number = n.message.match(/#(\d+)/)?.[1]
       return { title: number ? `Reminder #${number}` : 'Reminder', body: `Nobody has responded yet. Sent to you and ${GUARD}.`, Icon: BellRing, tone: 'alarm' }
@@ -114,6 +132,8 @@ export function notificationCopy(n: Notification, ctx: Ctx, incident: Incident |
         case 'home_check_requested':
           return { title: 'Home check requested', body: `${n.message} You asked ${GUARD} to check the home.`, Icon: ShieldCheck, tone: 'alarm' }
       }
+      if (/ tapped in at /.test(n.message))
+        return { title: `${R} tapped in`, body: `${n.message} Is ${R} back? Answer on Home.`, Icon: Luggage, tone: 'info' }
       return { title: `Activity while ${R} is away`, body: `${n.message} Do you know who’s there? Answer on Home.`, Icon: Luggage, tone: 'info' }
   }
   return { title: 'Update', body: n.message, Icon: Bell, tone: 'info' }
@@ -124,6 +144,8 @@ export function eventCopy(event: IncidentEvent, ctx: Ctx, incident: Incident): C
   switch (event.type) {
     case 'detected':
       if (isHomeCheck(incident)) return { title: `Activity while ${R} is away`, body: `Activity at home while ${R} was marked away.`, Icon: DoorOpen, tone: 'info' }
+      if (cardConcern(incident) === 'not_back') return { title: 'Not back yet', body: `${R} tapped out and has been out longer than usual.`, Icon: DoorOpen, tone: 'info' }
+      if (cardConcern(incident) === 'arrival') return { title: 'Tapped in, no activity at home', body: `${R} tapped in at the lobby, but nothing has been used at home since.`, Icon: DoorOpen, tone: 'info' }
       return isOuting(incident)
         ? { title: 'Outing longer than usual', body: `${R} has been away longer than usual.`, Icon: DoorOpen, tone: 'info' }
         : { title: 'Quiet gap detected', body: 'No water use for longer than the usual gap.', Icon: Droplets, tone: 'info' }

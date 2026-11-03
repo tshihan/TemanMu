@@ -40,6 +40,7 @@ export const liveApi: Api = {
   getBuddy: unitId => request(`/api/companion/buddy?unit_id=${query(unitId)}`),
   getNeighbours: unitId => request(`/api/companion/neighbours?unit_id=${query(unitId)}`),
   postReading: reading => post('/api/readings', reading),
+  postAccessEvent: event => post('/api/access-events', event),
   acknowledgeIncident: (id, actor) => post(`/api/incidents/${query(id)}/acknowledge`, actor),
   caregiverResponse: (id, actor) => post(`/api/incidents/${query(id)}/caregiver-response`, actor),
   confirmHome: (id, actor) => post(`/api/units/${query(id)}/confirm-home`, actor),

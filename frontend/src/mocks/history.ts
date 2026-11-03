@@ -1,11 +1,11 @@
 // Mirrors backend/app/services/history.py for the mock layer. Its random draws differ from
 // Python's, so the mock's simulated days are alike, not identical, to the backend's.
-import type { HistoryDay, Incident, MissingInterval, Reading, UnitHistory } from '../api/types'
+import type { AccessEvent, HistoryDay, Incident, MissingInterval, Reading, UnitHistory } from '../api/types'
 
 type Steps = [number, number][] // (from ms, value) changes of a step function, in time order
 type Window = [number, number]
 type Missing = [number, number, MissingInterval['reason']]
-interface Signals { water: Steps; power: Steps; powerInitial: number; doors: number[]; away: Window[]; missing: Missing[] }
+interface Signals { water: Steps; power: Steps; powerInitial: number; doors: number[]; taps: [number, 'out' | 'in'][]; away: Window[]; missing: Missing[] }
 
 const MIN = 60_000
 const HOUR = 3_600_000
@@ -92,6 +92,9 @@ function simulated(unitId: string, date: string, daysAgo: number, wake: string, 
   return {
     water: steps(loads(water), 0), power: steps(loads(power), standby), powerInitial: standby,
     doors: [...outs.flat(), ...away.flat().filter(t => t > midnight && t < at(1440))].sort((a, b) => a - b),
+    // A card home taps out as she leaves and in as she returns, for the same outings.
+    taps: [...outs, ...away].flatMap(([a, b]) => [[a, 'out'], [b, 'in']] as [number, 'out' | 'in'][])
+      .filter(([t]) => t > midnight && t < at(1440)).sort((a, b) => a[0] - b[0]),
     away, missing: (OFFLINE[daysAgo] ?? []).map(([a, b]) => [at(a), at(b), 'feed_offline']),
   }
 }
@@ -120,6 +123,7 @@ function day(date: string, source: HistoryDay['source'], s: Signals, cover: Wind
     }),
     first_water_at: firstWater === null ? null : iso(firstWater),
     door_opened_at: s.doors.filter(inside).map(iso),
+    card_taps: s.taps.filter(([t]) => inside(t)).map(([t, direction]) => ({ at: iso(t), direction })),
     away: s.away.filter(([a, b]) => a < end && start < b).map(([a, b]) => ({ starts_at: iso(Math.max(a, start)), ends_at: iso(Math.min(b, end)) })),
     missing: s.missing.filter(([a, b]) => a < end && start < b).map(([a, b, reason]) => ({ starts_at: iso(Math.max(a, start)), ends_at: iso(Math.min(b, end)), reason })),
     incidents: incidents.filter(i => Date.parse(i.opened_at) >= start && Date.parse(i.opened_at) < end)
@@ -132,15 +136,19 @@ interface Input {
   unitId: string; days: number; now: number; resetAt: number; standby: number; lastWater: number | null
   rhythm: { wake: string; outings: { start: string; end: string }[] }
   readings: Reading[]; away: Window[]; incidents: Incident[]
+  card: boolean; taps: AccessEvent[]
 }
 
-export function buildHistory({ unitId, days, now, resetAt, standby, lastWater, rhythm, readings, away, incidents }: Input): UnitHistory {
+export function buildHistory({ unitId, days, now, resetAt, standby, lastWater, rhythm, readings, away, incidents, card, taps }: Input): UnitHistory {
   const series = (sensor: Reading['sensor']): Steps => readings.filter(r => r.sensor === sensor).map(r => [Date.parse(r.recorded_at), Number(r.value)])
   // Readings are sent on change; before the first one the home counts as idle.
   const live: Signals = {
     water: series('water'), power: series('electricity'), powerInitial: standby, away, missing: [],
     doors: readings.filter(r => r.sensor === 'door' && r.value === 'open').map(r => Date.parse(r.recorded_at)),
+    taps: taps.map(tap => [Date.parse(tap.at), tap.direction]),
   }
+  // Each home has one outing signal: a card home has no door sensor, a door home no card taps.
+  const signal = (s: Signals): Signals => card ? { ...s, doors: [] } : { ...s, taps: [] }
   const today = midnightOf(localDate(now))
   const resetDay = localDate(resetAt)
   return {
@@ -148,9 +156,9 @@ export function buildHistory({ unitId, days, now, resetAt, standby, lastWater, r
     days: Array.from({ length: days }, (_, daysAgo) => {
       const start = today - daysAgo * DAY
       const date = localDate(start)
-      if (date < resetDay) return day(date, 'simulated_history', simulated(unitId, date, daysAgo, rhythm.wake, rhythm.outings, standby), [start, start + DAY], [])
+      if (date < resetDay) return day(date, 'simulated_history', signal(simulated(unitId, date, daysAgo, rhythm.wake, rhythm.outings, standby)), [start, start + DAY], [])
       const before: Missing[] = date === resetDay ? [[start, resetAt, 'before_demo']] : []
-      return day(date, 'live', { ...live, missing: before }, [Math.max(start, resetAt), Math.min(start + DAY, now)], incidents, lastWater)
+      return day(date, 'live', signal({ ...live, missing: before }), [Math.max(start, resetAt), Math.min(start + DAY, now)], incidents, lastWater)
     }),
   }
 }

@@ -206,6 +206,7 @@ async def start_watching(
                 unit_id,
                 last_water_activity_at=now,
                 status_since=now if unit.status == "possible_away" else None,
+                awaiting_arrival_since=now if unit.awaiting_arrival_since is not None else None,
             )
             await realtime.broadcast("unit.updated", unit)
         await _arm_watch_locked(unit_id)
@@ -807,9 +808,9 @@ async def escalate(incident_id: str, role: Role, name: str, action: str) -> Inci
 
 
 async def ingest_access_event(body: AccessEventIn) -> tuple[AccessEvent, Unit]:
-    """Store a tap separately from sensor readings, then broadcast after commit.
+    """Store a tap separately from sensor readings, apply the card-home rules, broadcast after commit.
 
-    A tap alone is not proof of safety. Status decisions are added in the card-home rules.
+    A tap alone is not proof of safety: it never resolves an open incident.
     """
     async with _unit_lock(body.unit_id):
         unit = await db_units.get_unit(body.unit_id)
@@ -829,10 +830,31 @@ async def ingest_access_event(body: AccessEventIn) -> tuple[AccessEvent, Unit]:
             access_point=body.access_point,
             at=body.at or utc_now(),
         )
+        incident = await _active_incident(unit)
+        changes = rules.on_access(
+            await _facts(unit, incident), event.direction, event.access_point, event.at, local_hhmm
+        )
         async with get_pool().acquire() as conn, conn.transaction():
             event = await db_access.insert_access_event(event, conn=conn)
+            unit = await db_units.update_unit_state(unit.unit_id, **changes.as_kwargs(), conn=conn)
 
         await realtime.broadcast("access.received", event)
+        await realtime.broadcast("unit.updated", unit)
+        # A tap while marked away: gentle, once per period, and the caregiver decides what it means.
+        if (
+            unit.care_state != "in_hospital"
+            and await db_away.is_away(unit.unit_id, event.at)
+            and await db_away.claim_activity_notice(unit.unit_id, event.at)
+        ):
+            await create_notification(
+                "caregiver",
+                unit.unit_id,
+                "away_activity",
+                reasons.access_away_message(
+                    unit.caregiver_relationship, event.direction, event.access_point, local_hhmm(event.at)
+                ),
+            )
+        await _arm_watch_locked(unit.unit_id)
         return event, unit
 
 

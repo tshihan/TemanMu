@@ -25,7 +25,7 @@ def test_naive_timestamp_rejected():
 
 
 def test_access_timestamp_serialises_as_utc_and_input_can_omit_it():
-    body = dict(unit_id="A-105", card_holder="Madam Lee Mei Ling", direction="out", access_point="Block B lift lobby")
+    body = dict(unit_id="A-105", card_holder="Madam Lee Mei Ling", direction="out", access_point="Block A lift lobby")
     assert AccessEventIn(**body).at is None
     event = AccessEvent(**body, at=T.astimezone(timezone(timedelta(hours=8))))
     assert event.model_dump(mode="json") == {**body, "at": "2026-10-15T01:02:03.123Z"}

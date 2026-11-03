@@ -7,7 +7,7 @@ import { interactionSpot, type InteractionId, type PhoneSpot } from '../interact
 import { ROCKETBOX_SCALE, disposeAvatar, inPlace, prepareAvatar, rocketboxLoader } from './rocketbox'
 
 export type CharacterAnimation = 'rest' | 'wake' | 'collapse' | 'recover'
-export type CharacterCommand = { destination: Waypoint | InteractionId | CharacterAnimation | 'reset' | 'resetInBed' | 'stop'; id: number; kind?: 'move' | 'interact' | 'animate'; approach?: Waypoint }
+export type CharacterCommand = { destination: Waypoint | InteractionId | CharacterAnimation | 'reset' | 'resetInBed' | 'resetAtDoor' | 'stop'; id: number; kind?: 'move' | 'interact' | 'animate'; approach?: Waypoint }
 export type CharacterStatus = { room: RoomId; destination: Waypoint | null; phase: 'loading' | 'idle' | 'walking' | 'interacting' | 'error' }
 export type InteractionPose = 'none' | 'reach' | 'phone'
 
@@ -92,10 +92,13 @@ export function ElderlyCharacter({ command, pose, speech, visible, paused, urgen
   useEffect(() => {
     if (command.id === 0 || command.id === handledCommandId.current || !shell.current) return
     handledCommandId.current = command.id
-    if (command.destination === 'reset' || command.destination === 'resetInBed') {
+    if (command.destination === 'reset' || command.destination === 'resetInBed' || command.destination === 'resetAtDoor') {
       // resetInBed starts her already lying down at the bedside, the end state of the 'rest' animation.
+      // resetAtDoor starts her by the entrance, facing the door, for the outing scenarios.
       const inBed = command.destination === 'resetInBed'
-      const start = inBed ? 'bedside' : 'bedroom'
+      const atDoor = command.destination === 'resetAtDoor'
+      const start = inBed ? 'bedside' : atDoor ? 'entryLane' : 'bedroom'
+      const room: RoomId = atDoor ? 'dining' : 'bedroom'
       queue.current = []
       pausedNext.current = null
       interaction.current = null
@@ -103,7 +106,7 @@ export function ElderlyCharacter({ command, pose, speech, visible, paused, urgen
       restPose.current = inBed ? 1 : 0
       fallPose.current = 0
       anchor.current = start
-      lastRoom.current = 'bedroom'
+      lastRoom.current = room
       destination.current = null
       shell.current.position.set(WAYPOINTS[start][0], .045, WAYPOINTS[start][1])
       shell.current.rotation.y = 0
@@ -111,7 +114,7 @@ export function ElderlyCharacter({ command, pose, speech, visible, paused, urgen
         if (inBed) { poseGroup.current.position.set(-1.4, .82, BED_HEAD_OFFSET); poseGroup.current.rotation.set(-Math.PI / 2, 0, 0) }
         else { poseGroup.current.position.set(0, 0, 0); poseGroup.current.rotation.set(0, 0, 0) }
       }
-      onStatus({ room: 'bedroom', destination: null, phase: 'idle' })
+      onStatus({ room, destination: null, phase: 'idle' })
       invalidate()
       return
     }

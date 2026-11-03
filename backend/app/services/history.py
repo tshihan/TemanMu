@@ -14,6 +14,7 @@ from dataclasses import dataclass, field, replace
 from datetime import date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
+from app.db import access_events as db_access
 from app.db import away_periods as db_away
 from app.db import incidents as db_incidents
 from app.db import neighbours as db_neighbours
@@ -21,6 +22,7 @@ from app.db import readings as db_readings
 from app.db import units as db_units
 from app.db.pool import connection
 from app.models import (
+    HistoryCardTap,
     HistoryDay,
     HistoryHour,
     HistoryIncident,
@@ -48,6 +50,7 @@ class _Signals:
     water_initial: float = 0.0
     power_initial: float = 0.0
     door_opened_at: list[datetime] = field(default_factory=list)
+    card_taps: list[tuple[datetime, str]] = field(default_factory=list)  # (at, "out" | "in")
     away: list[Window] = field(default_factory=list)
     missing: list[tuple[datetime, datetime, str]] = field(default_factory=list)
 
@@ -145,9 +148,11 @@ def _simulated(unit_id: str, day: date, days_ago: int, wake: time, outings: list
 
     doors = [t for o in outs for t in o]
     doors += [t for w in away for t in w if midnight < t < at(1440)]
+    # A card home taps out as she leaves and in as she returns, for the same outings.
+    taps = [(t, d) for w in outs + away for t, d in zip(w, ("out", "in")) if midnight < t < at(1440)]
     return _Signals(
         water=_steps(loads(water), 0.0), power=_steps(loads(power), standby_kw), power_initial=standby_kw,
-        door_opened_at=sorted(doors), away=away,
+        door_opened_at=sorted(doors), card_taps=sorted(taps), away=away,
         missing=[(at(a), at(b), "feed_offline") for a, b in _OFFLINE.get(days_ago, [])],
     )
 
@@ -180,6 +185,7 @@ def _day(day: date, source: str, signals: _Signals, cover: Window, zone: ZoneInf
         date=day.isoformat(), starts_at=start, ends_at=end, source=source, hours=hours,
         first_water_at=min(firsts, default=None),
         door_opened_at=[t for t in signals.door_opened_at if inside(t)],
+        card_taps=[HistoryCardTap(at=t, direction=d) for t, d in signals.card_taps if inside(t)],
         away=[HistoryInterval(starts_at=max(a, start), ends_at=min(b, end)) for a, b in signals.away
               if a < end and start < b],
         missing=[MissingInterval(starts_at=max(a, start), ends_at=min(b, end), reason=r)
@@ -204,6 +210,7 @@ async def unit_history(unit_id: str, days: int) -> UnitHistory | None:
         readings = await db_readings.list_readings(unit_id, conn=c)
         away = await db_away.list_windows(unit_id, conn=c)
         incidents = await db_incidents.list_incidents(unit_id, conn=c)
+        taps = await db_access.list_access_events(unit_id, conn=c)
     wake, outings = (rhythm[1], rhythm[2]) if rhythm else (time(7, 0), [])
     standby = baseline.standby_power_kw
 
@@ -213,8 +220,15 @@ async def unit_history(unit_id: str, days: int) -> UnitHistory | None:
         power=[(r.recorded_at, float(r.value)) for r in readings if r.sensor == "electricity"],
         power_initial=standby,
         door_opened_at=[r.recorded_at for r in readings if r.sensor == "door" and r.value == "open"],
+        card_taps=[(e.at, e.direction) for e in taps],
         away=away,
     )
+    # Each home has one outing signal: a card home has no door sensor, a door home no card taps.
+    card = unit.outing_signal == "card"
+
+    def outing_signal(signals: _Signals) -> _Signals:
+        return replace(signals, door_opened_at=[]) if card else replace(signals, card_taps=[])
+
     today = now.astimezone(zone).date()
     reset_day = reset_at.astimezone(zone).date()
     result = []
@@ -224,10 +238,10 @@ async def unit_history(unit_id: str, days: int) -> UnitHistory | None:
         end = start + timedelta(days=1)
         if day < reset_day:
             signals = _simulated(unit_id, day, days_ago, wake, outings, standby, zone)
-            result.append(_day(day, "simulated_history", signals, (start, end), zone, []))
+            result.append(_day(day, "simulated_history", outing_signal(signals), (start, end), zone, []))
             continue
         before = [(start, reset_at, "before_demo")] if day == reset_day else []
-        signals = replace(live, missing=before)
+        signals = outing_signal(replace(live, missing=before))
         result.append(_day(day, "live", signals, (max(start, reset_at), min(end, now)), zone, incidents,
                            unit.quiet_gap.last_water_activity_at))
     return UnitHistory(unit_id=unit_id, standby_power_kw=standby, days=result)

@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import { api } from './index'
-import type { Config, Incident, Notification, Reading, RealtimeEvent, Role, Status, Unit } from './types'
+import type { AccessEvent, Config, Incident, Notification, Reading, RealtimeEvent, Role, Status, Unit } from './types'
 
 export interface StatusChange {
   unit_id: string
@@ -18,12 +18,14 @@ export interface AppState {
   statusHistory: StatusChange[]
   config: Config | null
   readingsByUnit: Record<string, Reading[]>
+  /** Card taps received since the last snapshot, like readingsByUnit. */
+  accessByUnit: Record<string, AccessEvent[]>
   snapshotRevision: number
 }
 
 let state: AppState = {
   connected: false, loaded: false, units: [], incidents: [], notifications: [], statusHistory: [], config: null,
-  readingsByUnit: {}, snapshotRevision: 0,
+  readingsByUnit: {}, accessByUnit: {}, snapshotRevision: 0,
 }
 const subscribers = new Set<() => void>()
 const eventSubscribers = new Set<(event: RealtimeEvent) => void>()
@@ -45,7 +47,7 @@ function upsert<T>(items: T[], item: T, key: keyof T): T[] {
 export function applyEvent(event: RealtimeEvent): void {
   switch (event.type) {
     case 'snapshot':
-      setState({ ...state, loaded: true, ...event.data, statusHistory: [], readingsByUnit: {}, snapshotRevision: state.snapshotRevision + 1 })
+      setState({ ...state, loaded: true, ...event.data, statusHistory: [], readingsByUnit: {}, accessByUnit: {}, snapshotRevision: state.snapshotRevision + 1 })
       break
     case 'unit.updated': {
       const previous = state.units.find(unit => unit.unit_id === event.data.unit_id)
@@ -68,6 +70,12 @@ export function applyEvent(event: RealtimeEvent): void {
       setState({ ...state, readingsByUnit: {
         ...state.readingsByUnit,
         [event.data.unit_id]: [...(state.readingsByUnit[event.data.unit_id] || []), event.data],
+      } })
+      break
+    case 'access.received':
+      setState({ ...state, accessByUnit: {
+        ...state.accessByUnit,
+        [event.data.unit_id]: [...(state.accessByUnit[event.data.unit_id] || []), event.data],
       } })
       break
     case 'companion.message_delivered':

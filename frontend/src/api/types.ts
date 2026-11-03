@@ -4,6 +4,9 @@ export type Role = 'township' | 'caregiver'
 export type Sensor = 'water' | 'electricity' | 'door'
 export type DoorState = 'open' | 'closed'
 export type OutingSignal = 'card' | 'door'
+export type AccessDirection = 'out' | 'in'
+/** A resident's access-card tap at the lift lobby or gate (card homes only). */
+export interface AccessEvent { unit_id: UnitId; card_holder: string; direction: AccessDirection; access_point: string; at: string }
 export type Status = 'routine' | 'possible_away' | 'unusual_inactivity' | 'unresolved_concern'
 export type IncidentState = 'grace' | 'notified' | 'acknowledged' | 'closed' | 'auto_resolved'
 export type Outcome = 'resident_ok' | 'assistance_provided' | 'sent_to_hospital' | 'resident_away' | 'resident_activity_detected'
@@ -64,6 +67,10 @@ export interface Unit {
   active_incident_id: string | null
   /** Current and upcoming away periods, earliest first. */
   away_periods: AwayPeriod[]
+  /** Card homes: the latest tap. Township screens show it only while a concern is open. */
+  last_access: { direction: AccessDirection; access_point: string; at: string } | null
+  /** Card homes: set after a tap in until water or electricity is used at home. */
+  awaiting_arrival_since: string | null
 }
 
 export type IncidentEventType =
@@ -180,7 +187,10 @@ export interface HistoryDay {
   source: 'simulated_history' | 'live'
   hours: HistoryHour[]
   first_water_at: string | null
+  /** Door homes only. */
   door_opened_at: string[]
+  /** Card homes only: lift-lobby or gate taps. */
+  card_taps: { at: string; direction: AccessDirection }[]
   away: HistoryInterval[]
   missing: MissingInterval[]
   incidents: HistoryIncident[]
@@ -199,6 +209,7 @@ export interface Snapshot {
 export type RealtimeEvent =
   | { type: 'snapshot'; at: string; data: Snapshot }
   | { type: 'reading.received'; at: string; data: Reading }
+  | { type: 'access.received'; at: string; data: AccessEvent }
   | { type: 'unit.updated'; at: string; data: Unit }
   | { type: 'incident.updated'; at: string; data: Incident }
   | { type: 'notification.created'; at: string; data: Notification }
@@ -223,6 +234,7 @@ export interface Api {
   getBuddy(unitId: UnitId): Promise<BuddyMatch | null>
   getNeighbours(unitId: UnitId): Promise<NeighbourState>
   postReading(reading: Omit<Reading, 'recorded_at'> & { recorded_at?: string }): Promise<{ accepted: true; unit: Unit }>
+  postAccessEvent(event: Omit<AccessEvent, 'at'> & { at?: string }): Promise<{ accepted: true; event: AccessEvent; unit: Unit }>
   acknowledgeIncident(id: string, actor: { role: Role; name: string }): Promise<Incident>
   caregiverResponse(id: string, actor: { role: 'caregiver'; name: string; action: 'caregiver_checking_in' | 'township_requested' | 'resident_confirmed_safe' }): Promise<Incident>
   confirmHome(id: UnitId, actor: { role: 'caregiver'; name: string }): Promise<Unit>
