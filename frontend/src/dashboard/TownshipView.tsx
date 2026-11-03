@@ -1,11 +1,12 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { ChevronDown, ChevronRight, ChevronUp, DoorOpen, PhoneCall, Search, Timer, TriangleAlert, X, type LucideIcon } from 'lucide-react'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { Building2, ChevronDown, ChevronRight, ChevronUp, ClipboardList, DoorOpen, PhoneCall, Search, Timer, TriangleAlert, X, type LucideIcon } from 'lucide-react'
 import seed from '../../../shared/seed.json'
 import { useAppState } from '../api/store'
 import type { Incident, Status, Unit } from '../api/types'
 import { playTone, unlockAudio } from '../caregiver/sound'
 import { Acknowledge, IncidentPanel, alertReason } from './IncidentPanel'
 import { isHomeCheck } from '../caregiver/copy'
+import { IncidentHistory } from './IncidentHistory'
 import './township.css'
 
 type Shown = Status | 'none'
@@ -92,7 +93,8 @@ function liveRow(unit: Unit, now: number): Row {
 const withCore = (list: Row[]): (Row | null)[] => [...list.slice(0, 3), null, ...list.slice(3)]
 
 export function TownshipView() {
-  const { units, incidents } = useAppState()
+  const { units, incidents, connected, snapshotRevision } = useAppState()
+  const [tab, setTab] = useState<'live' | 'history'>('live')
   const start = useRef(Date.now())
   const [now, setNow] = useState(() => Date.now())
   const [selected, setSelected] = useState(() => units.find(unit => unit.controllable)?.unit_id || 'A-105')
@@ -103,11 +105,15 @@ export function TownshipView() {
   const [heldResponseId, setHeldResponseId] = useState<string | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
   const stepAlert = useRef<(direction: 1 | -1) => void>(() => {})
+  const floorViewport = useRef<HTMLDivElement>(null)
+  const floorHeight = useRef(0)
+  const viewportTop = useRef(3)
 
   const step = (delta: number) => setFocus(current => Math.max(1, Math.min(FLOORS, current + delta)))
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1000)
     const onKey = (event: KeyboardEvent) => {
+      if (tab !== 'live') return
       if (event.metaKey || event.ctrlKey || event.altKey) return
       const target = event.target instanceof HTMLElement ? event.target : document.body
       if (/INPUT|TEXTAREA|SELECT/.test(target.tagName) || target.isContentEditable || target.closest('.tm-resp')) return
@@ -126,7 +132,7 @@ export function TownshipView() {
     }
     window.addEventListener('keydown', onKey)
     return () => { window.clearInterval(timer); window.removeEventListener('keydown', onKey) }
-  }, [])
+  }, [tab])
 
   const rows = [...units.map(unit => liveRow(unit, now)), ...sampleRows(start.current, now)]
   const byFloor = (floor: number) => rows.filter(row => row.floor === floor)
@@ -141,6 +147,36 @@ export function TownshipView() {
   const belowAlerts = alerts.filter(row => row.floor < top - 2).length
   const alertFloors = [...new Set(alerts.map(row => row.floor))].sort((a, b) => b - a)
   const attention = [...alerts].sort((a, b) => ORDER.indexOf(a.status) - ORDER.indexOf(b.status) || b.elapsed - a.elapsed)
+
+  useLayoutEffect(() => {
+    const viewport = floorViewport.current
+    const row = viewport?.firstElementChild
+    if (!viewport || !row) return
+    const resize = () => {
+      const height = row.getBoundingClientRect().height
+      if (!height) return
+      floorHeight.current = height
+      viewport.style.height = `${height * 3}px`
+      viewport.scrollTop = (FLOORS - viewportTop.current) * height
+    }
+    resize()
+    const observer = new ResizeObserver(resize)
+    observer.observe(row)
+    return () => observer.disconnect()
+  }, [])
+
+  useLayoutEffect(() => {
+    if (!floorViewport.current || viewportTop.current === top) return
+    viewportTop.current = top
+    floorViewport.current.scrollTop = (FLOORS - top) * floorHeight.current
+  }, [top])
+
+  function scrollFloors() {
+    if (!floorViewport.current || !floorHeight.current) return
+    const visibleTop = Math.max(3, Math.min(FLOORS, FLOORS - Math.round(floorViewport.current.scrollTop / floorHeight.current)))
+    viewportTop.current = visibleTop
+    setFocus(current => Math.max(3, Math.min(FLOORS, current + 1)) === visibleTop ? current : visibleTop - 1)
+  }
 
   useEffect(() => { stepAlert.current = direction => {
     if (!attention.length) return
@@ -171,11 +207,11 @@ export function TownshipView() {
   const checkingMine = liveIncident?.state === 'acknowledged' && liveIncident.acknowledged_by?.role === 'township' && liveIncident.acknowledged_by.name === responder
   const dialogOpened = useRef<string | null>(null)
   useEffect(() => {
-    if (!checkingMine || !liveId || dialogOpened.current === liveId) return
+    if (tab !== 'live' || !checkingMine || !liveId || dialogOpened.current === liveId) return
     dialogOpened.current = liveId
     setDialogId(liveId)
-  }, [checkingMine, liveId])
-  const dialogOpen = !!activeIncident && dialogId === activeIncident.incident_id
+  }, [checkingMine, liveId, tab])
+  const dialogOpen = tab === 'live' && !!activeIncident && dialogId === activeIncident.incident_id
   const finish = () => { setHeldResponseId(null); setDialogId(null) }
 
   // A new alert brings its floor into view; keyboard focus stays where the guard left it.
@@ -234,7 +270,8 @@ export function TownshipView() {
     setQueryMsg(matches.length > 1 ? `${matches[index].id}: ${index + 1} of ${matches.length}. Press Enter for the next.` : '')
   }
 
-  return <div className="tm-township">
+  return <TownshipShell tab={tab} onSelect={setTab} needsResponse={!!waiting}>
+    <div className="tm-township">
     <p className="tm-sr" role="status">{announcement}</p>
     {waiting && activeUnit && <section className="tm-alertbar" aria-label="Alert needing a responder">
       <span className="tm-alertbar-icon" aria-hidden="true"><TriangleAlert size={26} strokeWidth={2.25} /></span>
@@ -243,13 +280,16 @@ export function TownshipView() {
         <p className="tm-alertbar-meta">{alertReason(waiting, activeUnit)}{!isHomeCheck(waiting) && waiting.events.some(event => event.type === 'township_requested') ? ` · ${activeUnit.caregiver_name} asked you to visit` : ''} · Floor {activeRow?.floor ?? 1} · reminder {waiting.reminder_count + 1} in {waiting.next_reminder_at ? duration((Date.parse(waiting.next_reminder_at) - now) / 1000) : '–'}</p>
       </div>
       <div className="tm-alertbar-actions">
-        <Acknowledge key={waiting.incident_id} incident={waiting} className="tm-alertbar-ack" />
-        <a className="tm-alertbar-999" href="tel:999">Call 999</a>
+        {tab === 'history' ? <button type="button" className="tm-alertbar-ack" onClick={() => setTab('live')}>Open live monitoring</button> : <>
+          <Acknowledge key={waiting.incident_id} incident={waiting} className="tm-alertbar-ack" />
+          <a className="tm-alertbar-999" href="tel:999">Call 999</a>
+        </>}
       </div>
     </section>}
+    <section id="tm-panel-live" role="tabpanel" aria-labelledby="tm-tab-live" hidden={tab !== 'live'} className="tm-live-panel">
     <header className="tm-toolbar">
       <div className="tm-title">
-        <h1>Unit status</h1>
+        <h1>Putra Heights</h1>
         <p>Block A · {FLOORS} floors · {FLOORS * UNITS_PER_FLOOR} units<span className="tm-live">Live <time>{clockTime(now)}</time></span></p>
       </div>
       <div className="tm-chips" role="group" aria-label="Show only">
@@ -324,8 +364,8 @@ export function TownshipView() {
         {top < FLOORS && <button type="button" className={`tm-more above ${aboveAlerts ? 'has-alerts' : ''}`} onClick={() => step(1)}>
           <ChevronUp size={14} aria-hidden="true" />{plural(FLOORS - top, 'floor')} above · {aboveAlerts ? plural(aboveAlerts, 'alert') : 'all clear'}
         </button>}
-        <div>
-          {lensFloors.map(floor => {
+        <div ref={floorViewport} className="tm-floor-viewport" role="region" aria-label="Scrollable three-floor condo view" aria-describedby="tm-floor-scroll-hint" tabIndex={0} onScroll={scrollFloors}>
+          {Array.from({ length: FLOORS }, (_, index) => FLOORS - index).map(floor => {
             const list = byFloor(floor)
             const count = list.filter(row => isAlert(row.status)).length
             return <div key={floor} className="tm-row">
@@ -375,6 +415,7 @@ export function TownshipView() {
             <div className="tm-lobby-ground" aria-hidden="true" />
           </div>
         </div>}
+        <p className="tm-floor-scroll-hint" id="tm-floor-scroll-hint">Scroll to browse floors. Use ↑ and ↓ when the building is focused.</p>
         <p className="tm-bar-key"><span aria-hidden="true"><span /></span>Each bar shows how long the home has been quiet, against that resident's usual longest gap.</p>
       </section>
 
@@ -409,10 +450,39 @@ export function TownshipView() {
         </section>
       </aside>
     </div>
+    </section>
+    <IncidentHistory incidents={incidents} units={units} now={now} connected={connected} active={tab === 'history'} snapshotRevision={snapshotRevision} />
     <CheckDialog open={dialogOpen} onClose={() => setDialogId(null)}>
       {dialogOpen && activeIncident && activeUnit && <IncidentPanel key={activeIncident.incident_id} incident={activeIncident} unit={activeUnit}
         floor={activeRow?.floor ?? 1} onDone={finish} variant="dialog" onCloseDialog={() => setDialogId(null)} />}
     </CheckDialog>
+    </div>
+  </TownshipShell>
+}
+
+function TownshipShell({ tab, onSelect, needsResponse, children }: {
+  tab: 'live' | 'history'; onSelect: (tab: 'live' | 'history') => void; needsResponse: boolean; children: ReactNode
+}) {
+  const tabs = [
+    { id: 'live' as const, label: 'Live monitoring', Icon: Building2 },
+    { id: 'history' as const, label: 'Incident log', Icon: ClipboardList },
+  ]
+  return <div className="tm-workspace">
+    <nav className="tm-sidebar" aria-label="Township sections">
+      <p>Township</p>
+      <div role="tablist" aria-label="Township views">{tabs.map(({ id, label, Icon }, index) => <button type="button" role="tab" id={`tm-tab-${id}`} key={id}
+        aria-selected={tab === id} aria-controls={`tm-panel-${id}`} tabIndex={tab === id ? 0 : -1}
+        onClick={() => onSelect(id)} onKeyDown={event => {
+          if (!['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+          event.preventDefault()
+          const next = event.key === 'Home' ? tabs[0] : event.key === 'End' ? tabs[1] : tabs[1 - index]
+          onSelect(next.id)
+          document.getElementById(`tm-tab-${next.id}`)?.focus()
+        }}>
+        <Icon size={19} aria-hidden="true" /><span>{label}</span>{id === 'live' && needsResponse && <span className="tm-sidebar-alert" aria-label="Responder needed" />}
+      </button>)}</div>
+    </nav>
+    <div className="tm-workspace-content">{children}</div>
   </div>
 }
 

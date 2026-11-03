@@ -84,6 +84,25 @@ several checks are due, the earliest one fires.
 | **Continuous water** | Water flowing without a break | `continuous_water_seconds` = 45 s | "Water has continued flowing longer than expected … tap left on or a leak" |
 | **Sustained power** | Power > standby + `high_power_above_standby_kw` (1.0 kW) without a break | `high_power_seconds` = 45 s | "Electricity use has stayed unusually high …" |
 
+### Fast-forward (demo only)
+
+A-105, the unit the simulator controls, has `usual_quiet_gap_seconds` = 5 in
+[`shared/seed.json`](../shared/seed.json). The rules engine waits these real 5 seconds; nothing
+in the backend is sped up.
+
+In the Unusual Inactivity and False Alarm Recovery scenarios, the simulator shows those
+5 seconds as a fast-forward card counting from 0h 00m to 4h 00m, the 4-hour quiet gap of the
+story ([`HomeEnvironment.tsx`](../frontend/src/home/HomeEnvironment.tsx), `QuietGapOverlay`).
+The 4 hours is display-only: it is a fixed constant in the frontend, not read from the backend.
+
+The scenario turns on the demo watch only when it reaches the quiet-gap step, so the walk before
+it does not use up the 5 seconds.
+
+The card scenarios work the same way. Not Back Yet shows A-105's 20-second
+`usual_outing_seconds` as a 3-hour outing, and Tapped In, Home Quiet shows the 20-second
+`ARRIVAL_WINDOW_SECONDS` as 20 minutes (`GAP_COPY` in the same file). Both turn on the watch
+only at their fast-forward step.
+
 ---
 
 ## 4. Combined situations

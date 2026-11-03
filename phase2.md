@@ -17,7 +17,7 @@ Existing away-mode implementation notes are preserved in [Away-period implementa
 | **Access Card Integration** | Use resident-linked entry and exit events to provide outing context and reduce additional door-sensor installation where township infrastructure supports integration. Cross-check events with water and electricity activity; a card swipe alone does not establish resident presence. | **P0** |
 | **Caregiver App — Mum/Dad Is Away** | Extend existing away periods with return reminders, extension, shared pause visibility and a return-confirmation prompt when household activity occurs. Require an outcome for an existing unresolved alert before pausing. | **P0** |
 | **Machine Learning — Personal Routine Model** | Evaluate Isolation Forest supported by time-of-day historical baselines, initially in shadow mode. Compare with existing rules before allowing model decisions to affect alerts. | **P0** |
-| **Township Incident Record** | Save the original trigger, responder acceptance, outcome, short note and event timeline in the existing backend database. Keep the current township flow; no visit recording or Reports area. | **P0** |
+| **Township Incident Record** | Save the original trigger, responder acceptance, outcome, short note and event timeline in the existing backend database. Add Live monitoring and Incident log tabs with summary statistics and read-only record details. Keep the current response flow; no visit recording or generated reports. | **P0** |
 | **Caregiver Activity History — 7 / 30 Days** | Add daily activity timelines and selected-day charts, with access events, away periods, welfare-check markers and explicit missing-data labels. | **P0** |
 
 ## 1. Access-card context
@@ -95,7 +95,24 @@ Candidate features:
 
 ### Agreed scope
 
-Keep the current operator flow: accept the alert, select an outcome, optionally add a short note, and submit. Store the record in the backend database using the existing `incidents` and `incident_events` tables. No arrival/visit action, Reports area, document generation, separate report tables or follow-up workflow is required.
+Keep the current operator flow: accept the alert, select an outcome, optionally add a short note, and submit. Store the record in the backend database using the existing `incidents` and `incident_events` tables. Add a left navigation sidebar with **Live monitoring** (default) and **Incident log**. No arrival/visit action, document generation, separate report tables or follow-up workflow is required.
+
+### Incident-log interface
+
+- Preserve live floor/unit selection and filters across tab changes. On narrow screens, show the navigation as a compact row.
+- Show finished (`closed` and `auto_resolved`) incidents only, newest completion first, with **7 days / 30 days / All** filters and 20 records per page. Calendar windows include today in Asia/Kuala_Lumpur time. Use the saved closing timestamp, falling back to a closing/automatic-resolution event; undated records appear only under All as **Not recorded**.
+- Display large counts for **Finished incidents**, **Township help requested** (unique finished incidents with a recorded `notified` event), and **Enrolled residents** (current actual resident records, including away/hospital; exclude illustrative units). Only the first two counts follow the period filter.
+- Show completion date/time, unit/resident, original trigger, responder, outcome and **View details**. A read-only drawer shows the incident ID, original trigger, opened/completed times, acceptance, outcome, saved note and chronological timeline. Missing fields say **Not recorded**. Automatic resolution is not confirmation of safety.
+- Keep sounds, reminders and a prominent response-needed banner active while the log is open. **Open live monitoring** returns to the existing response workflow without automatically switching tabs.
+- Reuse the existing shared snapshot and incident updates. Label mock records as simulated, retain honest empty states and show a stale-data notice on disconnection. Reset Demo clears mock history.
+
+### Hospital transfer details
+
+- Selecting **Sent to hospital** offers an optional hospital name and actual transfer date/time (Malaysia time), alongside the existing guard note. Unknown fields remain blank; submitting the record still stores a separate completion timestamp.
+- Persist `hospital_name` and `hospital_sent_at` on the existing incident using migration `014_hospital_transfer_details.sql`. Existing records keep null values. The close API accepts the fields only for hospital outcomes and rejects a future transfer time.
+- The caregiver hospital card names the guard recorded on the closing event or acceptance, and the whole card opens read-only transfer details: time sent, hospital, guard, note and recorded time. Missing fields show **Not recorded**; an outcome label is not treated as a guard note. Later unrelated incidents do not replace the hospital record.
+- Keep hospital details inside the caregiver app/phone frame as an in-app screen with an internally scrolling body, close/Escape controls and restored card focus. Notification banners respect the app's safe-area inset (including the desktop preview's notch), remain reachable over details and open the appropriate alert screen.
+- Hospital care state continues until caregiver return-home confirmation. Viewing details does not resume monitoring or alter any incident.
 
 | Field | Saved information |
 | --- | --- |
@@ -112,7 +129,7 @@ Keep the current operator flow: accept the alert, select an outcome, optionally 
 - Persist each existing action as it happens, retaining unfinished incidents too.
 - Capture `trigger_reason` on the incident so later home-status changes cannot replace the original explanation. Historical records without the full explanation retain null; their existing detected events remain available.
 - Save outcome, note, closing event and related home-state changes in the existing database transaction. Preserve row-lock/state checks that reject repeated acceptance or closure.
-- Reload records through the existing incident endpoints; no new Reports interface is needed.
+- Reload records through the existing snapshot and incident endpoints; the incident log needs no new API or database schema.
 - Keep false-alarm outcomes and automatically resolved episodes in history. Automatic activity recovery is not a completed human visit or confirmation of safety.
 - Keep human-recorded emergency calls distinct from dispatch confirmation. No LLM or external API key is needed.
 - Verify that records survive closing and reopening the database connection pool. Mock-mode history is demonstration state, not persistent database storage; Reset Demo deliberately clears incident history.

@@ -9,7 +9,7 @@ from typing import Annotated, Any, Literal, TypeAlias
 
 from pydantic import AwareDatetime, BaseModel, Field, PlainSerializer, model_serializer, model_validator
 
-from app.timeutil import iso
+from app.timeutil import iso, utc_now
 
 # Timestamps must be timezone-aware on input (a naive value is a 422, not a later 500) and
 # always serialise as UTC ISO-8601 with millisecond precision and a Z suffix.
@@ -220,6 +220,8 @@ class Incident(ContractModel):
     acknowledged_by: Acknowledgement | None
     outcome: Outcome | None
     report: str | None = None
+    hospital_name: str | None = None
+    hospital_sent_at: UtcDatetime | None = None
     closed_at: UtcDatetime | None
     events: list[IncidentEvent]
 
@@ -452,8 +454,14 @@ class EscalateRequest(ContractModel):
 class CloseRequest(ContractModel):
     role: Role
     name: str = Field(min_length=1)
-    outcome: Literal["resident_ok", "assistance_provided", "sent_to_hospital", "resident_away"]
+    outcome: Literal[
+        "resident_ok", "assistance_provided", "sent_to_hospital", "resident_away",
+        # Home check during an away period; monitoring.close checks the outcome fits the incident.
+        "home_secure", "known_person_home", "resident_returned", "security_concern",
+    ]
     report: str | None = Field(default=None, min_length=1, max_length=500)
+    hospital_name: str | None = Field(default=None, max_length=200)
+    hospital_sent_at: UtcDatetime | None = None
 
     @model_validator(mode="after")
     def _clean_report(self) -> "CloseRequest":
@@ -463,6 +471,13 @@ class CloseRequest(ContractModel):
                 raise ValueError("Report description cannot be blank")
         if self.role == "township" and not self.report:
             raise ValueError("Township response requires a short report")
+        if self.hospital_name is not None:
+            self.hospital_name = self.hospital_name.strip() or None
+        if self.outcome != "sent_to_hospital" and (self.hospital_name is not None or self.hospital_sent_at is not None):
+            raise ValueError("Hospital details require the sent-to-hospital outcome")
+        if self.hospital_sent_at is not None:
+            if self.hospital_sent_at > utc_now():
+                raise ValueError("Hospital transfer time cannot be in the future")
         return self
 
 

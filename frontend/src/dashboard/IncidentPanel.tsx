@@ -115,6 +115,8 @@ function OutcomeForm({ incident }: { incident: Incident }) {
   const [picked, setPicked] = useState<CloseOutcome | ''>('')
   const [noteOpen, setNoteOpen] = useState(false)
   const [note, setNote] = useState('')
+  const [hospitalName, setHospitalName] = useState('')
+  const [hospitalTime, setHospitalTime] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const unable = incident.events.some(event => event.type === 'unable_to_verify')
@@ -127,11 +129,19 @@ function OutcomeForm({ incident }: { incident: Incident }) {
 
   async function submit() {
     if (!outcome) return
+    const sentAt = outcome === 'sent_to_hospital' && hospitalTime ? Date.parse(`${hospitalTime}+08:00`) : null
+    if (sentAt !== null && (!Number.isFinite(sentAt) || sentAt > Date.now())) {
+      setError('Choose a valid transfer time that is not in the future. Times are Malaysia time.')
+      return
+    }
     setBusy(true)
     setError(null)
     // The backend requires a township report; the outcome label stands in when no note is added.
     const report = note.trim() || options.find(item => item.value === outcome)!.label
-    try { applyEvent({ type: 'incident.updated', at: new Date().toISOString(), data: await api.closeIncident(incident.incident_id, { ...actor, outcome, report }) }) }
+    try { applyEvent({ type: 'incident.updated', at: new Date().toISOString(), data: await api.closeIncident(incident.incident_id, {
+      ...actor, outcome, report,
+      ...(outcome === 'sent_to_hospital' ? { hospital_name: hospitalName.trim() || null, hospital_sent_at: sentAt === null ? null : new Date(sentAt).toISOString() } : {}),
+    }) }) }
     catch (cause) { setError(actionError(cause)); await refreshIncident(incident.incident_id) }
     finally { setBusy(false) }
   }
@@ -145,6 +155,11 @@ function OutcomeForm({ incident }: { incident: Incident }) {
         <span className="tm-outcome-text"><span>{item.label}</span>{item.help && <small>{item.help}</small>}</span>
       </button>)}
     </div>
+    {outcome === 'sent_to_hospital' && <div className="tm-hospital-fields">
+      <label>Hospital name (if known)<input type="text" maxLength={200} value={hospitalName} onChange={event => setHospitalName(event.target.value)} disabled={busy} /></label>
+      <label>Time sent to hospital (Malaysia time)<input type="datetime-local" value={hospitalTime} onChange={event => setHospitalTime(event.target.value)} disabled={busy} /></label>
+      <p>Leave unknown details blank. The time you submit this record is saved separately.</p>
+    </div>}
     {unable && !called && !isHomeCheck(incident) && <p className="tm-resp-hint">Record a 999 call to choose another outcome.</p>}
     {noteOpen
       ? <textarea className="tm-outcome-note" rows={2} maxLength={500} aria-label="Note for the caregiver" placeholder="Anything the caregiver should know"
