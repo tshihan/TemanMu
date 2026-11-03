@@ -98,7 +98,7 @@ export default function App() {
       </div> */}
     </header>
 
-    <main className="workspace workspace-dashboard">
+    <main className={`workspace workspace-dashboard ${role === 'township' ? 'is-township' : ''}`}>
       <section className={`dashboard-panel ${role === 'township' ? 'is-township' : ''}`} aria-label="TemanMu product dashboard">
         {/* The township view carries its own compact header so floor 1 stays above the fold. */}
         {role !== 'township' && <div className="dashboard-header">
