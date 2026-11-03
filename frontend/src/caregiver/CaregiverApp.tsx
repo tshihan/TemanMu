@@ -23,7 +23,7 @@ const TABS: { id: Tab; label: string; Icon: typeof House }[] = [
   { id: 'together', label: 'Together', Icon: HeartHandshake }, { id: 'settings', label: 'Settings', Icon: Settings },
 ]
 const TONES: Partial<Record<Notification['kind'], ToneKind>> = { morning_reassurance: 'morning', alert: 'alert', reminder: 'reminder' }
-const THEME_COLOR: Record<Theme, string> = { light: '#e9ebe3', dark: '#101310' }
+const THEME_COLOR: Record<Theme, string> = { light: '#fef9ef', dark: '#101310' }
 
 // Preferences are per device; storage can be unavailable (private mode), so every access is guarded.
 const THEME_KEY = 'temanmu.caregiver.theme'
