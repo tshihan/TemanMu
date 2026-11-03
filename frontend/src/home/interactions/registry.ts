@@ -1,6 +1,6 @@
 import type { RoomId, Waypoint } from '../character/navigation'
 
-export type InteractionId = 'bathroomTap' | 'shower' | 'kitchenKettle' | 'television' | 'bedroomLamp' | 'mainDoor' | 'telephone'
+export type InteractionId = 'bathroomTap' | 'shower' | 'kitchenKettle' | 'television' | 'bedroomLamp' | 'mainDoor' | 'telephone' | 'cardReader'
 export type TelephoneState = 'idle' | 'ringing' | 'answering' | 'finished'
 export type ObjectStates = {
   bathroomTap: boolean; shower: boolean; kitchenKettle: boolean; television: boolean; bedroomLamp: boolean
@@ -11,6 +11,8 @@ export type InteractionBindings = {
   paused?: boolean
   disabled?: boolean
   responderDoorOpen?: boolean
+  /** The latest card tap at the lobby reader; `id` changes on every tap so the reader flashes again. */
+  cardTap?: { direction: 'out' | 'in'; id: number } | null
   /** Shown over the mobile phone after Unusual Inactivity's call goes unanswered. */
   phoneTag?: string | null
   phoneSpot?: PhoneSpot
@@ -31,6 +33,7 @@ export const INTERACTIONS: Record<InteractionId, { label: string; approach: Wayp
   bedroomLamp: { label: 'Bedroom Lamp', approach: 'bedside', room: 'bedroom', target: [-1.22, -4.13] },
   mainDoor: { label: 'Main Door', approach: 'mainDoor', room: 'mainDoor', target: [1.5, 5] },
   telephone: { label: 'Mobile Phone', approach: 'phoneApproach', room: 'living', target: [-2.65, 2.38] },
+  cardReader: { label: 'Lobby Card Reader', approach: 'readerApproach', room: 'mainDoor', target: [-1.97, 7.4] },
 }
 
 /** The mobile phone lives on the coffee table, except during the nap, when it is on the bedside table. */
@@ -52,5 +55,6 @@ export function interactionPrompt(id: InteractionId, states: ObjectStates) {
     case 'bedroomLamp': return states.bedroomLamp ? 'Turn Off Bedroom Lamp' : 'Turn On Bedroom Lamp'
     case 'mainDoor': return states.mainDoor ? 'Close Door' : 'Open Door'
     case 'telephone': return 'Answer Mobile Phone'
+    case 'cardReader': return 'Tap Access Card'
   }
 }

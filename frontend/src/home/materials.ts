@@ -57,7 +57,7 @@ function createMaterials() {
     linen: new THREE.MeshStandardMaterial({ map: linen, roughness: .97 }),
     rug: new THREE.MeshStandardMaterial({ map: rug, roughness: 1 }),
     tile: new THREE.MeshStandardMaterial({ map: tile, roughness: .65 }),
-    wall: matte('#eee5d5'), trim: matte('#d9cfb9'), edge: matte('#555c51'),
+    wall: matte('#eee5d5'), concrete: matte('#d6d0c3', .92), trim: matte('#d9cfb9'), edge: matte('#555c51'),
     sage: matte('#82917c'), green: matte('#345b35'), leaf: matte('#648849'),
     terracotta: matte('#b56f50'), blush: matte('#cf9a87'), cream: matte('#fff4dd'),
     porcelain: matte('#faf9f1', .2), dark: matte('#292f2c', .38), soil: matte('#42382b'),
@@ -66,6 +66,8 @@ function createMaterials() {
     glass: new THREE.MeshPhysicalMaterial({ color: '#bfdcd6', transparent: true, opacity: .2, roughness: .1, metalness: .12, depthWrite: false, side: THREE.DoubleSide }),
     mirror: new THREE.MeshStandardMaterial({ color: '#bdcdd0', metalness: .35, roughness: .12 }),
     lamp: new THREE.MeshStandardMaterial({ color: '#ffe7b3', emissive: '#ffcc80', emissiveIntensity: .45, roughness: .8 }),
+    readerIdle: new THREE.MeshStandardMaterial({ color: '#5d6b66', emissive: '#3c4a45', emissiveIntensity: .25, roughness: .4 }),
+    readerOk: new THREE.MeshStandardMaterial({ color: '#7fd08a', emissive: '#4fd16a', emissiveIntensity: 1.4, roughness: .3 }),
     screen: new THREE.MeshStandardMaterial({ color: '#202f2b', roughness: .15, metalness: .2 }),
   }
 }

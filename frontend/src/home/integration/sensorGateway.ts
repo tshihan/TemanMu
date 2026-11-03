@@ -11,7 +11,7 @@ export function valuesFromUnit(unit: Unit): SensorValue {
 const waterLoad = (states: ObjectStates) => (states.bathroomTap ? 6 : 0) + (states.shower ? 9 : 0)
 const powerLoad = (states: ObjectStates) => (states.kitchenKettle ? 1.65 : 0) + (states.television ? .12 : 0) + (states.bedroomLamp ? .06 : 0)
 
-export function readingForObject(object: Exclude<InteractionId, 'telephone'>, on: boolean, unit: Unit, states: ObjectStates): { sensor: Sensor; value: number | DoorState } {
+export function readingForObject(object: Exclude<InteractionId, 'telephone' | 'cardReader'>, on: boolean, unit: Unit, states: ObjectStates): { sensor: Sensor; value: number | DoorState } {
   if (object === 'mainDoor') return { sensor: 'door', value: on ? 'open' : 'closed' }
   const next = { ...states, [object]: on }
   if (object === 'bathroomTap' || object === 'shower') {

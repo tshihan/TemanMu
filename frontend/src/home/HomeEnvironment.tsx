@@ -3,7 +3,7 @@ import { Canvas, useThree } from '@react-three/fiber'
 import { CameraControls, CameraControlsImpl, ContactShadows, OrthographicCamera } from '@react-three/drei'
 import { ACESFilmicToneMapping, PCFShadowMap, PMREMGenerator } from 'three'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
-import { Architecture } from './Architecture'
+import { Architecture, LobbySign } from './Architecture'
 import { Bedroom } from './rooms/Bedroom'
 import { Bathroom } from './rooms/Bathroom'
 import { Kitchen } from './rooms/Kitchen'
@@ -109,6 +109,7 @@ function Scene({ command, characterCommand, responderCommand, responderVisible, 
     <ElderlyCharacter command={characterCommand} pose={pose} speech={sensorView ? null : speech} visible={visible && !sensorView} paused={paused} urgent={urgent} phoneSpot={interaction.phoneSpot}
       onStatus={onCharacterStatus} onReached={onReached} onArrived={onArrived} onAnimationComplete={onAnimationComplete} />
     <SensorBeacons unit={unit} pulses={pulses} sensorView={sensorView} />
+    {unit && !sensorView && <LobbySign />}
     <TownshipResponder command={responderCommand} visible={responderVisible && !sensorView} checking={responderChecking} note={responderNote} paused={paused} onArrived={onResponderArrived} />
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -.48, 0]} receiveShadow>
       <planeGeometry args={[200, 200]} /><meshStandardMaterial color="#eeeae1" roughness={1} />
@@ -205,6 +206,8 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
   const [selected, setSelected] = useState<InteractionId | null>(null)
   const [hovered, setHovered] = useState<InteractionId | null>(null)
   const [pose, setPose] = useState<InteractionPose>('none')
+  const [cardTap, setCardTap] = useState<InteractionBindings['cardTap']>(null)
+  const cardDirection = useRef<'out' | 'in'>('out')
   const [speech, setSpeech] = useState<string | null>(null)
   const [visible, setVisible] = useState(true)
   const [paused, setPaused] = useState(false)
@@ -335,7 +338,7 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
     const id = nextCharacterCommand(animation, undefined, 'animate')
     return waitForCharacter(id, signal)
   }
-  const sendObjectState = async (target: Exclude<InteractionId, 'telephone'>, on: boolean) => {
+  const sendObjectState = async (target: Exclude<InteractionId, 'telephone' | 'cardReader'>, on: boolean) => {
     const unit = latestUnit.current
     if (!unit) throw new Error('A-105 has not loaded from the backend')
     const reading = readingForObject(target, on, unit, localStates.current)
@@ -383,6 +386,11 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
         setSpeech(null)
         await actionClock.wait(.7, aborter.signal)
         setVisualStates({ ...localStates.current, telephone: 'idle' })
+      } else if (target === 'cardReader') {
+        // Visual only for now: the access-card event is not sent to the backend yet.
+        setCardTap({ direction: cardDirection.current, id: Date.now() })
+        sound.current.play('cardTap')
+        await actionClock.wait(.9, aborter.signal)
       } else {
         await sendObjectState(target, desired ?? !localStates.current[target])
         await actionClock.wait(.8, aborter.signal)
@@ -401,7 +409,7 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
   // While the resident is away nobody walks over: the object just changes, as if left on or used by
   // someone else. The backend's alert timers go on (and stay on until the period ends) so a tap or
   // kettle left running still raises its alert; the "too quiet" checks stay paused by the away period.
-  const toggleWhileAway = async (target: Exclude<InteractionId, 'telephone'>) => {
+  const toggleWhileAway = async (target: Exclude<InteractionId, 'telephone' | 'cardReader'>) => {
     if (!monitoringOn.current) await switchMonitoring(true)
     setSelected(target)
     try { await sendObjectState(target, !localStates.current[target]) } finally { setSelected(null) }
@@ -409,12 +417,12 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
   const manualInteract = (target: InteractionId, incomingCall = false) => {
     if (scenarioActive || resetBusy || characterStatus.phase === 'loading' || characterStatus.phase === 'error' || !homeUnit) return
     if (absent) {
-      if (target !== 'telephone') void toggleWhileAway(target).catch(error => console.error('Interaction failed', error))
+      if (target !== 'telephone' && target !== 'cardReader') void toggleWhileAway(target).catch(error => console.error('Interaction failed', error))
       return
     }
     void interactWith(target, incomingCall).catch(error => { if (!(error instanceof DOMException && error.name === 'AbortError')) console.error('Interaction failed', error) })
   }
-  const interaction: InteractionBindings = { states, selected, hovered, paused, responderDoorOpen, disabled: scenarioActive || resetBusy || !homeUnit,
+  const interaction: InteractionBindings = { states, selected, hovered, paused, responderDoorOpen, cardTap, disabled: scenarioActive || resetBusy || !homeUnit,
     phoneDisabledReason: absent ? `${homeUnit?.caregiver_relationship ?? 'The resident'} is ${inHospital ? 'in hospital' : 'away'}` : null,
     phoneTag: callCard === 'noAnswer' ? 'Unanswered' : null,
     phoneSpot: (scenario ?? picked) === 'falseAlarmRecovery' ? 'bedside' : 'living',
@@ -426,7 +434,7 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
   }
   const setObject = async (target: InteractionId, value: boolean) => {
     if (target === 'telephone') setVisualStates({ ...localStates.current, telephone: value ? 'ringing' : 'idle' })
-    else await sendObjectState(target, value)
+    else if (target !== 'cardReader') await sendObjectState(target, value)
   }
   const waitForIncident = (predicate: (incidents: Incident[]) => boolean, signal: AbortSignal) => new Promise<void>((resolve, reject) => {
     if (signal.aborted) { reject(new DOMException('Scenario stopped', 'AbortError')); return }
@@ -642,7 +650,8 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
       },
       playAnimation,
       interactWith: (object, value, approach, signal) => interactWith(object, false, approach, signal, value),
-      setCharacterVisible: setVisible, setObject, waitForQuietGap, waitForResolution, waitForOutcome,
+      setCharacterVisible: setVisible, setObject,
+      tapCard: (direction, signal) => { cardDirection.current = direction; return interactWith('cardReader', false, undefined, signal) }, waitForQuietGap, waitForResolution, waitForOutcome,
       // The phone tag stays up from the first ring until the caregiver and township alert goes out.
       waitForNoAnswer: async signal => {
         setCallCard('ringing')
@@ -665,7 +674,7 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
     // Wait a frame so the reset command commits before the first step replaces it.
     void Promise.all([settle, new Promise<void>(resolve => requestAnimationFrame(() => resolve()))]).then(() => controller.play(steps, actions, (index: number, step: ScenarioStep) => {
       if (step.kind === 'animate' && (step.animation === 'wake' || step.animation === 'recover')) sound.current.play('wake')
-      if (id === 'goingOut' && step.kind === 'visible' && step.value) sound.current.play('return')
+      if (step.kind === 'visible' && step.value) sound.current.play('return')
       setScenarioProgress({ index: index + 1, total: steps.length, label: step.label, kind: step.kind })
     }))
       .then(() => {

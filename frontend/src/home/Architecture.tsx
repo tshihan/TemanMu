@@ -1,5 +1,6 @@
-import { useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
+import { Html } from '@react-three/drei'
 import { MathUtils, type Group } from 'three'
 import { Box, Plant } from './primitives'
 import { getMaterials } from './materials'
@@ -47,6 +48,36 @@ function EntranceDoor({ interaction }: { interaction?: InteractionBindings }) {
   </InteractiveObject> : model
 }
 
+/** Block B lift lobby: a pillar at the end of the shared corridor carries the township access-card reader. */
+function LobbyCardReader({ tap }: { tap?: InteractionBindings['cardTap'] }) {
+  const m = getMaterials()
+  const [faded, setFaded] = useState(0)
+  useEffect(() => {
+    if (!tap) return
+    const timer = setTimeout(() => setFaded(tap.id), 1800)
+    return () => clearTimeout(timer)
+  }, [tap])
+  const flash = tap && tap.id !== faded ? tap.direction : null
+  return <group name="lobby-card-reader">
+    <Box at={[-2.1, 1.05, 7.47]} size={[.22, 2.1, .45]} mat={m.wall} radius={.012} />
+    <Box at={[-2.1, 2.12, 7.47]} size={[.24, .04, .47]} mat={m.edge} radius={.008} />
+    <Box at={[-2.1, .075, 7.47]} size={[.245, .13, .475]} mat={m.trim} radius={.006} />
+    <Box at={[-1.975, 1.12, 7.4]} size={[.03, .2, .13]} mat={m.dark} radius={.01} />
+    <Box at={[-1.958, 1.17, 7.4]} size={[.008, .05, .07]} mat={flash ? m.readerOk : m.readerIdle} radius={0} />
+    <Box at={[-1.975, 1.55, 7.4]} size={[.02, .16, .3]} mat={m.cream} radius={.008} />
+    {flash && <Html position={[-1.95, 1.75, 7.25]} center style={{ pointerEvents: 'none' }} zIndexRange={[30, 0]}>
+      <span className="home-card-tap">Card tapped · {flash === 'out' ? 'Out' : 'In'}</span>
+    </Html>}
+  </group>
+}
+
+/** Mounted by the scene once the home has loaded, like the sensor beacons. */
+export function LobbySign() {
+  return <Html position={[-2.85, 2.05, 7.05]} center style={{ pointerEvents: 'none' }} zIndexRange={[10, 0]}>
+    <span className="home-place-tag">Lift lobby · Block B</span>
+  </Html>
+}
+
 export function Architecture({ interaction }: { interaction?: InteractionBindings }) {
   const m = getMaterials()
   return <group name="architecture">
@@ -79,9 +110,12 @@ export function Architecture({ interaction }: { interaction?: InteractionBinding
     <Box at={[-.6, .075, -1]} size={[1.2, .05, .18]} mat={m.walnut} radius={0} />
     <Box at={[1.5, .08, -1]} size={[1.5, .05, .18]} mat={m.trim} radius={0} />
     <Box at={[1.6, -.14, 5.68]} size={[3.2, .25, 1.4]} mat={m.tile} />
-    <Box at={[1.6, -.28, 6.35]} size={[3.6, .18, .3]} mat={m.trim} />
+    {/* Shared corridor outside A-105: open parapet on the outer edge, lift lobby to the left. */}
+    <Box at={[.9, -.14, 7.04]} size={[9, .25, 1.32]} mat={m.concrete} radius={.02} />
+    <Wall x={.9} z={7.78} width={9} depth={.16} height={.55} />
     <Box at={[1.62, .015, 5.65]} size={[1.05, .035, .6]} mat={m.rug} />
     <Plant at={[.2, .02, 5.6]} scale={.85} /><Plant at={[3, .02, 5.6]} scale={.85} />
     <EntranceDoor interaction={interaction} />
+    <LobbyCardReader tap={interaction?.cardTap} />
   </group>
 }

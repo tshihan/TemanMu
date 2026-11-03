@@ -5,6 +5,7 @@ export type ScenarioActions = {
   interactWith: (object: Extract<ScenarioStep, { kind: 'interact' }>['object'], value: boolean, approach: Extract<ScenarioStep, { kind: 'interact' }>['approach'], signal: AbortSignal) => Promise<void>
   playAnimation: (animation: Extract<ScenarioStep, { kind: 'animate' }>['animation'], signal: AbortSignal) => Promise<void>
   setCharacterVisible: (visible: boolean) => void
+  tapCard: (direction: Extract<ScenarioStep, { kind: 'tapCard' }>['direction'], signal: AbortSignal) => Promise<void>
   setObject: (object: Extract<ScenarioStep, { kind: 'object' }>['object'], value: boolean) => Promise<void>
   waitForQuietGap: (signal: AbortSignal) => Promise<void>
   waitForNoAnswer: (signal: AbortSignal) => Promise<void>
@@ -77,6 +78,7 @@ export class ScenarioController {
         case 'animate': await actions.playAnimation(step.animation, this.signal); break
         case 'wait': await this.wait(step.seconds); break
         case 'visible': actions.setCharacterVisible(step.value); break
+        case 'tapCard': await actions.tapCard(step.direction, this.signal); break
         case 'object': await actions.setObject(step.object, step.value); break
         case 'quietGap': await actions.waitForQuietGap(this.signal); break
         case 'noAnswer': await actions.waitForNoAnswer(this.signal); break

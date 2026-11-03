@@ -197,7 +197,7 @@ export function ElderlyCharacter({ command, pose, speech, visible, paused, urgen
           if (arrived && arrived in ROOM_LABELS) lastRoom.current = arrived as RoomId
           else if (arrived === 'bedside') lastRoom.current = 'bedroom'
           else if (arrived === 'collapseSpot') lastRoom.current = 'living'
-          else if (arrived === 'outside' || arrived === 'porch') lastRoom.current = 'mainDoor'
+          else if (arrived === 'outside' || arrived === 'porch' || arrived === 'corridor' || arrived === 'lobby') lastRoom.current = 'mainDoor'
           onStatus({ room: lastRoom.current, destination: null, phase: 'idle' })
           if (arrived) onArrived(moveCommandId.current, arrived)
         }

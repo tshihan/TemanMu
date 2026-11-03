@@ -1,4 +1,4 @@
-export type HomeCue = 'wake' | 'return' | 'doorOpen' | 'doorClose'
+export type HomeCue = 'wake' | 'return' | 'doorOpen' | 'doorClose' | 'cardTap'
 export type HomeLoop = 'telephone' | 'water' | 'kettle' | 'footsteps'
 
 /** Small Web Audio soundscape; no network assets and no audio before a user gesture. */
@@ -179,6 +179,9 @@ export class HomeSoundscape {
       this.tone(659, .5, .035, 'sine', .33)
     } else if (cue === 'return') {
       for (let i = 0; i < 4; i++) this.tone(105 + i % 2 * 22, .08, .025, 'triangle', i * .22, 65)
+    } else if (cue === 'cardTap') {
+      this.tone(1320, .07, .03, 'sine')
+      this.tone(1760, .09, .03, 'sine', .09)
     } else if (cue === 'doorOpen') {
       this.tone(240, .18, .055, 'triangle', 0, 110)
       this.tone(95, .12, .035, 'sine', .12, 65)

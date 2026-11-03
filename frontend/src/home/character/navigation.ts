@@ -20,6 +20,10 @@ export const WAYPOINTS = {
   doorThreshold: [1.48, 5.28],
   porch: [1.48, 5.68],
   outside: [1.48, 6.08],
+  // Shared corridor outside the flat, leading left to the Block B lift lobby and its card reader.
+  corridor: [1.48, 6.85],
+  readerApproach: [-1.5, 6.95],
+  lobby: [-3.1, 6.8],
   collapseSpot: [-1.35, 3.4],
   responderCheck: [-.35, 2.85],
   tapApproach: [.35, -3.18],
@@ -45,6 +49,7 @@ const EDGES: [Waypoint, Waypoint][] = [
   ['kitchen', 'diningEast'], ['diningEast', 'frontLane'],
   ['frontLane', 'entryLane'], ['entryLane', 'mainDoor'],
   ['mainDoor', 'doorThreshold'], ['doorThreshold', 'porch'], ['porch', 'outside'],
+  ['outside', 'corridor'], ['corridor', 'readerApproach'], ['readerApproach', 'lobby'],
   ['bathroom', 'tapApproach'], ['kitchen', 'kettleApproach'],
   ['bathroomInner', 'showerApproach'], ['livingLane', 'tvApproach'],
   ['living', 'phoneApproach'],

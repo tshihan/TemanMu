@@ -2,16 +2,19 @@ import type { Waypoint } from '../character/navigation'
 import type { InteractionId } from '../interactions/registry'
 import type { CallTiming } from '../../api/types'
 
-export type ScenarioId = 'normalMorning' | 'goingOut' | 'unusualInactivity' | 'falseAlarmRecovery'
+export type ScenarioId = 'normalMorning' | 'goingOut' | 'notBackYet' | 'tappedInNoActivity' | 'unusualInactivity' | 'falseAlarmRecovery'
 export type ScenarioTiming = { outsideSeconds: number }
 export const DEFAULT_TIMING: ScenarioTiming = { outsideSeconds: 4 }
 export const SCENARIO_LABELS: Record<ScenarioId, string> = {
   normalMorning: 'Normal Morning', goingOut: 'Going Out',
+  notBackYet: 'Not Back Yet', tappedInNoActivity: 'Tapped In, Home Quiet',
   unusualInactivity: 'Unusual Inactivity', falseAlarmRecovery: 'False Alarm Recovery',
 }
 export const SCENARIO_DESCRIPTIONS: Record<ScenarioId, string> = {
   normalMorning: 'Wakes, uses the tap and kettle. Readings stay within routine.',
-  goingOut: 'Door opens, the home goes quiet, she returns. Read as a possible outing.',
+  goingOut: 'She taps her card out at the lift lobby, the home goes quiet, then she taps back in and returns.',
+  notBackYet: 'She taps her card out and never taps back in, staying out far longer than usual.',
+  tappedInNoActivity: 'She taps back in at the lobby but never reaches the flat; the home stays quiet.',
   unusualInactivity: 'A long water quiet gap with no outing evidence escalates to the township.',
   falseAlarmRecovery: 'She is napping, wakes to the call and confirms she is okay. The concern resolves.',
 }
@@ -29,6 +32,7 @@ export type ScenarioStep =
   | { kind: 'animate'; animation: 'rest' | 'wake' | 'collapse' | 'recover'; label: string }
   | { kind: 'wait'; seconds: number; label: string }
   | { kind: 'visible'; value: boolean; label: string }
+  | { kind: 'tapCard'; direction: 'out' | 'in'; label: string }
   | { kind: 'object'; object: InteractionId; value: boolean; label: string }
   | { kind: 'quietGap'; label: string }
   | { kind: 'noAnswer'; label: string }
@@ -41,6 +45,27 @@ export type ScenarioStep =
   | { kind: 'resolution'; label: string }
   | { kind: 'confirmCall'; label: string }
   | { kind: 'hold'; label: string }
+
+/** Out through the front door, along the corridor, card tap out at the lift lobby, then out of view. */
+function leaveViaLobby(timing: ScenarioTiming): ScenarioStep[] {
+  return [
+    { kind: 'move', to: 'mainDoor', label: 'Walking to the entrance' },
+    { kind: 'interact', object: 'mainDoor', value: true, label: 'Opening the main door' },
+    { kind: 'move', to: 'outside', label: 'Walking through the doorway' },
+    { kind: 'object', object: 'mainDoor', value: false, label: 'Closing the door' },
+    { kind: 'tapCard', direction: 'out', label: 'Tapping her access card out at the lift lobby' },
+    { kind: 'move', to: 'lobby', label: 'Heading to the lift' },
+    { kind: 'visible', value: false, label: 'Leaving the block' },
+    { kind: 'wait', seconds: timing.outsideSeconds, label: 'Away from home' },
+  ]
+}
+/** Back out of the lift and a card tap in at the lobby reader. */
+function returnViaLobby(): ScenarioStep[] {
+  return [
+    { kind: 'visible', value: true, label: 'Back at the lift lobby' },
+    { kind: 'tapCard', direction: 'in', label: 'Tapping her access card in at the lift lobby' },
+  ]
+}
 
 export function scenarioSteps(id: ScenarioId, timing: ScenarioTiming): ScenarioStep[] {
   const quietGapLabel = 'Fast-forward 4 hours: no water use, longer than her usual quiet gap; no outing evidence'
@@ -58,18 +83,24 @@ export function scenarioSteps(id: ScenarioId, timing: ScenarioTiming): ScenarioS
       { kind: 'interact', object: 'kitchenKettle', value: false, label: 'Switching off the kettle' },
     ]
     case 'goingOut': return [
-      { kind: 'move', to: 'mainDoor', label: 'Walking to the entrance' },
-      { kind: 'interact', object: 'mainDoor', value: true, label: 'Opening the main door' },
-      { kind: 'move', to: 'outside', label: 'Walking through the doorway' },
-      { kind: 'visible', value: false, label: 'Leaving the interior view' },
-      { kind: 'object', object: 'mainDoor', value: false, label: 'Closing the door' },
-      { kind: 'wait', seconds: timing.outsideSeconds, label: 'Away from home' },
-      { kind: 'visible', value: true, label: 'Returning to the porch' },
-      { kind: 'move', to: 'porch', label: 'Approaching the door from outside' },
+      ...leaveViaLobby(timing),
+      ...returnViaLobby(),
+      { kind: 'move', to: 'porch', label: 'Walking back along the corridor' },
       { kind: 'interact', object: 'mainDoor', value: true, approach: 'porch', label: 'Opening the door from outside' },
       { kind: 'move', to: 'mainDoor', label: 'Walking back inside' },
       { kind: 'interact', object: 'mainDoor', value: false, label: 'Closing the main door' },
       { kind: 'move', to: 'dining', label: 'Settling back inside' },
+    ]
+    case 'notBackYet': return [
+      ...leaveViaLobby(timing),
+      { kind: 'wait', seconds: 3, label: 'Her usual outing time passes with no tap back in' },
+    ]
+    case 'tappedInNoActivity': return [
+      ...leaveViaLobby(timing),
+      ...returnViaLobby(),
+      { kind: 'move', to: 'corridor', label: 'Walking back along the corridor' },
+      { kind: 'animate', animation: 'collapse', label: 'Audience-only fall in the corridor; no sensor event' },
+      { kind: 'wait', seconds: 3, label: 'Tapped in, but no water or power is used at home' },
     ]
     case 'unusualInactivity': return [
       { kind: 'move', to: 'collapseSpot', label: 'Walking beside the sofa' },

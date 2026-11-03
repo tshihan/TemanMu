@@ -15,11 +15,12 @@ const obstacles = [
   [.5, 1.8, .34, 2.36], [.85, 1.45, -.38, .27], [.85, 1.45, 2.42, 3.1],
   [-.14, .46, 1.05, 1.65], [1.84, 2.44, 1.05, 1.65], // dining table and chairs
   [-.975, .275, 4.29, 4.75], // entry bench
+  [-2.21, -1.99, 7.25, 7.7], // lobby pillar with the card reader
 ]
 
 test('all room and object approach pairs have clear, connected walking routes', () => {
   const destinations = [...Object.keys(ROOM_LABELS), ...Object.values(INTERACTIONS).map(value => value.approach),
-    'bedside', 'collapseSpot', 'responderCheck', 'doorThreshold', 'porch', 'outside']
+    'bedside', 'collapseSpot', 'responderCheck', 'doorThreshold', 'porch', 'outside', 'corridor', 'lobby']
   for (const from of destinations) {
     for (const to of destinations) {
       const route = routeBetween(from, to)
