@@ -703,7 +703,8 @@ async def acknowledge(incident_id: str, role: Role, name: str) -> Incident:
         return incident
 
 
-async def close(incident_id: str, role: Role, name: str, outcome: str, report: str | None = None) -> Incident:
+async def close(incident_id: str, role: Role, name: str, outcome: str, report: str | None = None,
+                *, hospital_name: str | None = None, hospital_sent_at: datetime | None = None) -> Incident:
     """Close the response; a hospital transfer pauses resident inactivity monitoring."""
     unit_id = await _incident_unit_id(incident_id)
     async with _unit_lock(unit_id):
@@ -731,7 +732,11 @@ async def close(incident_id: str, role: Role, name: str, outcome: str, report: s
                 period_id = await db_away.covering(unit_id, now, conn=conn)
                 if period_id is not None:
                     await db_away.end_away_period(period_id, now, conn=conn)
-            await db_incidents.update_incident(incident_id, state="closed", outcome=outcome, report=report, closed_at=now, conn=conn)
+            await db_incidents.update_incident(
+                incident_id, state="closed", outcome=outcome, report=report, closed_at=now,
+                hospital_name=hospital_name if outcome == "sent_to_hospital" else None,
+                hospital_sent_at=hospital_sent_at if outcome == "sent_to_hospital" else None, conn=conn,
+            )
             incident = await db_incidents.add_incident_event(
                 incident_id,
                 "closed",

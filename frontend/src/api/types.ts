@@ -87,6 +87,8 @@ export interface Incident {
   acknowledged_by: { role: Role; name: string; at: string } | null
   outcome: Outcome | null
   report?: string | null
+  hospital_name?: string | null
+  hospital_sent_at?: string | null
   closed_at: string | null
   events: IncidentEvent[]
 }
@@ -228,7 +230,7 @@ export interface Api {
   addAwayPeriod(id: UnitId, body: { role: 'caregiver'; name: string; starts_at: string; ends_at: string; reason?: string | null }): Promise<Unit>
   cancelAwayPeriod(id: UnitId, periodId: string, actor: { role: 'caregiver'; name: string }): Promise<Unit>
   escalateIncident(id: string, actor: { role: Role; name: string; action: 'unable_to_verify' | 'emergency_called' }): Promise<Incident>
-  closeIncident(id: string, actor: { role: Role; name: string; outcome: Exclude<Outcome, 'resident_activity_detected'>; report?: string }): Promise<Incident>
+  closeIncident(id: string, actor: { role: Role; name: string; outcome: Exclude<Outcome, 'resident_activity_detected'>; report?: string; hospital_name?: string | null; hospital_sent_at?: string | null }): Promise<Incident>
   markNotificationsRead(role: Role): Promise<void>
   markNotificationRead(id: string, role: Role): Promise<Notification>
   respondToAwayActivity(id: string, body: { role: 'caregiver'; name: string; response: AwayActivityResponse }): Promise<Notification>

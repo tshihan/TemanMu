@@ -45,7 +45,10 @@ async def caregiver_response(incident_id: str, body: CaregiverResponseRequest) -
 async def close_incident(incident_id: str, body: CloseRequest) -> Incident:
     """The acknowledger logs the outcome. 409 unless acknowledged, 403 for anyone else."""
     try:
-        return await monitoring.close(incident_id, body.role, body.name, body.outcome, body.report)
+        return await monitoring.close(
+            incident_id, body.role, body.name, body.outcome, body.report,
+            hospital_name=body.hospital_name, hospital_sent_at=body.hospital_sent_at,
+        )
     except (monitoring.IncidentNotFound, monitoring.IncidentConflict, monitoring.NotAcknowledger) as e:
         raise _http_error(e) from None
 

@@ -8,6 +8,33 @@ from app.models import Actor, CaregiverResponseRequest, CloseRequest, CompanionM
 T = datetime(2026, 10, 15, 1, 2, 3, 123456, tzinfo=timezone.utc)
 
 
+def test_hospital_close_details_are_optional_and_normalised():
+    legacy = CloseRequest(role="township", name="Guard Ali", outcome="sent_to_hospital", report="Sent to hospital")
+    assert legacy.hospital_name is None and legacy.hospital_sent_at is None
+    record = CloseRequest(role="township", name="Guard Ali", outcome="sent_to_hospital", report="Family accompanied her.",
+                          hospital_name="  Hospital Shah Alam  ", hospital_sent_at="2026-10-15T09:02:03+08:00")
+    assert record.hospital_name == "Hospital Shah Alam"
+    assert record.model_dump(mode="json")["hospital_sent_at"] == "2026-10-15T01:02:03.000Z"
+
+
+@pytest.mark.parametrize("details", [
+    {"hospital_name": "Hospital Shah Alam"}, {"hospital_sent_at": "2026-10-15T09:02:03+08:00"},
+])
+def test_hospital_details_require_hospital_outcome(details):
+    with pytest.raises(ValidationError, match="Hospital details"):
+        CloseRequest(role="township", name="Guard Ali", outcome="resident_ok", report="Resident okay.", **details)
+
+
+@pytest.mark.parametrize("details", [
+    {"hospital_sent_at": "2026-10-15T09:02:03"},
+    {"hospital_sent_at": "2999-01-01T00:00:00Z"},
+    {"hospital_name": "A" * 201},
+])
+def test_invalid_hospital_details_are_rejected(details):
+    with pytest.raises(ValidationError):
+        CloseRequest(role="township", name="Guard Ali", outcome="sent_to_hospital", report="Hospital transfer.", **details)
+
+
 def test_timestamps_serialise_as_utc_z_millis():
     r = Reading(unit_id="A-105", sensor="water", value=6.0, recorded_at=T.astimezone(timezone(timedelta(hours=8))))
     assert r.model_dump(mode="json")["recorded_at"] == "2026-10-15T01:02:03.123Z"

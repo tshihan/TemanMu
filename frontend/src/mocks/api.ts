@@ -584,6 +584,12 @@ export const mockApi: Api = {
   },
   async closeIncident(id, actor) {
     if (actor.role === 'township' && !actor.report?.trim()) throw new ApiError(422, 'Township response requires a short report')
+    const hospitalName = actor.hospital_name?.trim() || null
+    const hospitalTime = actor.hospital_sent_at ?? null
+    if (hospitalName && hospitalName.length > 200) throw new ApiError(422, 'Hospital name must be at most 200 characters')
+    if (actor.outcome !== 'sent_to_hospital' && (hospitalName || hospitalTime)) throw new ApiError(422, 'Hospital details require the sent-to-hospital outcome')
+    if (hospitalTime && (!Number.isFinite(Date.parse(hospitalTime)) || Date.parse(hospitalTime) > Date.now()))
+      throw new ApiError(422, 'Hospital transfer time must be valid and cannot be in the future')
     const incident = incidentOrThrow(id)
     if (incident.state !== 'acknowledged') throw new ApiError(409, 'Incident must be acknowledged first')
     if (incident.acknowledged_by?.role !== actor.role || incident.acknowledged_by.name !== actor.name) throw new ApiError(403, 'Only the acknowledger can close this incident')
@@ -597,6 +603,8 @@ export const mockApi: Api = {
     incident.state = 'closed'
     incident.outcome = actor.outcome
     incident.report = actor.report?.trim() || null
+    incident.hospital_name = hospitalName
+    incident.hospital_sent_at = hospitalTime
     incident.closed_at = now()
     incident.events.push({ type: 'closed', at: incident.closed_at, actor: { role: actor.role, name: actor.name } })
     const unit = unitOrThrow(incident.unit_id)

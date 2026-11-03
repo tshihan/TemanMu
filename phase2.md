@@ -106,6 +106,14 @@ Keep the current operator flow: accept the alert, select an outcome, optionally 
 - Keep sounds, reminders and a prominent response-needed banner active while the log is open. **Open live monitoring** returns to the existing response workflow without automatically switching tabs.
 - Reuse the existing shared snapshot and incident updates. Label mock records as simulated, retain honest empty states and show a stale-data notice on disconnection. Reset Demo clears mock history.
 
+### Hospital transfer details
+
+- Selecting **Sent to hospital** offers an optional hospital name and actual transfer date/time (Malaysia time), alongside the existing guard note. Unknown fields remain blank; submitting the record still stores a separate completion timestamp.
+- Persist `hospital_name` and `hospital_sent_at` on the existing incident using migration `014_hospital_transfer_details.sql`. Existing records keep null values. The close API accepts the fields only for hospital outcomes and rejects a future transfer time.
+- The caregiver hospital card names the guard recorded on the closing event or acceptance, and the whole card opens read-only transfer details: time sent, hospital, guard, note and recorded time. Missing fields show **Not recorded**; an outcome label is not treated as a guard note. Later unrelated incidents do not replace the hospital record.
+- Keep hospital details inside the caregiver app/phone frame as an in-app screen with an internally scrolling body, close/Escape controls and restored card focus. Notification banners respect the app's safe-area inset (including the desktop preview's notch), remain reachable over details and open the appropriate alert screen.
+- Hospital care state continues until caregiver return-home confirmation. Viewing details does not resume monitoring or alter any incident.
+
 | Field | Saved information |
 | --- | --- |
 | Incident | Incident ID, home/unit, opened time and current state. |

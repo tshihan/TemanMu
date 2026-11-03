@@ -362,6 +362,29 @@ async def test_close_errors(client):
     assert (await close(client, iid)).status_code == 409
 
 
+async def test_hospital_details_survive_database_reconnect(client):
+    iid = await notified_incident()
+    assert (await ack(client, iid)).status_code == 200
+    sent_at = utc_now() - timedelta(minutes=12)
+    response = await client.post(f"/api/incidents/{iid}/close", json={
+        **ALI, "outcome": "sent_to_hospital", "report": "Daughter accompanied her; belongings handed over.",
+        "hospital_name": "Hospital Shah Alam", "hospital_sent_at": sent_at.isoformat(),
+    })
+    assert response.status_code == 200
+    recorded = response.json()
+    assert recorded["hospital_name"] == "Hospital Shah Alam"
+    assert recorded["hospital_sent_at"] != recorded["closed_at"]
+    from app.db import pool as db_pool
+    await db_pool.close_pool()
+    await db_pool.init_pool(os.environ["TEST_DATABASE_URL"])
+    restored = (await client.get(f"/api/incidents/{iid}")).json()
+    assert restored["hospital_name"] == recorded["hospital_name"]
+    assert restored["hospital_sent_at"] == recorded["hospital_sent_at"]
+    assert restored["report"] == recorded["report"]
+    assert restored["events"][-1]["actor"] == ALI
+    assert (await units.get_unit(UNIT)).care_state == "in_hospital"
+
+
 async def test_successful_close(client, broadcasts):
     iid = await notified_incident()
     await ack(client, iid)

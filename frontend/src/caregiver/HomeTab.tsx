@@ -7,12 +7,14 @@ import { ResidentAvatar } from './Avatar'
 import { actorName, currentAway, GUARD, isHomeCheck, isOuting, outcomeLabel, STATUS_LABELS, type Ctx } from './copy'
 import { clock, dayFraction, dayLabel, isToday, until, when } from './format'
 import { TrackingControl } from './TrackingControl'
+import { hospitalGuard } from './hospital-transfer'
 
 type Variant = 'alarm' | 'checking' | 'quiet' | 'away' | 'calm' | 'pending' | 'hospital'
 interface Card { variant: Variant; Icon: LucideIcon; badge: string; headline: string; reason: string; grace?: string; ack?: boolean; open?: string }
 
-function statusCard(unit: Unit, incident: Incident | null, ctx: Ctx, now: number, hasRoutineEvidence: boolean, away: AwayPeriod | null, awayReason: string | null): Card {
+function statusCard(unit: Unit, incident: Incident | null, ctx: Ctx, now: number, hasRoutineEvidence: boolean, away: AwayPeriod | null, awayReason: string | null, hospitalIncident: Incident | null): Card {
   const { R } = ctx
+  const guard = hospitalGuard(hospitalIncident)
   const doorAt = unit.latest.last_door_event_at
   if (isHomeCheck(incident) && (incident?.state === 'notified' || incident?.state === 'acknowledged')) {
     const taken = incident.state === 'acknowledged' && incident.acknowledged_by
@@ -46,7 +48,7 @@ function statusCard(unit: Unit, incident: Incident | null, ctx: Ctx, now: number
       reason: `${cause} TemanMu is calling ${R} now (simulated).`, grace: incident?.state === 'grace' ? until(incident.grace_ends_at, now) : undefined }
   }
   if (unit.care_state === 'in_hospital') return { variant: 'hospital', Icon: Hospital, badge: 'In hospital', headline: `${R} is in hospital`,
-    reason: 'A responder recorded a hospital transfer. Inactivity checks are paused until you confirm a return home. Water and power safety alerts remain active.' }
+    reason: `${guard ? `${guard} recorded the hospital transfer.` : 'Hospital transfer recorded.'} Inactivity checks are paused until you confirm a return home. Water and power safety alerts remain active.` }
   if (away) return { variant: 'away', Icon: Luggage, badge: 'Tracking paused', headline: 'Monitoring paused',
     reason: `${awayReason ? `${awayReason.replace(/[.!]+$/, '')}. ` : ''}Until ${when(away.ends_at, now)}. Inactivity alerts are paused until then; you’ll still be alerted if water or power is left running.` }
   if (unit.status === 'possible_away') return { variant: 'away', Icon: DoorOpen, badge: STATUS_LABELS.possible_away, headline: `${R} may be out`,
@@ -71,7 +73,7 @@ function statusCard(unit: Unit, incident: Incident | null, ctx: Ctx, now: number
 }
 
 interface Props {
-  unit: Unit; ctx: Ctx; incident: Incident | null; readings: Reading[]; now: number; awayReasons: Record<string, string | null>
+  unit: Unit; ctx: Ctx; incident: Incident | null; hospitalIncident: Incident | null; onOpenHospital: () => void; readings: Reading[]; now: number; awayReasons: Record<string, string | null>
   ackBusy: boolean; responseError: boolean; confirmBusy: boolean; confirmError: boolean
   muted: boolean; onToggleMute: () => void
   awayNotice: Notification | null; answerBusy: boolean; answerError: boolean
@@ -79,7 +81,7 @@ interface Props {
   onAnswerAway: (n: Notification, response: AwayActivityResponse) => void; onOpenHistory: () => void
 }
 
-export function HomeTab({ unit, ctx, incident, readings, now, awayReasons, ackBusy, responseError, confirmBusy, confirmError, muted, onToggleMute, awayNotice, answerBusy, answerError,
+export function HomeTab({ unit, ctx, incident, hospitalIncident, onOpenHospital, readings, now, awayReasons, ackBusy, responseError, confirmBusy, confirmError, muted, onToggleMute, awayNotice, answerBusy, answerError,
   onCheckIn, onRequestVisit, onOpenIncident, onCall, onConfirmHome, onAnswerAway, onOpenHistory }: Props) {
   const { R } = ctx
   const today = readings.filter(reading => isToday(reading.recorded_at, now))
@@ -90,7 +92,7 @@ export function HomeTab({ unit, ctx, incident, readings, now, awayReasons, ackBu
   const power = last(reading => reading.sensor === 'electricity')
   const powerUsed = last(reading => reading.sensor === 'electricity' && Number(reading.value) > unit.baseline.standby_power_kw)
   const away = currentAway(unit, now)
-  const card = statusCard(unit, incident, ctx, now, !!waterAt || !!powerUsed, away, away ? awayReasons[away.period_id] ?? null : null)
+  const card = statusCard(unit, incident, ctx, now, !!waterAt || !!powerUsed, away, away ? awayReasons[away.period_id] ?? null : null, hospitalIncident)
   const checkingIn = incident?.events.some(event => event.type === 'caregiver_checking_in') ?? false
   const visitRequested = incident?.events.some(event => event.type === 'township_requested') ?? false
   const lastReadingAt = readings.at(-1)?.recorded_at
@@ -142,9 +144,10 @@ export function HomeTab({ unit, ctx, incident, readings, now, awayReasons, ackBu
 
     <section aria-label="Current status" className={`cg-status is-${card.variant}`}>
       <span className="cg-status-seal" aria-hidden="true"><card.Icon size={32} strokeWidth={2.4} /></span>
-      <span className="cg-status-pill" role="status">{card.badge} · {when(updatedAt, now)}</span>
+      <span className="cg-status-pill" role="status">{card.badge} · {when(card.variant === 'hospital' ? hospitalIncident?.hospital_sent_at ?? hospitalIncident?.closed_at ?? unit.status_since : updatedAt, now)}</span>
       <h2 className="cg-status-headline">{card.headline}</h2>
       <p className="cg-status-reason">{card.reason}</p>
+      {card.variant === 'hospital' && <button type="button" className="cg-hospital-open" aria-label="View hospital transfer details" onClick={onOpenHospital}><span>View hospital details<ChevronRight size={18} aria-hidden="true" /></span></button>}
       {card.grace && <p className="cg-status-grace"><span className="cg-status-timer cg-num">{card.grace}</span>
         <span>left in the simulated call window. You’ll only be alerted if {R} doesn’t answer.</span></p>}
       {unit.status === 'possible_away' && !away && <div className="cg-status-actions">

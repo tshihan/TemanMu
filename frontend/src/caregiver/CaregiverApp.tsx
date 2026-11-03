@@ -8,6 +8,8 @@ import { actorName, awaitingAnswer, ctxFor, currentAway, GUARD, isHomeCheck, NOT
 import { clock, initials } from './format'
 import { HistoryView } from './HistoryView'
 import { HomeTab } from './HomeTab'
+import { HospitalDetails } from './HospitalDetails'
+import { latestHospitalTransfer } from './hospital-transfer'
 import { IncidentView, type AckError } from './IncidentView'
 import { SettingsTab, type Theme } from './SettingsTab'
 import { playTone, unlockAudio, type ToneKind } from './sound'
@@ -44,6 +46,7 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
   const [tab, setTab] = useState<Tab>('home')
   const [incidentOpen, setIncidentOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [hospitalOpen, setHospitalOpen] = useState(false)
   // A past alert opened from the history; the current one opens through incidentOpen.
   const [pastIncidentId, setPastIncidentId] = useState<string | null>(null)
   const [theme, setTheme] = useState<Theme>(initialTheme)
@@ -70,6 +73,7 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
   const timers = useRef<Record<'push' | 'toast' | 'call', number | undefined>>({ push: undefined, toast: undefined, call: undefined })
 
   const unitIncidents = incidents.filter(item => item.unit_id === unitId)
+  const hospitalIncident = latestHospitalTransfer(unitIncidents)
   const incident = unitIncidents.find(item => item.incident_id === unit?.active_incident_id)
     || [...unitIncidents].sort((a, b) => b.opened_at.localeCompare(a.opened_at))[0] || null
   const seenReminders = new Set<string>()
@@ -134,7 +138,7 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
   useEffect(() => subscribeAppEvents(event => {
     setLastSync(Date.now())
     if (event.type === 'snapshot') {
-      setIncidentOpen(false); setPastIncidentId(null); setReadIds(new Set()); setPush(null); setAckError(null); setLiveNote(false)
+      setIncidentOpen(false); setHospitalOpen(false); setPastIncidentId(null); setReadIds(new Set()); setPush(null); setAckError(null); setLiveNote(false)
       return
     }
     if (event.type !== 'notification.created' || event.data.role !== 'caregiver') return
@@ -153,11 +157,13 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
     timers.current.toast = window.setTimeout(() => setToast(null), 3200)
   }
   function openIncident() {
+    setHospitalOpen(false)
     if (!incident || incident.state === 'grace') return
     setIncidentOpen(true)
     setLiveNote(false)
   }
   function goTo(next: Tab) {
+    setHospitalOpen(false)
     // Tapping the tab you're already on returns to its top, as native apps do.
     if (next === tab && !showIncident) scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
     setTab(next)
@@ -243,6 +249,11 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
   const latestAlert = feed.find(item => item.kind === 'alert' || item.kind === 'reminder')
   const ackTargetId = incident?.state === 'notified' && latestAlert?.incident_id === incident.incident_id ? latestAlert.notification_id : null
   const pushCopy = push && ctx ? notificationCopy(push, ctx, incidentFor(push)) : null
+  const showHospital = hospitalOpen && unit?.care_state === 'in_hospital'
+  const pushBanner = push && pushCopy ? <button type="button" className={`cg-push ${pushCopy.tone === 'alarm' ? 'is-alarm' : ''}`} onClick={() => open(push)}>
+    <span className={`cg-tone-icon tone-${pushCopy.tone}`}><pushCopy.Icon size={18} aria-hidden="true" /></span>
+    <span><strong>{pushCopy.title}</strong><span>{pushCopy.body}</span></span>
+  </button> : null
   const ackWho = incident?.acknowledged_by && ctx ? actorName(ctx, incident.acknowledged_by) : ''
   const pastIncident = incidents.find(item => item.incident_id === pastIncidentId) ?? null
   // Today's history row is live, so fetch it again when readings, alerts or away periods change.
@@ -277,7 +288,7 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
           <div /><div /><div /><div />
           <p>{connectionTimedOut ? 'Cannot reach TemanMu. Check the backend connection and retry.' : 'Connecting to TemanMu…'}</p>
         </div> : !unit || !ctx ? <p className="cg-card-lead cg-pad">The resident’s home is unavailable.</p>
-          : tab === 'home' ? <HomeTab unit={unit} ctx={ctx} incident={incident} readings={readingsByUnit[unit.unit_id] || []} now={now} awayReasons={awayReasons}
+          : tab === 'home' ? <HomeTab unit={unit} ctx={ctx} incident={incident} hospitalIncident={hospitalIncident} onOpenHospital={() => setHospitalOpen(true)} readings={readingsByUnit[unit.unit_id] || []} now={now} awayReasons={awayReasons}
             ackBusy={ackBusy} responseError={ackError?.kind === 'failed'} confirmBusy={confirmBusy} confirmError={confirmError}
             muted={muted} onToggleMute={() => setMuted(value => !value)}
             awayNotice={awayNotice} answerBusy={answerBusy} answerError={answerError}
@@ -302,6 +313,8 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
         })}
       </nav>
 
+      {showHospital && <HospitalDetails incident={hospitalIncident} onClose={() => setHospitalOpen(false)}>{pushBanner}</HospitalDetails>}
+
       {historyOpen && unit && ctx && <HistoryView unit={unit} ctx={ctx} now={now} revision={historyRevision}
         onBack={() => setHistoryOpen(false)} onOpenIncident={openHistoryIncident} />}
 
@@ -324,10 +337,7 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
         </div>
       </div>}
 
-      {push && pushCopy && <button type="button" className={`cg-push ${pushCopy.tone === 'alarm' ? 'is-alarm' : ''}`} onClick={() => open(push)}>
-        <span className={`cg-tone-icon tone-${pushCopy.tone}`}><pushCopy.Icon size={18} aria-hidden="true" /></span>
-        <span><strong>{pushCopy.title}</strong><span>{pushCopy.body}</span></span>
-      </button>}
+      {!showHospital && pushBanner}
 
       {toast && <div className="cg-toast" role="status"><Check size={15} aria-hidden="true" />{toast}</div>}
       {alert}

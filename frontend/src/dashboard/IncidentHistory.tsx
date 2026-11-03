@@ -110,6 +110,10 @@ function IncidentDetails({ incident, unit, onClose }: { incident?: Incident; uni
           <div><dt>Responder</dt><dd>{incident.acknowledged_by ? `${incident.acknowledged_by.name} (${incident.acknowledged_by.role})` : 'Not recorded'}</dd></div>
           <div><dt>Accepted</dt><dd>{dateLabel(incident.acknowledged_by?.at)}</dd></div>
           <div><dt>Outcome</dt><dd><Outcome incident={incident} /></dd></div>
+          {incident.outcome === 'sent_to_hospital' && <>
+            <div><dt>Hospital</dt><dd>{incident.hospital_name || 'Not recorded'}</dd></div>
+            <div><dt>Time sent to hospital</dt><dd>{dateLabel(incident.hospital_sent_at)}</dd></div>
+          </>}
           <div><dt>Saved note</dt><dd>{incident.report?.trim() || 'Not recorded'}</dd></div>
         </dl>
         <h3>Event timeline</h3>
