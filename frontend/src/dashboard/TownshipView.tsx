@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
-import { Building2, ChevronDown, ChevronRight, ChevronUp, ClipboardList, DoorOpen, PhoneCall, Search, Timer, TriangleAlert, X, type LucideIcon } from 'lucide-react'
+import { Building2, Check, ChevronDown, ChevronRight, ChevronUp, ClipboardList, DoorOpen, Globe, PhoneCall, Search, Timer, TriangleAlert, X, type LucideIcon } from 'lucide-react'
 import seed from '../../../shared/seed.json'
 import { useAppState } from '../api/store'
 import type { Incident, Status, Unit } from '../api/types'
@@ -484,20 +484,44 @@ function TownshipShell({ tab, onSelect, needsResponse, children }: {
   </div>
 }
 
-const LANGUAGES: { id: Lang; short: string; name: string }[] = [
-  { id: 'en', short: 'EN', name: 'English' },
-  { id: 'ms', short: 'BM', name: 'Bahasa Melayu' },
+const LANGUAGES: { id: Lang; name: string }[] = [
+  { id: 'en', name: 'English' },
+  { id: 'ms', name: 'Bahasa Melayu' },
 ]
 
-/** English or Malay for the whole dashboard; the choice is remembered in this browser. */
+/** A globe button that opens English or Malay for the whole dashboard; the choice is remembered in this browser. */
 export function LanguageSwitch() {
   const lang = useLang()
   const t = useT()
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
   // Screen readers pick their voice from the page language.
   useEffect(() => { document.documentElement.lang = lang }, [lang])
-  return <div className="tm-lang" role="group" aria-label={t.language}>
-    {LANGUAGES.map(item => <button key={item.id} type="button" lang={item.id} aria-pressed={lang === item.id}
-      aria-label={item.name} title={item.name} onClick={() => setLang(item.id)}>{item.short}</button>)}
+  useEffect(() => {
+    if (!open) return
+    const outside = (event: PointerEvent) => { if (!ref.current?.contains(event.target as Node)) setOpen(false) }
+    const escape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      setOpen(false)
+      ref.current?.querySelector<HTMLElement>('.tm-lang-button')?.focus()
+    }
+    window.addEventListener('pointerdown', outside)
+    window.addEventListener('keydown', escape)
+    return () => { window.removeEventListener('pointerdown', outside); window.removeEventListener('keydown', escape) }
+  }, [open])
+  const current = LANGUAGES.find(item => item.id === lang)!
+  return <div className="tm-lang" ref={ref}>
+    <button type="button" className="tm-lang-button" aria-expanded={open} aria-controls="tm-lang-list"
+      aria-label={`${t.language}: ${current.name}`} title={t.language} onClick={() => setOpen(value => !value)}>
+      <Globe size={18} aria-hidden="true" />
+    </button>
+    {open && <ul id="tm-lang-list" className="tm-lang-list" aria-label={t.language}>
+      {LANGUAGES.map(item => <li key={item.id}>
+        <button type="button" lang={item.id} aria-pressed={lang === item.id} onClick={() => { setLang(item.id); setOpen(false) }}>
+          {item.name}{lang === item.id && <Check size={15} aria-hidden="true" />}
+        </button>
+      </li>)}
+    </ul>}
   </div>
 }
 
