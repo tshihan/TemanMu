@@ -41,6 +41,11 @@ button:focus-visible, select:focus-visible, .divider:focus-visible { outline: 3p
 .view-navigation a[aria-current="page"] { background: var(--color-terracotta); color: var(--color-parchment); box-shadow: none; }
 .view-navigation a:hover { color: var(--color-terracotta-dark); }
 .view-navigation a[aria-current="page"]:hover { color: var(--color-parchment); }
+.tm-lang { display: flex; flex: none; gap: 2px; padding: 4px; border: 1px solid var(--color-warm-taupe); border-radius: 999px; background: var(--color-aged-paper); }
+.tm-lang button { min-width: 40px; padding: 8px 10px; border: 0; border-radius: 999px; background: transparent; color: var(--color-charcoal); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.tm-lang button:hover { color: var(--color-terracotta-dark); }
+.tm-lang button[aria-pressed="true"] { background: var(--color-terracotta); color: var(--color-parchment); }
+.tm-lang button:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 2px; }
 .home-panel, .dashboard-panel { border-color: var(--color-warm-taupe); border-radius: 24px; background: var(--color-parchment); }
 .panel-heading, .dashboard-header { border-color: var(--color-warm-taupe); padding: 24px 28px; }
 .eyebrow { margin-bottom: 8px; color: var(--color-terracotta); font-size: 12px; font-weight: 700; letter-spacing: -.023em; }
