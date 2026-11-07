@@ -214,11 +214,24 @@
 .cg-routine-bars { position: relative; flex: 1; display: flex; align-items: flex-end; touch-action: none; }
 .cg-routine-grid { position: absolute; left: 0; right: 0; height: 1px; background: var(--line); }
 .cg-routine-col { position: relative; flex: 1; height: 100%; display: flex; align-items: flex-end; justify-content: center; padding: 0 1px; cursor: default; }
-.cg-routine-col b { width: 100%; max-width: 24px; min-height: 2px; border-radius: 4px 4px 0 0; background: var(--waterwash); box-shadow: inset 0 0 0 1px #d8ae97; }
+.cg-routine-col b { width: 100%; max-width: 24px; min-height: 2px; border-radius: 4px 4px 0 0; background: var(--waterwash); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--water) 35%, var(--tile)); }
 .cg-routine-col.is-scene b { background: var(--water); box-shadow: none; }
-.cg-routine-col.is-shown::after { content: ''; position: absolute; inset: 0 0 auto; height: 100%; border-radius: 4px; background: #1b1f1a0d; pointer-events: none; }
+.cg-routine-col.is-shown::after { content: ''; position: absolute; inset: 0 0 auto; height: 100%; border-radius: 4px; background: color-mix(in srgb, var(--ink) 6%, transparent); pointer-events: none; }
 .cg-routine-axis { margin-left: 24px; }
 .cg-routine-note { margin-top: 10px; color: var(--faint); font-size: 12px; line-height: 1.4; }
+.cg-outings { display: flex; flex-direction: column; gap: 14px; margin-top: 14px; }
+.cg-outings li { display: grid; gap: 6px; }
+.cg-outing-when { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.cg-outing-when strong { color: var(--ink); font-size: 17px; font-weight: 800; }
+.cg-outing-when span { color: var(--mut); font-size: 13px; font-weight: 600; text-align: right; }
+.cg-outing-bar { position: relative; height: 10px; border-radius: 999px; background: var(--tile2); }
+.cg-outing-bar i { position: absolute; inset: 0 auto 0 0; border-radius: 999px; }
+.cg-outing-bar .is-limit { background: color-mix(in srgb, var(--accent) 22%, var(--tile)); }
+.cg-outing-bar .is-usual { background: var(--accent); box-shadow: 2px 0 0 var(--tile); }
+.cg-outing-text { color: var(--mut); font-size: 13px; }
+.cg-outing-text strong { color: var(--ink); font-weight: 700; }
+.cg-outing-legend .is-usual::before { background: var(--accent); }
+.cg-outing-legend .is-limit::before { background: color-mix(in srgb, var(--accent) 22%, var(--tile)); }
 
 /* Activity history (phase2.md §5): one row of lanes per day, then a day's hourly charts. */
 .cg-hist-range { margin: 0 0 4px; }

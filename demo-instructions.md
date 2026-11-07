@@ -24,7 +24,7 @@
 
 ## Part C: The emergency path
 5. **Unusual Inactivity:** press play.
-   - Say this once, in one sentence: *"The quiet gap is the longest she normally goes without using water, learned by our Quiet Gap Model from her own history (1 h 55 m at 8 AM here, much shorter than overnight), and the grace period is a short extra wait after that before TemanMu calls her, so we don't raise false alarms."*
+   - Say this once, in one sentence: *"The quiet gap is the longest she normally goes without using water, learned by our Quiet Gap Model from her own history (2 h at 8 AM here, much shorter than overnight), and the grace period is a short extra wait after that before TemanMu calls her, so we don't raise false alarms."*
    - Optional: show **Mum's usual quiet gaps** on the caregiver home tab: short in the busy morning, long overnight.
    - TemanMu calls her and she doesn't answer.
    - On the **caregiver tab**, tap **Ask township to visit**.
@@ -46,6 +46,7 @@
 9. **Not Back Yet:** press play, then switch to the **township tab** once the alert comes in.
    - She tapped out and hasn't come back. Point out the **"Not back yet · search outside"** label and the **last card tap** (place and time).
    - Say: the guard sees where she last tapped **only while an alert is open**. On a normal day the guard sees nothing about her outings.
+   - Optional, one sentence: *"How long she's normally out is learned by our Outing Model from her card taps: about 1 h 20 m on a normal morning, longer on market days, so we check after 2 h 20 m here."* Sarah's app shows this as **Mum's usual outings**.
    - Click **I'll Check Now**, then point out the steps: call her, check CCTV, search the township. Pick any outcome and **Submit**.
 10. **Tapped In, Home Quiet:** press play.
     - She taps back in at the lobby but falls in the corridor before reaching her flat. Nothing is used at home, so TemanMu calls her and alerts both sides.

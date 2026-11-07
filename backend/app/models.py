@@ -112,13 +112,13 @@ def check_value_matches_sensor(sensor: Sensor, value: float | DoorState) -> None
         raise ValueError(f"{sensor} readings need a number >= 0")
 
 
-class LearnedQuietGap(ContractModel):
-    """Where a learned quiet gap came from, in real-life ("story") time."""
+class LearnedLimit(ContractModel):
+    """Where a learned quiet gap or outing length came from, in real-life ("story") time."""
 
-    story_minutes: int  # her learned limit at scene_time, e.g. 115 (1 h 55 m)
+    story_minutes: int  # her learned limit at scene_time, e.g. 120 (2 h)
     scene_time: str  # "08:00"
     story_minutes_per_demo_second: float
-    model: str  # "Quiet Gap Model"
+    model: str  # "Quiet Gap Model" or "Outing Model"
     trained_days: int
     source: Literal["simulated_history"] = "simulated_history"
 
@@ -128,7 +128,8 @@ class Baseline(ContractModel):
     usual_outing_seconds: int
     standby_power_kw: float
     source: Literal["simulated_history"] = "simulated_history"
-    learned_quiet_gap: LearnedQuietGap | None = None  # set when the quiet gap comes from the model
+    learned_quiet_gap: LearnedLimit | None = None  # set when the quiet gap comes from the model
+    learned_outing: LearnedLimit | None = None  # set when the usual outing comes from the model
 
 
 class UnitLatest(ContractModel):

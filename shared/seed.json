@@ -104,7 +104,11 @@
           "scene_time": "08:00",
           "story_minutes_per_demo_second": 24
         },
-        "usual_outing_seconds": 20,
+        "learned_outing": {
+          "model_file": "ml/A-105_outing.json",
+          "scene_time": "07:00",
+          "story_minutes_per_demo_second": 35
+        },
         "standby_power_kw": 0.15
       },
       "rhythm": { "wake": "06:00", "outings": [{ "start": "07:00", "end": "08:15" }] },

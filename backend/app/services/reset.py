@@ -6,7 +6,7 @@ from datetime import datetime, time, timedelta
 
 from app import timers
 from app.db.pool import get_pool
-from app.learned_baseline import resolve_quiet_gap
+from app.learned_baseline import resolve_outing, resolve_quiet_gap
 from app.models import Unit
 from app.realtime import broadcast as realtime
 from app.seed import SeedUnit, load_seed, next_occurrence
@@ -53,10 +53,12 @@ async def reset_demo() -> list[Unit]:
                 u.controllable, u.status, _status_reason(u, door_at), now, water_at, door_at,
                 u.latest.water_lpm, u.latest.power_kw, u.latest.door, u.outing_signal,
             ))  # fmt: skip
-            quiet_gap_seconds, learned = resolve_quiet_gap(u.baseline, settings.seed_file.parent)
+            quiet_gap_seconds, learned_gap = resolve_quiet_gap(u.baseline, settings.seed_file.parent)
+            outing_seconds, learned_outing = resolve_outing(u.baseline, settings.seed_file.parent)
             profile_rows.append((
-                u.unit_id, quiet_gap_seconds, u.baseline.usual_outing_seconds, u.baseline.standby_power_kw,
-                learned.model_dump_json() if learned else None,
+                u.unit_id, quiet_gap_seconds, outing_seconds, u.baseline.standby_power_kw,
+                learned_gap.model_dump_json() if learned_gap else None,
+                learned_outing.model_dump_json() if learned_outing else None,
             ))  # fmt: skip
             interest_rows.extend((u.unit_id, interest, i) for i, interest in enumerate(u.interests))
             rhythm_rows.append((
@@ -89,8 +91,9 @@ async def reset_demo() -> list[Unit]:
             )
             await conn.executemany(
                 """insert into resident_profiles (unit_id, usual_quiet_gap_seconds,
-                                                  usual_outing_seconds, standby_power_kw, learned_quiet_gap)
-                   values ($1, $2, $3, $4, $5::jsonb)""",
+                                                  usual_outing_seconds, standby_power_kw,
+                                                  learned_quiet_gap, learned_outing)
+                   values ($1, $2, $3, $4, $5::jsonb, $6::jsonb)""",
                 profile_rows,
             )
             await conn.executemany(

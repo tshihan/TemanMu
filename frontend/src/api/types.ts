@@ -22,8 +22,8 @@ export interface Reading {
   recorded_at: string
 }
 
-/** Where a learned quiet gap came from, in real-life ("story") time. */
-export interface LearnedQuietGap {
+/** Where a learned quiet gap or outing length came from, in real-life ("story") time. */
+export interface LearnedLimit {
   story_minutes: number
   scene_time: string
   story_minutes_per_demo_second: number
@@ -38,7 +38,9 @@ export interface Baseline {
   standby_power_kw: number
   source: 'simulated_history'
   /** Set when the quiet gap comes from the Quiet Gap Model instead of a typed-in number. */
-  learned_quiet_gap?: LearnedQuietGap | null
+  learned_quiet_gap?: LearnedLimit | null
+  /** Set when the usual outing comes from the Outing Model instead of a typed-in number. */
+  learned_outing?: LearnedLimit | null
 }
 
 /** A caregiver-declared time when the resident is not at home. Every screen (township

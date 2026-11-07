@@ -9,7 +9,7 @@ from app.models import AwayPeriod, Baseline, DoorState, LastAccess, OutingSignal
 
 _UNIT_SELECT = """
 select u.*,
-       p.usual_quiet_gap_seconds, p.usual_outing_seconds, p.standby_power_kw, p.learned_quiet_gap,
+       p.usual_quiet_gap_seconds, p.usual_outing_seconds, p.standby_power_kw, p.learned_quiet_gap, p.learned_outing,
        (select i.incident_id from incidents i
          where i.unit_id = u.unit_id and i.state in ('grace','notified','acknowledged')
          order by i.opened_at desc limit 1) as active_incident_id,
@@ -34,6 +34,7 @@ def _row_to_baseline(row: asyncpg.Record) -> Baseline:
         usual_outing_seconds=row["usual_outing_seconds"],
         standby_power_kw=row["standby_power_kw"],
         learned_quiet_gap=json.loads(row["learned_quiet_gap"]) if row["learned_quiet_gap"] else None,
+        learned_outing=json.loads(row["learned_outing"]) if row["learned_outing"] else None,
     )
 
 

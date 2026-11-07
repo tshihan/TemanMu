@@ -21,7 +21,7 @@ import { ApiError } from '../api/live'
 import { primeSharedMockInactivity, settleSharedMockHome } from '../mocks/shared-client'
 import { applyEvent, getAppState, subscribeAppEvents, useAppState } from '../api/store'
 import type { AwayPeriod, CallTiming, CompanionMessage, Config, Incident, Reading, Sensor, Unit } from '../api/types'
-import { storyDuration } from '../api/learnedQuietGap'
+import { storyDuration } from '../api/learnedBaseline'
 import { HOME_UNIT_ID, SensorGateway, readingForObject } from './integration/sensorGateway'
 import seed from '../../../shared/seed.json'
 import { SensorBeacons, type SensorPulses } from './SensorBeacons'
@@ -127,7 +127,7 @@ class SceneBoundary extends Component<{ children: ReactNode }, { failed: boolean
 }
 const ready = () => { /* Stable callback: resizing must not create a render loop. */ }
 
-/** Fallback when a unit's quiet gap is typed in rather than learned (A-105's comes from the Quiet Gap Model). */
+/** Fallbacks when a unit's baselines are typed in rather than learned (A-105's come from the models). */
 const QUIET_GAP_STORY_MINUTES = 4 * 60
 /** Mirrors the backend's ARRIVAL_WINDOW_SECONDS (rules/engine.py): the demo tapped-in clock. */
 const ARRIVAL_WINDOW_SECONDS = 20
@@ -136,13 +136,14 @@ const MOCK_AUTO_ACK_SECONDS = 20
 
 type WatchGap = 'quiet' | 'outing' | 'arrival'
 type GapStory = { minutes: number; note: string }
-/** Her learned quiet gap in real-life time (e.g. 1h 55m at 08:00) and where it came from. */
-const quietGapStory = (unit: Unit | null): GapStory => {
-  const learned = unit?.baseline.learned_quiet_gap
+/** Her learned quiet gap or outing in real-life time (e.g. 2h 00m at 08:00) and where it came from. */
+const gapStory = (unit: Unit | null, gap: 'quiet' | 'outing'): GapStory => {
+  const learned = gap === 'quiet' ? unit?.baseline.learned_quiet_gap : unit?.baseline.learned_outing
   return learned
     ? { minutes: learned.story_minutes, note: `Learned by the ${learned.model} from ${learned.trained_days} days of her history (simulated)` }
-    : { minutes: QUIET_GAP_STORY_MINUTES, note: GAP_COPY.quiet.note }
+    : { minutes: GAP_COPY[gap].minutes, note: GAP_COPY[gap].note }
 }
+const quietGapStory = (unit: Unit | null) => gapStory(unit, 'quiet')
 /** Story length and wording for each fast-forward. Card-home clocks: her usual outing, and the walk from the lobby. */
 const GAP_COPY: Record<WatchGap, { minutes: number; active: string; done: string; unit: string; note: string }> = {
   quiet: { minutes: QUIET_GAP_STORY_MINUTES, active: 'Fast-forward · water quiet gap', done: 'Longer than her usual quiet gap', unit: 'without water use', note: 'Her usual quiet gap of 4 hours is learned from her past history' },
@@ -150,7 +151,7 @@ const GAP_COPY: Record<WatchGap, { minutes: number; active: string; done: string
   arrival: { minutes: 20, active: 'Fast-forward · since tapping in', done: 'Still no activity at home', unit: 'with no water or power used', note: 'She usually reaches the flat within a few minutes of tapping in' },
 }
 
-/** Plays a learned gap (quiet gap from the model, 3-hour outing, 20-minute walk home) as a fast-forward over the short demo clock. */
+/** Plays a learned gap (quiet gap and outing from the models, 20-minute walk home) as a fast-forward over the short demo clock. */
 function QuietGapOverlay({ endsAt, seconds, gap = 'quiet', story }: { endsAt: number; seconds: number; gap?: WatchGap; story?: GapStory }) {
   const copy = { ...GAP_COPY[gap], ...story }
   const [now, setNow] = useState(() => Date.now())
@@ -534,7 +535,7 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
     try { await switchMonitoring(true, callTiming) } catch { throw new Error('Could not start A-105 monitoring on the backend') }
     if (signal.aborted) throw new DOMException('Scenario stopped', 'AbortError')
     const seconds = gap === 'outing' ? latestUnit.current?.baseline.usual_outing_seconds ?? 45 : ARRIVAL_WINDOW_SECONDS
-    setQuietGap({ endsAt: Date.now() + seconds * 1000, seconds, gap })
+    setQuietGap({ endsAt: Date.now() + seconds * 1000, seconds, gap, story: gap === 'outing' ? gapStory(latestUnit.current, 'outing') : undefined })
     try { await waitForGrace(signal) } finally { setQuietGap(null) }
     setVisualStates({ ...localStates.current, telephone: 'ringing' })
   }
@@ -967,6 +968,8 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
       ? `Demo time is compressed: ${homeUnit?.quiet_gap.usual_max_seconds ?? 5} seconds stand in for her usual ${storyDuration(quietGapStory(homeUnit).minutes)} quiet gap, so a simulated check-in call rings while Madam Lee is napping.`
     : scenario === 'unusualInactivity' && scenarioActive
       ? `Demo time is compressed: ${homeUnit?.quiet_gap.usual_max_seconds ?? 5} seconds stand in for her usual ${storyDuration(quietGapStory(homeUnit).minutes)} quiet gap at ${homeUnit?.baseline.learned_quiet_gap?.scene_time ?? 'this time'}, learned by the Quiet Gap Model from her past history. The fall is for the audience, not a sensor reading.`
+    : scenario === 'notBackYet' && scenarioActive
+      ? `Demo time is compressed: ${homeUnit?.baseline.usual_outing_seconds ?? 4} seconds stand in for ${storyDuration(gapStory(homeUnit, 'outing').minutes)} after she taps out at ${homeUnit?.baseline.learned_outing?.scene_time ?? 'this time'}: her usual outing plus a safety margin, learned by the Outing Model from her past card taps.`
       : null
   const pickScenario = (id: ScenarioId) => {
     if (scenarioActive) return

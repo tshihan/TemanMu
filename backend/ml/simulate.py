@@ -4,6 +4,12 @@ This is made-up but believable data for the prototype. It is never measured resi
 Her day follows the seed rhythm (wake 06:00, morning outing 07:00-08:15) plus gardening,
 meals, an afternoon nap and the odd night-time toilet visit.
 
+Her outings (card tap out -> tap in):
+- most mornings at 07:00, a walk and kopi, back by about 08:15
+- Tuesday and Saturday mornings, the wet market instead, back by about 09:30
+- most Thursday afternoons at 14:00, the senior activity centre, for about 2.5 hours
+- some evenings at 17:30, a short walk round the block
+
 Besides water uses, the history also records the periods the model must not learn from:
 - outings (card tap out -> tap in): the outing rule covers these, not the quiet gap
 - away periods (e.g. staying with her daughter): known absences
@@ -50,7 +56,12 @@ def _uses(rng: np.random.Generator, start: datetime, end: datetime, mean_gap_min
         out.append(t)
 
 
-def _one_day(rng: np.random.Generator, day: date, h: History) -> None:
+MARKET_DAYS = {1, 5}  # Tuesday, Saturday
+CENTRE_DAY = 3  # Thursday
+
+
+def _one_day(rng: np.random.Generator, orng: np.random.Generator, day: date, h: History) -> None:
+    """One day of water use and outings. `orng` draws the afternoon and evening outings."""
     wake = 6.0 + _jitter(rng, 20)
     bed = 22.5 + _jitter(rng, 30)
     w = h.water
@@ -63,10 +74,11 @@ def _one_day(rng: np.random.Generator, day: date, h: History) -> None:
     w += [_at(day, wake), _at(day, wake + 0.1 + rng.random() * 0.1)]
     w += _uses(rng, _at(day, wake + 0.25), _at(day, 6.9), 15)
 
-    # Morning outing on most days (market / exercise), by access card.
-    if rng.random() < 0.85:
+    # Morning outing on most days (walk, or the market on market days), by access card.
+    market = day.weekday() in MARKET_DAYS
+    if rng.random() < 0.85 or market:
         out_t = _at(day, 7.0 + _jitter(rng, 15))
-        back_t = _at(day, 8.25 + _jitter(rng, 30))
+        back_t = _at(day, (9.5 if market else 8.25) + _jitter(rng, 30))
         h.outings.append((out_t, back_t))
         home_from = back_t
     else:
@@ -97,10 +109,23 @@ def _one_day(rng: np.random.Generator, day: date, h: History) -> None:
     w += _uses(rng, _at(day, 20.0), _at(day, bed), 50)
     w.append(_at(day, bed))  # last toilet visit before bed
 
+    # Afternoon and evening outings. Water uses while she's out are dropped in simulate().
+    if day.weekday() == CENTRE_DAY and orng.random() < 0.8:
+        _outing(orng, h, _at(day, 14.0 + _jitter(orng, 15)), mean_min=160, sd_min=30)
+    if orng.random() < 0.4:
+        _outing(orng, h, _at(day, 17.5 + _jitter(orng, 20)), mean_min=45, sd_min=10)
+
+
+def _outing(rng: np.random.Generator, h: History, out_t: datetime, mean_min: float, sd_min: float) -> None:
+    back_t = out_t + timedelta(minutes=max(15.0, float(rng.normal(mean_min, sd_min))))
+    h.outings.append((out_t, back_t))
+    h.water.append(back_t + timedelta(minutes=5 + float(rng.random()) * 10))  # wash up when back
+
 
 def simulate(days: int = DAYS, seed: int = 105) -> History:
     """Madam Lee's water history. The same seed always gives the same history."""
     rng = np.random.default_rng(seed)
+    orng = np.random.default_rng(seed + 1)
     h = History(start=_at(START_DATE, 0), end=_at(START_DATE + timedelta(days=days), 0))
 
     # Two nights staying with her daughter Sarah (weekend of week 4).
@@ -114,11 +139,13 @@ def simulate(days: int = DAYS, seed: int = 105) -> History:
         h.missing.append((s, s + timedelta(hours=hours)))
 
     for i in range(days):
-        _one_day(rng, START_DATE + timedelta(days=i), h)
+        _one_day(rng, orng, START_DATE + timedelta(days=i), h)
 
     def blocked(t: datetime) -> bool:
         spans = h.away + h.missing + h.outings
         return any(s <= t < e for s, e in spans)
 
+    # Outings during the away weekend or a meter outage didn't happen / can't be seen.
+    h.outings = sorted(o for o in h.outings if not any(s < o[1] and o[0] < e for s, e in h.away + h.missing))
     h.water = sorted(t for t in h.water if not blocked(t))
     return h

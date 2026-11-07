@@ -1,5 +1,8 @@
+// TODO(design): the "usual quiet gaps" and "usual outings" cards need refining. Shown together on
+// the caregiver home tab they make the page much more confusing; simplify or merge them, or move
+// them off the home tab, before treating them as final.
 import { useState } from 'react'
-import { learnedDay, storyDuration } from '../api/learnedQuietGap'
+import { learnedDay, storyDuration, usualOutings } from '../api/learnedBaseline'
 import type { Unit } from '../api/types'
 
 const CEILING_MINUTES = 9 * 60
@@ -38,5 +41,42 @@ export function RoutineCard({ unit, relationship: R }: { unit: Unit; relationshi
     </div>
     <div className="cg-axis cg-routine-axis" aria-hidden="true">{['12a', '6a', '12p', '6p', '12a'].map((label, index) => <span key={index}>{label}</span>)}</div>
     <p className="cg-routine-note">Learned by the {learned.model} from {R}’s simulated water history. Short in the busy morning, long overnight.</p>
+  </section>
+}
+
+const DAY_SHORT: Record<string, string> = { mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri', sat: 'Sat', sun: 'Sun' }
+const OUTING_SCALE_MINUTES = 4 * 60
+const clockLabel = (hhmm: string) => {
+  const [h, m] = hhmm.split(':').map(Number)
+  return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`
+}
+const daysLabel = (days: string[]) => days.length === 7 ? 'Every day' : days.map(day => DAY_SHORT[day]).join(', ')
+const limitLabel = ([lo, hi]: number[]) => lo === hi ? storyDuration(lo) : `${storyDuration(lo)}–${storyDuration(hi)}`
+
+/** Her regular outings by card tap-out time, from the Outing Model: usual length and when TemanMu checks. */
+export function OutingsCard({ unit, relationship: R }: { unit: Unit; relationship: string }) {
+  const learned = unit.baseline.learned_outing
+  const rows = usualOutings(unit.unit_id)
+  if (!learned || !rows?.length) return null
+  const width = (minutes: number) => `${Math.min(1, minutes / OUTING_SCALE_MINUTES) * 100}%`
+
+  return <section className="cg-day cg-routine" aria-labelledby="cg-outings-heading">
+    <div className="cg-day-head">
+      <h2 id="cg-outings-heading">{R}’s usual outings</h2>
+      <span>Learned · {learned.trained_days} days</span>
+    </div>
+    <p className="cg-routine-lead">When {R} taps her card out, how long she is usually away. If she isn’t back by the check time, TemanMu calls her.</p>
+    <ul className="cg-outings">
+      {rows.map(row => <li key={`${row.tap_out}-${row.days.join()}`}>
+        <div className="cg-outing-when"><strong className="cg-num">{clockLabel(row.tap_out)}</strong><span>{daysLabel(row.days)}</span></div>
+        <div className="cg-outing-bar" aria-hidden="true">
+          <i className="is-limit" style={{ width: width(row.limit_minutes[1]) }} />
+          <i className="is-usual" style={{ width: width(row.usual_minutes) }} />
+        </div>
+        <p className="cg-outing-text">Usually <strong className="cg-num">{storyDuration(row.usual_minutes)}</strong> · check after <strong className="cg-num">{limitLabel(row.limit_minutes)}</strong></p>
+      </li>)}
+    </ul>
+    <div className="cg-legend cg-outing-legend" aria-hidden="true"><span className="is-usual">Usually out</span><span className="is-limit">Until check</span></div>
+    <p className="cg-routine-note">Learned by the {learned.model} from {R}’s simulated card taps. Longer on market mornings.</p>
   </section>
 }

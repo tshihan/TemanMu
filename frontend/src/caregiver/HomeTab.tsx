@@ -4,7 +4,7 @@ import { ArrowRight, ChevronRight, CircleCheck, Clock3, DoorClosed, DoorOpen, Dr
 import type { AccessEvent, AwayActivityResponse, AwayPeriod, Incident, Notification, Reading, Unit } from '../api/types'
 import { AwayActivityChoices } from './AwayActivityChoices'
 import { ResidentAvatar } from './Avatar'
-import { RoutineCard } from './RoutineCard'
+import { OutingsCard, RoutineCard } from './RoutineCard'
 import { actorName, cardConcern, currentAway, GUARD, isHomeCheck, isOuting, outcomeLabel, STATUS_LABELS, type Ctx } from './copy'
 import { clock, dayFraction, dayLabel, isToday, until, when } from './format'
 import { TrackingControl } from './TrackingControl'
@@ -221,6 +221,7 @@ export function HomeTab({ unit, ctx, incident, hospitalIncident, onOpenHospital,
     </section>
 
     <RoutineCard unit={unit} relationship={R} />
+    {cardHome && <OutingsCard unit={unit} relationship={R} />}
 
     <div className="cg-actions">
       <button type="button" className="cg-action is-ink" onClick={onCall}><Phone size={18} aria-hidden="true" />Call {R}</button>

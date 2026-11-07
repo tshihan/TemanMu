@@ -1,6 +1,6 @@
 import seed from '../../../shared/seed.json'
 import { ApiError } from '../api/live'
-import { resolveQuietGap } from '../api/learnedQuietGap'
+import { resolveOuting, resolveQuietGap } from '../api/learnedBaseline'
 import { ARRIVAL_DETECTED, HOME_CHECK_DETECTED, HOME_CHECK_OUTCOMES, NOT_BACK_DETECTED, isHomeCheck, outcomeLabel } from '../caregiver/copy'
 import { buildHistory } from './history'
 import type {
@@ -108,7 +108,7 @@ const initialConsents = () => new Set(seed.units.filter(item => item.open_to_nei
 function initialSnapshot(): Snapshot {
   const resetAt = new Date()
   return {
-    units: seed.units.map(item => { const quietGap = resolveQuietGap(item.baseline); return {
+    units: seed.units.map(item => { const quietGap = resolveQuietGap(item.baseline); const outing = resolveOuting(item.baseline); return {
       unit_id: item.unit_id,
       resident_name: item.resident_name,
       caregiver_name: item.caregiver_name,
@@ -130,8 +130,9 @@ function initialSnapshot(): Snapshot {
         usual_max_seconds: quietGap.seconds,
       },
       baseline: {
-        usual_quiet_gap_seconds: quietGap.seconds, usual_outing_seconds: item.baseline.usual_outing_seconds,
-        standby_power_kw: item.baseline.standby_power_kw, source: 'simulated_history' as const, learned_quiet_gap: quietGap.learned,
+        usual_quiet_gap_seconds: quietGap.seconds, usual_outing_seconds: outing.seconds,
+        standby_power_kw: item.baseline.standby_power_kw, source: 'simulated_history' as const,
+        learned_quiet_gap: quietGap.learned, learned_outing: outing.learned,
       },
       active_incident_id: null,
       care_state: 'home_monitoring',

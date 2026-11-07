@@ -40,8 +40,8 @@ class SeedLatest(_Strict):
     door: Literal["open", "closed"]
 
 
-class SeedLearnedQuietGap(_Strict):
-    """Take the quiet gap from a trained model file instead of typing it in (see app.learned_baseline)."""
+class SeedLearnedLimit(_Strict):
+    """Take a baseline from a trained model file instead of typing it in (see app.learned_baseline)."""
 
     model_file: str  # relative to seed.json, e.g. "ml/A-105_quiet_gap.json"
     scene_time: HHMM  # time of day the demo scene plays at
@@ -50,14 +50,17 @@ class SeedLearnedQuietGap(_Strict):
 
 class SeedBaseline(_Strict):
     usual_quiet_gap_seconds: int | None = Field(default=None, gt=0)
-    learned_quiet_gap: SeedLearnedQuietGap | None = None
-    usual_outing_seconds: int = Field(gt=0)
+    learned_quiet_gap: SeedLearnedLimit | None = None
+    usual_outing_seconds: int | None = Field(default=None, gt=0)
+    learned_outing: SeedLearnedLimit | None = None
     standby_power_kw: float = Field(ge=0)
 
     @model_validator(mode="after")
     def _check(self) -> "SeedBaseline":
         if (self.usual_quiet_gap_seconds is None) == (self.learned_quiet_gap is None):
             raise ValueError("give exactly one of usual_quiet_gap_seconds or learned_quiet_gap")
+        if (self.usual_outing_seconds is None) == (self.learned_outing is None):
+            raise ValueError("give exactly one of usual_outing_seconds or learned_outing")
         return self
 
 

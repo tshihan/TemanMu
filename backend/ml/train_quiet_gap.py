@@ -28,6 +28,8 @@ from pathlib import Path
 import numpy as np
 from sklearn.ensemble import GradientBoostingRegressor
 
+from ml.common import DAY_NAMES, SLOT_MIN, SLOTS, Rows, Table, export_limits, fit_quantile, lookup, predict_table
+from ml.common import overlaps as _overlaps
 from ml.simulate import History, simulate
 
 UNIT_ID = "A-105"
@@ -35,23 +37,12 @@ RESIDENT = "Madam Lee Mei Ling"
 QUANTILE = 0.95
 LOOKAHEAD_MIN = 60
 FLOOR_MIN, CEILING_MIN = 45, 9 * 60
-SLOT_MIN = 15
-SLOTS = 24 * 60 // SLOT_MIN
 TRAIN_DAYS = 42  # first 6 weeks to learn from, last 2 weeks to test on
 VALIDATION_WEEKS = [3, 4, 5, 6]  # each one held back in turn (training on the weeks before it)
 MARGINS = [round(1 + 0.1 * i, 1) for i in range(21)]  # x1.0 .. x3.0
 TARGET_CHECKS_PER_WEEK = 1.0
 FIXED_RULES_MIN = {"fixed_4h_rule": 4 * 60, "fixed_8h_rule": 8 * 60}  # "one number for everyone"
-DAY_NAMES = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 OUT = Path(__file__).resolve().parents[2] / "shared" / "ml" / f"{UNIT_ID}_quiet_gap.json"
-
-Rows = list[tuple[datetime, float]]  # (start of gap, gap length in minutes)
-Table = np.ndarray  # limits in minutes, shape (7 days, SLOTS)
-
-
-def _overlaps(a: datetime, b: datetime, spans: list[tuple[datetime, datetime]]) -> bool:
-    return any(s < b and a < e for s, e in spans)
-
 
 def gaps(h: History) -> tuple[Rows, dict[str, int]]:
     """Gaps between water uses she was home for.
@@ -73,20 +64,12 @@ def gaps(h: History) -> tuple[Rows, dict[str, int]]:
 
 
 def train(rows: Rows) -> GradientBoostingRegressor:
-    X = np.array([[t.hour + t.minute / 60, t.weekday()] for t, _ in rows])
-    y = np.array([g for _, g in rows])
-    model = GradientBoostingRegressor(
-        loss="quantile", alpha=QUANTILE, n_estimators=300, learning_rate=0.05,
-        max_depth=3, min_samples_leaf=25, random_state=0,
-    )
-    return model.fit(X, y)
+    return fit_quantile(rows, QUANTILE, n_estimators=300, learning_rate=0.05, max_depth=3, min_samples_leaf=25)
 
 
 def raw_table(model: GradientBoostingRegressor) -> Table:
     """Model prediction at the middle of every slot, with the look-ahead applied."""
-    hours = (np.arange(SLOTS) + 0.5) * SLOT_MIN / 60
-    X = np.array([[hr, d] for d in range(7) for hr in hours])
-    pred = model.predict(X).reshape(7, SLOTS)
+    pred = predict_table(model)
     ahead = LOOKAHEAD_MIN // SLOT_MIN
     week = pred.reshape(-1)  # Monday 00:00 .. Sunday 23:45, wrapping round to Monday
     return np.array([
@@ -96,10 +79,6 @@ def raw_table(model: GradientBoostingRegressor) -> Table:
 
 def finish(raw: Table, margin: float) -> Table:
     return np.clip(raw * margin, FLOOR_MIN, CEILING_MIN)
-
-
-def lookup(table: Table, t: datetime) -> float:
-    return float(table[t.weekday(), (t.hour * 60 + t.minute) // SLOT_MIN])
 
 
 def _checks_per_week(table: Table, rows: Rows, days: float) -> float:
@@ -180,10 +159,7 @@ def export(table: Table, margin: float, n_train: int, dropped: dict, h: History,
         },
         "timezone": "Asia/Kuala_Lumpur",
         "slot_minutes": SLOT_MIN,
-        # limits_minutes[day][slot]: slot 0 = 00:00-00:15, 1 = 00:15-00:30, ... (time of last water use)
-        "limits_minutes": {
-            name: [int(round(v / 5) * 5) for v in table[d]] for d, name in enumerate(DAY_NAMES)
-        },
+        "limits_minutes": export_limits(table),  # [day][slot], by time of last water use
         "evaluation": evaluation,
     }
 
