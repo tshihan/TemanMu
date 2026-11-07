@@ -10,7 +10,7 @@ test('inactivity demo shows a quiet gap, call, no answer, then caregiver alert',
     'responderMove', 'responderDoor', 'responderCheck', 'hold',
   ])
   assert.match(steps[1].label, /no sensor event/i)
-  assert.match(steps[3].label, /fast-forward 4 hours/i)
+  assert.match(steps[3].label, /fast-forward: no water use, longer than her learned usual quiet gap/i)
   assert.match(steps[6].label, /acknowledge on the township dashboard/i)
   assert.equal(steps[10].to, 'responderCheck')
   assert.equal(steps.some(step => step.kind === 'object' && step.object === 'mainDoor'), false)

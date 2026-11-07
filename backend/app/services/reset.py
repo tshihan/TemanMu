@@ -6,6 +6,7 @@ from datetime import datetime, time, timedelta
 
 from app import timers
 from app.db.pool import get_pool
+from app.learned_baseline import resolve_quiet_gap
 from app.models import Unit
 from app.realtime import broadcast as realtime
 from app.seed import SeedUnit, load_seed, next_occurrence
@@ -52,9 +53,10 @@ async def reset_demo() -> list[Unit]:
                 u.controllable, u.status, _status_reason(u, door_at), now, water_at, door_at,
                 u.latest.water_lpm, u.latest.power_kw, u.latest.door, u.outing_signal,
             ))  # fmt: skip
+            quiet_gap_seconds, learned = resolve_quiet_gap(u.baseline, settings.seed_file.parent)
             profile_rows.append((
-                u.unit_id, u.baseline.usual_quiet_gap_seconds,
-                u.baseline.usual_outing_seconds, u.baseline.standby_power_kw,
+                u.unit_id, quiet_gap_seconds, u.baseline.usual_outing_seconds, u.baseline.standby_power_kw,
+                learned.model_dump_json() if learned else None,
             ))  # fmt: skip
             interest_rows.extend((u.unit_id, interest, i) for i, interest in enumerate(u.interests))
             rhythm_rows.append((
@@ -87,8 +89,8 @@ async def reset_demo() -> list[Unit]:
             )
             await conn.executemany(
                 """insert into resident_profiles (unit_id, usual_quiet_gap_seconds,
-                                                  usual_outing_seconds, standby_power_kw)
-                   values ($1, $2, $3, $4)""",
+                                                  usual_outing_seconds, standby_power_kw, learned_quiet_gap)
+                   values ($1, $2, $3, $4, $5::jsonb)""",
                 profile_rows,
             )
             await conn.executemany(

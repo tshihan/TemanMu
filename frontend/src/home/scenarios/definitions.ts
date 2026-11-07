@@ -72,7 +72,7 @@ function returnViaLobby(): ScenarioStep[] {
 }
 
 export function scenarioSteps(id: ScenarioId, timing: ScenarioTiming): ScenarioStep[] {
-  const quietGapLabel = 'Fast-forward 4 hours: no water use, longer than her usual quiet gap; no outing evidence'
+  const quietGapLabel = 'Fast-forward: no water use, longer than her learned usual quiet gap; no outing evidence'
   switch (id) {
     case 'normalMorning': return [
       { kind: 'wait', seconds: 1.2, label: 'Asleep in bed' },

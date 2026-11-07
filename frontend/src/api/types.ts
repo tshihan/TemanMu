@@ -22,11 +22,23 @@ export interface Reading {
   recorded_at: string
 }
 
+/** Where a learned quiet gap came from, in real-life ("story") time. */
+export interface LearnedQuietGap {
+  story_minutes: number
+  scene_time: string
+  story_minutes_per_demo_second: number
+  model: string
+  trained_days: number
+  source: 'simulated_history'
+}
+
 export interface Baseline {
   usual_quiet_gap_seconds: number
   usual_outing_seconds: number
   standby_power_kw: number
   source: 'simulated_history'
+  /** Set when the quiet gap comes from the Quiet Gap Model instead of a typed-in number. */
+  learned_quiet_gap?: LearnedQuietGap | null
 }
 
 /** A caregiver-declared time when the resident is not at home. Every screen (township

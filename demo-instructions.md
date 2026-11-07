@@ -24,7 +24,8 @@
 
 ## Part C: The emergency path
 5. **Unusual Inactivity:** press play.
-   - Say this once, in one sentence: *"The quiet gap is the longest she normally goes without any activity, learned from her own history (4 hours here), and the grace period is a short extra wait after that before TemanMu calls her, so we don't raise false alarms."*
+   - Say this once, in one sentence: *"The quiet gap is the longest she normally goes without using water, learned by our Quiet Gap Model from her own history (1 h 55 m at 8 AM here, much shorter than overnight), and the grace period is a short extra wait after that before TemanMu calls her, so we don't raise false alarms."*
+   - Optional: show **Mum's usual quiet gaps** on the caregiver home tab: short in the busy morning, long overnight.
    - TemanMu calls her and she doesn't answer.
    - On the **caregiver tab**, tap **Ask township to visit**.
    - Switch to the **township tab**.

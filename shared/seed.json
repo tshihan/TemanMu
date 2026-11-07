@@ -99,7 +99,11 @@
       "last_door_event_offset_seconds": null,
       "interests": ["gardening", "cooking"],
       "baseline": {
-        "usual_quiet_gap_seconds": 5,
+        "learned_quiet_gap": {
+          "model_file": "ml/A-105_quiet_gap.json",
+          "scene_time": "08:00",
+          "story_minutes_per_demo_second": 24
+        },
         "usual_outing_seconds": 20,
         "standby_power_kw": 0.15
       },

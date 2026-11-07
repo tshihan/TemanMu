@@ -1,5 +1,6 @@
 import seed from '../../../shared/seed.json'
 import { ApiError } from '../api/live'
+import { resolveQuietGap } from '../api/learnedQuietGap'
 import { ARRIVAL_DETECTED, HOME_CHECK_DETECTED, HOME_CHECK_OUTCOMES, NOT_BACK_DETECTED, isHomeCheck, outcomeLabel } from '../caregiver/copy'
 import { buildHistory } from './history'
 import type {
@@ -107,7 +108,7 @@ const initialConsents = () => new Set(seed.units.filter(item => item.open_to_nei
 function initialSnapshot(): Snapshot {
   const resetAt = new Date()
   return {
-    units: seed.units.map(item => ({
+    units: seed.units.map(item => { const quietGap = resolveQuietGap(item.baseline); return {
       unit_id: item.unit_id,
       resident_name: item.resident_name,
       caregiver_name: item.caregiver_name,
@@ -126,15 +127,18 @@ function initialSnapshot(): Snapshot {
       quiet_gap: {
         last_water_activity_at: new Date(resetAt.getTime() + item.last_water_activity_offset_seconds * 1000).toISOString(),
         last_caregiver_confirmation_at: null,
-        usual_max_seconds: item.baseline.usual_quiet_gap_seconds,
+        usual_max_seconds: quietGap.seconds,
       },
-      baseline: { ...item.baseline, source: 'simulated_history' as const },
+      baseline: {
+        usual_quiet_gap_seconds: quietGap.seconds, usual_outing_seconds: item.baseline.usual_outing_seconds,
+        standby_power_kw: item.baseline.standby_power_kw, source: 'simulated_history' as const, learned_quiet_gap: quietGap.learned,
+      },
       active_incident_id: null,
       care_state: 'home_monitoring',
       away_periods: [],
       last_access: null,
       awaiting_arrival_since: null,
-    })),
+    } }),
     incidents: [],
     notifications: [],
     config: clone(config),

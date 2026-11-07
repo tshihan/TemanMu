@@ -204,6 +204,21 @@
 .cg-legend .is-power::before { background: var(--ochre); }
 .cg-legend .is-door::before { background: var(--accent); }
 .cg-day-history { width: 100%; min-height: 44px; margin-top: 10px; padding: 0; border: 0; border-top: 1px solid var(--line); background: transparent; color: var(--accent); display: flex; align-items: center; justify-content: space-between; font-size: 15px; font-weight: 700; }
+.cg-routine { display: flex; flex-direction: column; }
+.cg-routine-lead { margin-top: 8px; color: var(--mut); font-size: 14px; line-height: 1.45; text-wrap: pretty; }
+.cg-routine-readout { display: flex; align-items: baseline; gap: 8px; margin-top: 12px; color: var(--mut); font-size: 13px; font-weight: 600; }
+.cg-routine-readout strong { color: var(--ink); font-size: 22px; font-weight: 800; }
+.cg-routine-plot { display: flex; gap: 6px; height: 104px; margin-top: 10px; }
+.cg-routine-ticks { position: relative; width: 18px; flex: none; color: var(--faint); font-size: 11px; font-weight: 600; }
+.cg-routine-ticks span { position: absolute; right: 0; transform: translateY(50%); }
+.cg-routine-bars { position: relative; flex: 1; display: flex; align-items: flex-end; touch-action: none; }
+.cg-routine-grid { position: absolute; left: 0; right: 0; height: 1px; background: var(--line); }
+.cg-routine-col { position: relative; flex: 1; height: 100%; display: flex; align-items: flex-end; justify-content: center; padding: 0 1px; cursor: default; }
+.cg-routine-col b { width: 100%; max-width: 24px; min-height: 2px; border-radius: 4px 4px 0 0; background: var(--waterwash); box-shadow: inset 0 0 0 1px #d8ae97; }
+.cg-routine-col.is-scene b { background: var(--water); box-shadow: none; }
+.cg-routine-col.is-shown::after { content: ''; position: absolute; inset: 0 0 auto; height: 100%; border-radius: 4px; background: #1b1f1a0d; pointer-events: none; }
+.cg-routine-axis { margin-left: 24px; }
+.cg-routine-note { margin-top: 10px; color: var(--faint); font-size: 12px; line-height: 1.4; }
 
 /* Activity history (phase2.md §5): one row of lanes per day, then a day's hourly charts. */
 .cg-hist-range { margin: 0 0 4px; }
