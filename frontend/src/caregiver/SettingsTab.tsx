@@ -45,6 +45,6 @@ export function SettingsTab({ unit, ctx, theme, onTheme, onOpenRoutine }: Props)
         </div>
       </div>
     </section>
-    <p className="cg-fineprint">Prototype. Sensor data is simulated; alerts run live. Times are Malaysia time (MYT). TemanMu knows only water, electricity and door activity.</p>
+    <p className="cg-fineprint">Times are Malaysia time (MYT). TemanMu knows only water, electricity and door activity.</p>
   </div>
 }

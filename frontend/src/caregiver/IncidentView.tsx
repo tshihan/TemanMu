@@ -41,7 +41,7 @@ export function IncidentView({ incident, unit, ctx, now, liveNote, ackBusy, ackE
       : { variant: 'checking', chip: 'Awaiting outcome', Icon: ShieldCheck, badge: 'Home check', title: `${actorName(ctx, ack)} is checking the home`,
         body: `Taken at ${ack ? clock(ack.at) : '—'}. You’ll get an update when the check is done.` }
     : state === 'notified'
-    ? { variant: 'alarm', chip: 'Needs response', Icon: TriangleAlert, badge: STATUS_LABELS[unit.status], title: 'Unusual inactivity', body: `${cause} The simulated call to ${R} went unanswered. You and the township operator have been alerted.` }
+    ? { variant: 'alarm', chip: 'Needs response', Icon: TriangleAlert, badge: STATUS_LABELS[unit.status], title: 'Unusual inactivity', body: `${cause} The call to ${R} went unanswered. You and the township operator have been alerted.` }
     : state === 'acknowledged'
       ? { variant: called || unable ? 'alarm' : 'checking', chip: called ? '999 called' : unable ? 'Urgent follow-up' : 'Awaiting outcome', Icon: called || unable ? TriangleAlert : ShieldCheck, badge: called ? 'Emergency handoff' : unable ? 'Safety not verified' : 'Someone is checking', title: called ? '999 call reported' : unable ? 'Safety not verified' : mine ? 'You’re checking' : `${actorName(ctx, ack)} is checking`,
         body: called ? `${actorName(ctx, ack)} reports calling 999. Dispatch has not been confirmed. Help responders reach ${R} and await an outcome.` : unable ? `${actorName(ctx, ack)} could not verify ${R}’s safety. Contact the duty supervisor urgently; call 999 if an emergency is suspected.` : `${actorName(ctx, ack)} took this at ${ack ? clock(ack.at) : '—'}. Reminders have stopped for everyone. ${R} is not yet confirmed safe.` }

@@ -86,7 +86,7 @@ export function notificationCopy(n: Notification, ctx: Ctx, incident: Incident |
     case 'morning_reassurance':
       return { title: `${R}’s day has started.`, body: n.message.match(/day has started\.\s*(.+)$/)?.[1] || 'Activity detected at home.', Icon: Sunrise, tone: 'calm' }
     case 'alert':
-      return { title: alertTitle(incident), body: `${cause(ctx, incident)}. The simulated call went unanswered. You and the township operator have been alerted.`, Icon: TriangleAlert, tone: 'alarm' }
+      return { title: alertTitle(incident), body: `${cause(ctx, incident)}. The call went unanswered. You and the township operator have been alerted.`, Icon: TriangleAlert, tone: 'alarm' }
     case 'reminder': {
       const number = n.message.match(/#(\d+)/)?.[1]
       return { title: number ? `Reminder #${number}` : 'Reminder', body: `Nobody has responded yet. Sent to you and ${GUARD}.`, Icon: BellRing, tone: 'alarm' }
@@ -113,11 +113,11 @@ export function notificationCopy(n: Notification, ctx: Ctx, incident: Incident |
       return { title: 'Resident activity detected', body: 'Activity at home ended the alert. No in-person check was recorded.', Icon: CircleCheck, tone: 'calm' }
     case 'message_delivered': {
       const text = n.message.match(/"(.+)"/)?.[1]
-      return { title: 'Message delivered', body: text ? `“${text}” was delivered to ${R} by voice call (simulated).` : `Delivered to ${R} by voice call (simulated).`, Icon: Heart, tone: 'warm' }
+      return { title: 'Message delivered', body: text ? `“${text}” was delivered to ${R} by voice call.` : `Delivered to ${R} by voice call.`, Icon: Heart, tone: 'warm' }
     }
     case 'buddy_matched': {
       const match = n.message.match(/with (.+), who also enjoys (.+)$/)
-      return { title: 'Buddy matched', body: match ? `${match[1]} shares ${R}’s interest in ${match[2]} (simulated match).` : `${n.message} (simulated match).`, Icon: Users, tone: 'warm' }
+      return { title: 'Buddy matched', body: match ? `${match[1]} shares ${R}’s interest in ${match[2]}.` : n.message, Icon: Users, tone: 'warm' }
     }
     case 'neighbour_introduced': {
       const name = n.message.match(/to meet (.+)\.$/)?.[1]
@@ -149,9 +149,9 @@ export function eventCopy(event: IncidentEvent, ctx: Ctx, incident: Incident): C
       return isOuting(incident)
         ? { title: 'Outing longer than usual', body: `${R} has been away longer than usual.`, Icon: DoorOpen, tone: 'info' }
         : { title: 'Quiet gap detected', body: 'No water use for longer than the usual gap.', Icon: Droplets, tone: 'info' }
-    case 'voice_call_started': return { title: `Simulated call to ${R}`, body: `TemanMu called ${R} automatically (simulated).`, Icon: PhoneOutgoing, tone: 'info' }
-    case 'voice_call_no_answer': return { title: 'No answer', body: `${R} didn’t answer the simulated call.`, Icon: PhoneMissed, tone: 'alarm' }
-    case 'voice_call_cancelled': return { title: 'Call stopped', body: 'The simulated call was stopped.', Icon: PhoneOff, tone: 'info' }
+    case 'voice_call_started': return { title: `Call to ${R}`, body: `TemanMu called ${R} automatically.`, Icon: PhoneOutgoing, tone: 'info' }
+    case 'voice_call_no_answer': return { title: 'No answer', body: `${R} didn’t answer the call.`, Icon: PhoneMissed, tone: 'alarm' }
+    case 'voice_call_cancelled': return { title: 'Call stopped', body: 'The call was stopped.', Icon: PhoneOff, tone: 'info' }
     case 'notified': return { title: 'Alert sent', body: `You and ${GUARD} were alerted together.`, Icon: BellRing, tone: 'alarm' }
     case 'reminder': return { title: event.detail || 'Reminder', body: `Sent to you and ${GUARD}.`, Icon: BellRing, tone: 'alarm' }
     case 'acknowledged':

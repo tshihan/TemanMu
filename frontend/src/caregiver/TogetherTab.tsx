@@ -28,7 +28,7 @@ function Person({ name, lines }: { name: string; lines: string[] }) {
   return <div className="cg-person">
     <span className="cg-avatar">{initials(name)}</span>
     <span className="cg-person-text">
-      <small className="cg-person-tag">Simulated match</small>
+      <small className="cg-person-tag">Buddy match</small>
       {lines.map((line, index) => index ? <span key={line}>{line}</span> : <strong key={line}>{line}</strong>)}
     </span>
   </div>

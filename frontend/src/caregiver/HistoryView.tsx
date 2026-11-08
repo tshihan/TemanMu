@@ -19,7 +19,6 @@ const hourName = (hour: number) => `${hour % 12 || 12} ${hour < 12 ? 'AM' : 'PM'
 const hourRange = (hour: number) => `${hourName(hour)}–${hourName((hour + 1) % 24)}`
 const litres = (value: number) => `${value && value < 10 ? value.toFixed(1) : Math.round(value)} L`
 const kwh = (value: number) => `${value.toFixed(2)} kWh`
-const simulated = (day: HistoryDay) => day.source === 'simulated_history'
 // The electricity lane marks hours with use above the home's standby draw.
 const poweredHour = (energy: number | null, standby: number) => energy !== null && energy > standby + 0.02
 
@@ -45,7 +44,7 @@ function list(items: string[]): string {
 function summary(day: HistoryDay, now: number): string[] {
   const lines: string[] = []
   for (const gap of day.missing)
-    lines.push(gap.reason === 'before_demo' ? `No data before the demo started at ${clock(gap.ends_at)}.` : `No meter data ${span(day, gap)}.`)
+    lines.push(gap.reason === 'before_demo' ? `No data before ${clock(gap.ends_at)}.` : `No meter data ${span(day, gap)}.`)
   const hasData = day.hours.some(hour => hour.water_litres !== null)
   if (day.first_water_at) lines.push(`First water use recorded at ${clock(day.first_water_at)}.`)
   else if (hasData) lines.push(`No water use recorded${day.date === dayKey(now) ? ' so far' : ''}.`)
@@ -124,7 +123,6 @@ function DayDetail({ day, history, ctx, now, card, onOpenIncident }: { day: Hist
     <section className="cg-card cg-hist-day">
       <div className="cg-hist-day-head">
         <h2 className="cg-card-title">{dayName(day, now)}</h2>
-        <span className="cg-chip">{simulated(day) ? 'Simulated' : 'Live'}</span>
       </div>
       <p className="cg-card-lead">{summary(day, now).join(' ') || 'No activity recorded yet.'}</p>
       <p className="cg-hist-readout cg-num" role="status">
@@ -197,10 +195,9 @@ export function HistoryView({ unit, ctx, now, revision, onBack, onOpenIncident }
 
   const row = (item: HistoryDay, compact: boolean) => <li key={item.date}>
     <button type="button" className={`cg-hist-row ${compact ? 'is-compact' : ''}`} onClick={() => setDate(item.date)}
-      aria-label={`${dayName(item, now)}${simulated(item) ? ', simulated' : ''}. ${summary(item, now).join(' ')}`}>
+      aria-label={`${dayName(item, now)}. ${summary(item, now).join(' ')}`}>
       <span className="cg-hist-date">
         <strong>{item.date === dayKey(now) ? 'Today' : dayLabel(Date.parse(item.starts_at) + DAY_MS / 2).replace(/ \w+$/, '')}</strong>
-        {!compact && <span>{simulated(item) ? 'Simulated' : 'Live'}</span>}
       </span>
       <Lanes day={item} standby={history!.standby_power_kw} now={now} compact={compact} />
       <ChevronRight size={16} aria-hidden="true" />
@@ -230,7 +227,7 @@ export function HistoryView({ unit, ctx, now, revision, onBack, onOpenIncident }
               </section>)}
             <Legend card={card} />
           </section>
-          <p className="cg-fineprint">Days marked Simulated are generated for this demo, not measured. Live days start at the last demo reset. Tap a day for hourly detail.</p>
+          <p className="cg-fineprint">Tap a day for hourly detail.</p>
         </>}
     </div>
   </div>

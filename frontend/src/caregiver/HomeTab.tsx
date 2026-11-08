@@ -33,7 +33,7 @@ function statusCard(unit: Unit, incident: Incident | null, ctx: Ctx, now: number
     const reminder = incident.reminder_count ? ` Reminder #${incident.reminder_count}.` : ''
     const headline = concern === 'not_back' ? 'Not back yet' : concern === 'arrival' ? 'Tapped in, no activity at home' : 'Unusual inactivity'
     return { variant: 'alarm', Icon: TriangleAlert, badge: STATUS_LABELS[unit.status], headline, ack: true,
-      reason: `${cause}. The simulated call went unanswered. You and the township operator have been alerted.${reminder}` }
+      reason: `${cause}. The call went unanswered. You and the township operator have been alerted.${reminder}` }
   }
   if (incident?.state === 'acknowledged' && incident.acknowledged_by) {
     const who = actorName(ctx, incident.acknowledged_by)
@@ -51,7 +51,7 @@ function statusCard(unit: Unit, incident: Incident | null, ctx: Ctx, now: number
     const cause = cardCause ? `${cardCause}.` : isOuting(incident) && doorAt ? `${R} has been out since ${clock(doorAt)}, longer than usual.`
       : lastWater ? `No water use since ${clock(lastWater)}, longer than the usual gap.` : 'No water use for longer than the usual gap.'
     return { variant: 'quiet', Icon: PhoneOutgoing, badge: STATUS_LABELS.unusual_inactivity, headline: `Checking on ${R} quietly`,
-      reason: `${cause} TemanMu is calling ${R} now (simulated).`, grace: incident?.state === 'grace' ? until(incident.grace_ends_at, now) : undefined }
+      reason: `${cause} TemanMu is calling ${R} now.`, grace: incident?.state === 'grace' ? until(incident.grace_ends_at, now) : undefined }
   }
   if (unit.care_state === 'in_hospital') return { variant: 'hospital', Icon: Hospital, badge: 'In hospital', headline: `${R} is in hospital`,
     reason: `${guard ? `${guard} recorded the hospital transfer.` : 'Hospital transfer recorded.'} Inactivity checks are paused until you confirm a return home. Water and power safety alerts remain active.` }
@@ -170,7 +170,7 @@ export function HomeTab({ unit, ctx, incident, hospitalIncident, onOpenHospital,
         <TrackingControl unit={unit} relationship={R} away={away} now={now} inCard blocked={trackingBlocked} />
       </div>}
       {card.grace && <p className="cg-status-grace"><span className="cg-status-timer cg-num">{card.grace}</span>
-        <span>left in the simulated call window. You’ll only be alerted if {R} doesn’t answer.</span></p>}
+        <span>left in the call window. You’ll only be alerted if {R} doesn’t answer.</span></p>}
       {unit.status === 'possible_away' && !away && <div className="cg-status-actions">
         <button type="button" className="cg-btn cg-btn-ink" onClick={onCall}><Phone size={18} aria-hidden="true" />Call {R}</button>
         <button type="button" className="cg-btn cg-btn-outline" onClick={onConfirmHome} disabled={confirmBusy}>

@@ -330,14 +330,13 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
         ackBusy={ackBusy} ackError={ackError} onAck={() => void respond('township_requested')} onCheckIn={() => void respond('caregiver_checking_in')} onConfirmSafe={() => void respond('resident_confirmed_safe')} onBack={() => { setIncidentOpen(false); setLiveNote(false) }} />}
 
       {call && ctx && <div className="cg-scrim" onClick={event => { if (event.target === event.currentTarget) setCall(null) }}>
-        <div className={`cg-call ${call === 'calling' ? 'is-calling' : ''}`} role="dialog" aria-modal="true" aria-label="Simulated call">
-          <span className="cg-call-tag">Simulated call</span>
+        <div className={`cg-call ${call === 'calling' ? 'is-calling' : ''}`} role="dialog" aria-modal="true" aria-label="Voice call">
+          <span className="cg-call-tag">Voice call</span>
           <span className="cg-call-avatar" aria-hidden="true"><span /><span />{initials(ctx.R)}</span>
           <strong>{ctx.R}</strong>
-          <span role="status">{call === 'calling' ? 'Calling… (simulated)' : 'Simulated call ended'}</span>
-          <p>This is a demo. No real phone call is made and {ctx.R}’s phone won’t ring.</p>
+          <span role="status">{call === 'calling' ? 'Calling…' : 'Call ended'}</span>
           <button type="button" autoFocus className={call === 'calling' ? 'is-calling' : ''} onClick={() => setCall(current => current === 'calling' ? 'ended' : null)}>
-            {call === 'calling' && <PhoneOff size={18} aria-hidden="true" />}{call === 'calling' ? 'End simulated call' : 'Close'}
+            {call === 'calling' && <PhoneOff size={18} aria-hidden="true" />}{call === 'calling' ? 'End call' : 'Close'}
           </button>
         </div>
       </div>}
