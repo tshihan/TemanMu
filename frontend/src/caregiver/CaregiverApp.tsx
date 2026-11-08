@@ -7,6 +7,7 @@ import { ConfirmContext, useConfirmAlert } from './ConfirmAlert'
 import { actorName, awaitingAnswer, ctxFor, currentAway, GUARD, isHomeCheck, NOTIFICATION_TARGET, notificationCopy } from './copy'
 import { clock, initials } from './format'
 import { HistoryView } from './HistoryView'
+import { RoutineView } from './RoutineView'
 import { HomeTab } from './HomeTab'
 import { HospitalDetails } from './HospitalDetails'
 import { latestHospitalTransfer } from './hospital-transfer'
@@ -46,6 +47,7 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
   const [tab, setTab] = useState<Tab>('home')
   const [incidentOpen, setIncidentOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [routineOpen, setRoutineOpen] = useState(false)
   const [hospitalOpen, setHospitalOpen] = useState(false)
   // A past alert opened from the history; the current one opens through incidentOpen.
   const [pastIncidentId, setPastIncidentId] = useState<string | null>(null)
@@ -169,6 +171,7 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
     setTab(next)
     setIncidentOpen(false)
     setHistoryOpen(false)
+    setRoutineOpen(false)
     setPastIncidentId(null)
   }
   function openHistoryIncident(id: string) {
@@ -298,7 +301,7 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
           : tab === 'updates' ? <UpdatesTab feed={feed} ctx={ctx} now={now} incidentFor={incidentFor} isUnread={isUnread} ackTargetId={ackTargetId}
             ackBusy={ackBusy} onOpen={open} onMarkAllRead={markAllRead} onAck={openIncident} />
           : tab === 'together' ? <TogetherTab unit={unit} ctx={ctx} companion={companion} onToast={showToast} />
-          : <SettingsTab unit={unit} ctx={ctx} now={now} awayReasons={awayReasons} theme={theme} onTheme={setTheme} onToast={showToast} />}
+          : <SettingsTab unit={unit} ctx={ctx} now={now} awayReasons={awayReasons} theme={theme} onTheme={setTheme} onToast={showToast} onOpenRoutine={() => setRoutineOpen(true)} />}
       </div>
 
       <nav className="cg-nav" aria-label="Main">
@@ -317,6 +320,8 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
 
       {historyOpen && unit && ctx && <HistoryView unit={unit} ctx={ctx} now={now} revision={historyRevision}
         onBack={() => setHistoryOpen(false)} onOpenIncident={openHistoryIncident} />}
+
+      {routineOpen && unit && ctx && <RoutineView unit={unit} ctx={ctx} onBack={() => setRoutineOpen(false)} />}
 
       {pastIncident && unit && ctx && <IncidentView key={pastIncident.incident_id} incident={pastIncident} unit={unit} ctx={ctx} now={now} liveNote={false}
         ackBusy={false} ackError={null} onAck={() => {}} onCheckIn={() => {}} onConfirmSafe={() => {}} onBack={() => setPastIncidentId(null)} />}

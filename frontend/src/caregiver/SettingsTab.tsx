@@ -1,4 +1,4 @@
-import { Moon, Sun } from 'lucide-react'
+import { ChevronRight, Moon, Sun } from 'lucide-react'
 import type { Unit } from '../api/types'
 import { GUARD, type Ctx } from './copy'
 import { ResidentAvatar } from './Avatar'
@@ -8,9 +8,10 @@ export type Theme = 'light' | 'dark'
 interface Props {
   unit: Unit; ctx: Ctx; now: number; awayReasons: Record<string, string | null>
   theme: Theme; onTheme: (theme: Theme) => void; onToast: (text: string) => void
+  onOpenRoutine: () => void
 }
 
-export function SettingsTab({ unit, ctx, theme, onTheme }: Props) {
+export function SettingsTab({ unit, ctx, theme, onTheme, onOpenRoutine }: Props) {
   return <div className="cg-page">
     <header className="cg-page-head">
       <p className="cg-kicker">Settings</p>
@@ -29,6 +30,11 @@ export function SettingsTab({ unit, ctx, theme, onTheme }: Props) {
         <div><dt>Responders</dt><dd>You and {GUARD}</dd></div>
         <div><dt>Sensors</dt><dd>Water · Electricity · Door</dd></div>
       </dl>
+    </section>
+    <section className="cg-card cg-menu">
+      <button type="button" className="cg-menu-row" onClick={onOpenRoutine}>
+        <span>{ctx.R}’s routine</span><ChevronRight size={18} aria-hidden="true" />
+      </button>
     </section>
     <section className="cg-card cg-settings">
       <div>
