@@ -4,7 +4,8 @@ import { connectStore, markRoleViewed, useAppState } from './api/store'
 import type { Role } from './api/types'
 import { Box, Building2, House } from 'lucide-react'
 import { CaregiverApp } from './caregiver/CaregiverApp'
-import { TownshipView } from './dashboard/TownshipView'
+import { LanguageSwitch, TownshipView } from './dashboard/TownshipView'
+import { useT } from './dashboard/i18n'
 import './live.css'
 
 const Landing = lazy(() => import('./landing/Landing').then(module => ({ default: module.Landing })))
@@ -23,6 +24,7 @@ export default function App() {
   const { connected, loaded, notifications } = useAppState()
   const [page] = useState<Page>(pageFromPath)
   const [role] = useState<Role>('township')
+  const t = useT()
   const activeUnread = notifications.filter(item => item.role === role && !item.read).length
 
   useEffect(() => {
@@ -85,11 +87,12 @@ export default function App() {
           <p className="brand-name">TemanMu</p>
         </div>
       </a>
-      <nav className="view-navigation" aria-label="Presentation views">
-        <a href="/dashboard" target="_blank" rel="noopener" aria-current="page">Product dashboard</a>
-        <a href="/simulator" target="_blank" rel="noopener">Live 3D view <span aria-hidden="true">↗</span></a>
-        <a href="/caregiver" target="_blank" rel="noopener">Caregiver app <span aria-hidden="true">↗</span></a>
+      <nav className="view-navigation" aria-label={t.viewsNav}>
+        <a href="/dashboard" target="_blank" rel="noopener" aria-current="page">{t.dashboardLink}</a>
+        <a href="/simulator" target="_blank" rel="noopener">{t.simulatorLink} <span aria-hidden="true">↗</span></a>
+        <a href="/caregiver" target="_blank" rel="noopener">{t.caregiverLink} <span aria-hidden="true">↗</span></a>
       </nav>
+      <LanguageSwitch />
       {/* <div className="header-meta">
         <span className="environment-label">{usingMock ? 'Simulated data' : 'Live backend'}</span>
         <span className={`connection-label ${connected ? 'is-connected' : ''}`} role="status">
@@ -105,7 +108,7 @@ export default function App() {
           <h1>Caregiver <em>view</em></h1>
         </div>}
         <div className="dashboard-content">
-          {!loaded ? <p className="loading-state" role="status">Waiting for the first snapshot…</p> : role === 'caregiver' ? <CaregiverApp /> : <TownshipView />}
+          {!loaded ? <p className="loading-state" role="status">{t.waitingSnapshot}</p> : role === 'caregiver' ? <CaregiverApp /> : <TownshipView />}
         </div>
       </section>
     </main>

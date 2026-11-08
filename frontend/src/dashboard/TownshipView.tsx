@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
-import { Building2, ChevronDown, ChevronRight, ChevronUp, ClipboardList, DoorOpen, PhoneCall, Search, Timer, TriangleAlert, X, type LucideIcon } from 'lucide-react'
+import { Building2, Check, ChevronDown, ChevronRight, ChevronUp, ClipboardList, DoorOpen, Globe, PhoneCall, Search, Timer, TriangleAlert, X, type LucideIcon } from 'lucide-react'
 import seed from '../../../shared/seed.json'
 import { useAppState } from '../api/store'
 import type { Incident, Status, Unit } from '../api/types'
@@ -7,24 +7,20 @@ import { playTone, unlockAudio } from '../caregiver/sound'
 import { Acknowledge, IncidentPanel, alertReason } from './IncidentPanel'
 import { isHomeCheck } from '../caregiver/copy'
 import { IncidentHistory } from './IncidentHistory'
+import { setLang, useLang, useT, type Lang } from './i18n'
 import './township.css'
 
 type Shown = Status | 'none'
-// Colours live in township.css as `.s-<status>` classes; this keeps the words and icons.
-const STATUS: Record<Shown, { label: string; Icon?: LucideIcon }> = {
-  routine: { label: 'No action needed' },
-  possible_away: { label: 'Possible away', Icon: DoorOpen },
-  unusual_inactivity: { label: 'Unusual inactivity', Icon: PhoneCall },
-  unresolved_concern: { label: 'Unresolved concern', Icon: TriangleAlert },
-  none: { label: 'Not enrolled' },
+// Colours live in township.css as `.s-<status>` classes and words in i18n.ts; this keeps the icons.
+const STATUS: Record<Shown, { Icon?: LucideIcon }> = {
+  routine: {},
+  possible_away: { Icon: DoorOpen },
+  unusual_inactivity: { Icon: PhoneCall },
+  unresolved_concern: { Icon: TriangleAlert },
+  none: {},
 }
 const ORDER: Shown[] = ['unresolved_concern', 'unusual_inactivity', 'possible_away', 'routine', 'none']
 type AlertStatus = 'unresolved_concern' | 'unusual_inactivity'
-// The filter chips double as the legend: what each alert level means for the guard.
-const CHIPS: Record<AlertStatus, { label: string; meaning: string }> = {
-  unresolved_concern: { label: 'Unresolved concern', meaning: 'Family and guard alerted' },
-  unusual_inactivity: { label: 'Unusual inactivity', meaning: 'TemanMu is calling her' },
-}
 const isAlert = (status: Shown): status is AlertStatus => status === 'unresolved_concern' || status === 'unusual_inactivity'
 
 // Only floor 1 is backed by the live store; the rest of Block A is illustrative sample data.
@@ -48,7 +44,6 @@ const duration = (seconds: number) => { const s = Math.max(0, Math.floor(seconds
 const clockTime = (time: number | string) => new Intl.DateTimeFormat('en-GB', {
   timeZone: 'Asia/Kuala_Lumpur', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
 }).format(new Date(time))
-const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`
 const TITLES: Record<string, string> = { Madam: 'Mdm', Puan: 'Pn', Encik: 'En' }
 function shortName(name: string): string {
   const [title, first] = name.split(' ')
@@ -93,6 +88,7 @@ function liveRow(unit: Unit, now: number): Row {
 const withCore = (list: Row[]): (Row | null)[] => [...list.slice(0, 3), null, ...list.slice(3)]
 
 export function TownshipView() {
+  const t = useT()
   const { units, incidents, connected, snapshotRevision } = useAppState()
   const [tab, setTab] = useState<'live' | 'history'>('live')
   const start = useRef(Date.now())
@@ -244,45 +240,45 @@ export function TownshipView() {
   useEffect(() => {
     if (!waitingUnitId) return
     const original = document.title
-    const alertTitle = `⚠ ${waitingUnitId} needs a check`
+    const alertTitle = t.tabTitle(waitingUnitId)
     let on = true
     document.title = alertTitle
     const timer = window.setInterval(() => { on = !on; document.title = on ? alertTitle : original }, 1000)
     return () => { window.clearInterval(timer); document.title = original }
-  }, [waitingUnitId])
+  }, [waitingUnitId, t])
 
   const announcement = !liveIncident || !activeUnit ? ''
-    : liveIncident.state === 'notified' ? `Alert: unit ${activeUnit.unit_id}, ${activeUnit.resident_name}, needs a responder.`
-    : `${liveIncident.acknowledged_by?.name ?? 'A responder'} is checking unit ${activeUnit.unit_id}.`
+    : liveIncident.state === 'notified' ? t.announceAlert(activeUnit.unit_id, activeUnit.resident_name)
+    : t.announceChecking(liveIncident.acknowledged_by?.name ?? t.aResponder, activeUnit.unit_id)
 
   function jump(value: string) {
     const text = value.trim()
     const digits = text.replace(/\D/g, '')
     if (!text) { setQueryMsg(''); return }
-    if (digits && digits.length < 3) { setQueryMsg('Type the full unit number, e.g. 1204'); return }
+    if (digits && digits.length < 3) { setQueryMsg(t.searchFull); return }
     const lower = text.toLowerCase()
     const matches = digits ? rows.filter(row => row.id.replace(/\D/g, '') === digits)
       : rows.filter(row => row.short.toLowerCase().includes(lower) || !!row.unit?.resident_name.toLowerCase().includes(lower))
-    if (!matches.length) { setQueryMsg(digits ? `No unit ${digits} in Block A` : `No resident called “${text}”`); return }
+    if (!matches.length) { setQueryMsg(digits ? t.noUnit(digits) : t.noResident(text)); return }
     // Enter again steps through residents who share a name.
     const index = (matches.findIndex(row => row.id === selected) + 1) % matches.length
     select(matches[index])
-    setQueryMsg(matches.length > 1 ? `${matches[index].id}: ${index + 1} of ${matches.length}. Press Enter for the next.` : '')
+    setQueryMsg(matches.length > 1 ? t.matchOf(matches[index].id, index + 1, matches.length) : '')
   }
 
   return <TownshipShell tab={tab} onSelect={setTab} needsResponse={!!waiting}>
     <div className="tm-township">
     <p className="tm-sr" role="status">{announcement}</p>
-    {waiting && activeUnit && <section className="tm-alertbar" aria-label="Alert needing a responder">
+    {waiting && activeUnit && <section className="tm-alertbar" aria-label={t.alertBarLabel}>
       <span className="tm-alertbar-icon" aria-hidden="true"><TriangleAlert size={26} strokeWidth={2.25} /></span>
       <div className="tm-alertbar-text">
-        <p className="tm-alertbar-what"><span>{activeUnit.unit_id}</span>{isHomeCheck(waiting) ? `${activeUnit.resident_name}'s home needs a check` : `${activeUnit.resident_name} needs a responder now`}</p>
-        <p className="tm-alertbar-meta">{alertReason(waiting, activeUnit)}{!isHomeCheck(waiting) && waiting.events.some(event => event.type === 'township_requested') ? ` · ${activeUnit.caregiver_name} asked you to visit` : ''} · Floor {activeRow?.floor ?? 1} · reminder {waiting.reminder_count + 1} in {waiting.next_reminder_at ? duration((Date.parse(waiting.next_reminder_at) - now) / 1000) : '–'}</p>
+        <p className="tm-alertbar-what"><span>{activeUnit.unit_id}</span>{isHomeCheck(waiting) ? t.homeNeedsCheck(activeUnit.resident_name) : t.needsResponderNow(activeUnit.resident_name)}</p>
+        <p className="tm-alertbar-meta">{alertReason(t, waiting, activeUnit)}{!isHomeCheck(waiting) && waiting.events.some(event => event.type === 'township_requested') ? ` · ${t.askedYouToVisit(activeUnit.caregiver_name)}` : ''} · {t.floor(activeRow?.floor ?? 1)} · {t.reminderIn(waiting.reminder_count + 1, waiting.next_reminder_at ? duration((Date.parse(waiting.next_reminder_at) - now) / 1000) : '–')}</p>
       </div>
       <div className="tm-alertbar-actions">
-        {tab === 'history' ? <button type="button" className="tm-alertbar-ack" onClick={() => setTab('live')}>Open live monitoring</button> : <>
+        {tab === 'history' ? <button type="button" className="tm-alertbar-ack" onClick={() => setTab('live')}>{t.openLive}</button> : <>
           <Acknowledge key={waiting.incident_id} incident={waiting} className="tm-alertbar-ack" />
-          <a className="tm-alertbar-999" href="tel:999">Call 999</a>
+          <a className="tm-alertbar-999" href="tel:999">{t.call999}</a>
         </>}
       </div>
     </section>}
@@ -290,10 +286,10 @@ export function TownshipView() {
     <header className="tm-toolbar">
       <div className="tm-title">
         <h1>Putra Heights</h1>
-        <p>Block A · {FLOORS} floors · {FLOORS * UNITS_PER_FLOOR} units<span className="tm-live">Live <time>{clockTime(now)}</time></span></p>
+        <p>{t.blockSummary(FLOORS, FLOORS * UNITS_PER_FLOOR)}<span className="tm-live">{t.live} <time>{clockTime(now)}</time></span></p>
       </div>
-      <div className="tm-chips" role="group" aria-label="Show only">
-        {filter && <button type="button" className="tm-clear" onClick={() => setFilter(null)}><X size={14} aria-hidden="true" />Show all</button>}
+      <div className="tm-chips" role="group" aria-label={t.showOnly}>
+        {filter && <button type="button" className="tm-clear" onClick={() => setFilter(null)}><X size={14} aria-hidden="true" />{t.showAll}</button>}
         {(['unresolved_concern', 'unusual_inactivity'] as AlertStatus[]).map(key => {
           const count = rows.filter(row => row.status === key).length
           const Icon = STATUS[key].Icon!
@@ -301,17 +297,17 @@ export function TownshipView() {
             aria-pressed={filter === key} onClick={() => setFilter(current => current === key ? null : key)}>
             <span className="tm-chip-swatch" aria-hidden="true"><Icon size={16} strokeWidth={2.25} /></span>
             <span className="tm-chip-count">{count}</span>
-            <span className="tm-chip-text"><strong>{CHIPS[key].label}</strong><small>{CHIPS[key].meaning}</small></span>
+            <span className="tm-chip-text"><strong>{t.status[key]}</strong><small>{t.chipMeaning[key]}</small></span>
           </button>
         })}
       </div>
     </header>
 
     <div className="tm-layout">
-      <section className="tm-block" aria-label="Block A floor map">
+      <section className="tm-block" aria-label={t.floorMap}>
         <div className="tm-search">
           <Search size={15} aria-hidden="true" />
-          <input ref={searchRef} type="search" value={query} placeholder="Unit or name" aria-label="Find a unit or resident" aria-keyshortcuts="/"
+          <input ref={searchRef} type="search" value={query} placeholder={t.searchPlaceholder} aria-label={t.searchLabel} aria-keyshortcuts="/"
             onChange={event => { setQuery(event.target.value); setQueryMsg('') }}
             onKeyDown={event => { if (event.key === 'Enter') jump(event.currentTarget.value); if (event.key === 'Escape') event.currentTarget.blur() }} />
           <kbd aria-hidden="true">/</kbd>
@@ -325,7 +321,7 @@ export function TownshipView() {
             const count = list.filter(row => isAlert(row.status)).length
             const Icon = count ? STATUS[w].Icon : undefined
             return <button key={floor} type="button" onClick={() => setFocus(floor)}
-              aria-label={`Floor ${floor}${count ? `, ${plural(count, 'alert')}` : ''}`} aria-current={floor === focus ? 'true' : undefined}
+              aria-label={`${t.floor(floor)}${count ? `, ${t.alerts(count)}` : ''}`} aria-current={floor === focus ? 'true' : undefined}
               className={`tm-map-row ${lensFloors.includes(floor) ? 'in-lens' : ''} ${floor === focus ? 'is-focus' : ''}`}>
               <span className="tm-map-num">{pad(floor)}</span>
               <span className="tm-map-cells" aria-hidden="true">
@@ -338,23 +334,23 @@ export function TownshipView() {
           })}
         </div>
         <div className="tm-ground" aria-hidden="true" />
-        <p className="tm-keys"><span><kbd>↑</kbd><kbd>↓</kbd> floors</span><span><kbd>J</kbd><kbd>K</kbd> next alert</span></p>
+        <p className="tm-keys"><span><kbd>↑</kbd><kbd>↓</kbd> {t.floorsKey}</span><span><kbd>J</kbd><kbd>K</kbd> {t.nextAlertKey}</span></p>
       </section>
 
       <section className="tm-lens" aria-labelledby="tm-lens-title">
         <div className="tm-lens-head">
           <div className="tm-lens-nav">
-            <button type="button" onClick={() => step(-1)} disabled={focus <= 1} aria-label="Floor below"><ChevronDown size={18} aria-hidden="true" /></button>
-            <button type="button" onClick={() => step(1)} disabled={top >= FLOORS} aria-label="Floor above"><ChevronUp size={18} aria-hidden="true" /></button>
-            <h2 id="tm-lens-title">Floors {top}–{top - 2}</h2>
+            <button type="button" onClick={() => step(-1)} disabled={focus <= 1} aria-label={t.floorBelow}><ChevronDown size={18} aria-hidden="true" /></button>
+            <button type="button" onClick={() => step(1)} disabled={top >= FLOORS} aria-label={t.floorAbove}><ChevronUp size={18} aria-hidden="true" /></button>
+            <h2 id="tm-lens-title">{t.floorsRange(top, top - 2)}</h2>
           </div>
-          {alertFloors.length > 0 && <div className="tm-alert-floors" role="group" aria-label="Floors with alerts">
+          {alertFloors.length > 0 && <div className="tm-alert-floors" role="group" aria-label={t.floorsWithAlerts}>
             {alertFloors.map(floor => {
               const w = worst(byFloor(floor))
               const Icon = STATUS[w].Icon
               return <button key={floor} type="button" className={`tm-alert-floor s-${w} ${lensFloors.includes(floor) ? 'is-shown' : ''}`}
                 onClick={() => { const first = attention.find(row => row.floor === floor); if (first) select(first) }}>
-                {Icon && <Icon size={13} strokeWidth={2.5} aria-hidden="true" />}Floor {floor}
+                {Icon && <Icon size={13} strokeWidth={2.5} aria-hidden="true" />}{t.floor(floor)}
               </button>
             })}
           </div>}
@@ -362,32 +358,33 @@ export function TownshipView() {
 
         {top === FLOORS && <div className="tm-row" aria-hidden="true"><div /><div className="tm-lens-roof"><span /><span /></div></div>}
         {top < FLOORS && <button type="button" className={`tm-more above ${aboveAlerts ? 'has-alerts' : ''}`} onClick={() => step(1)}>
-          <ChevronUp size={14} aria-hidden="true" />{plural(FLOORS - top, 'floor')} above · {aboveAlerts ? plural(aboveAlerts, 'alert') : 'all clear'}
+          <ChevronUp size={14} aria-hidden="true" />{t.floorsAbove(FLOORS - top)} · {aboveAlerts ? t.alerts(aboveAlerts) : t.allClear}
         </button>}
-        <div ref={floorViewport} className="tm-floor-viewport" role="region" aria-label="Scrollable three-floor condo view" aria-describedby="tm-floor-scroll-hint" tabIndex={0} onScroll={scrollFloors}>
+        <div ref={floorViewport} className="tm-floor-viewport" role="region" aria-label={t.floorViewport} aria-describedby="tm-floor-scroll-hint" tabIndex={0} onScroll={scrollFloors}>
           {Array.from({ length: FLOORS }, (_, index) => FLOORS - index).map(floor => {
             const list = byFloor(floor)
             const count = list.filter(row => isAlert(row.status)).length
             return <div key={floor} className="tm-row">
               <div className="tm-floor-label">
-                <span>Floor</span>
+                <span>{t.floorWord}</span>
                 <span className={`tm-floor-num ${floor === focus ? 'is-focus' : ''}`}>{pad(floor)}</span>
-                {count > 0 && <span className={`tm-floor-alert s-${worst(list)}`}>{plural(count, 'alert')}</span>}
+                {count > 0 && <span className={`tm-floor-alert s-${worst(list)}`}>{t.alerts(count)}</span>}
               </div>
               <div className="tm-floor">
                 {withCore(list).map((row, index) => {
                   if (!row) return <div key={`core-${index}`} className="tm-core" aria-hidden="true" />
                   const st = STATUS[row.status]
+                  const label = t.status[row.status]
                   const checker = checkerFor(row)
-                  const where = row.unit?.care_state === 'in_hospital' ? 'In hospital' : row.away ? 'Away' : ''
-                  const tag = row.status === 'unresolved_concern' ? (checker ? `${checker.split(' ').pop()} checking` : 'Check now')
+                  const where = row.unit?.care_state === 'in_hospital' ? t.inHospital : row.away ? t.away : ''
+                  const tag = row.status === 'unresolved_concern' ? (checker ? t.checking(checker.split(' ').pop()!) : t.checkNow)
                     : row.status === 'unusual_inactivity' ? duration(row.elapsed) : where
                   return <button key={row.id} type="button" onClick={() => select(row)}
                     className={`tm-unit s-${row.status} ${selected === row.id ? 'is-selected' : ''} ${dimmed(row) ? 'is-dimmed' : ''} ${checker ? 'is-claimed' : ''}`}
                     aria-pressed={selected === row.id}
-                    aria-label={[`Unit ${row.id}`, row.short, st.label,
-                      row.status === 'unusual_inactivity' ? `quiet for ${duration(row.elapsed)}` : '',
-                      row.status === 'unresolved_concern' ? (checker ? `${checker} is checking` : 'needs a responder') : '',
+                    aria-label={[t.unitLabel(row.id), row.short, label,
+                      row.status === 'unusual_inactivity' ? t.quietFor(duration(row.elapsed)) : '',
+                      row.status === 'unresolved_concern' ? (checker ? t.isChecking(checker) : t.needsResponder) : '',
                       where].filter(Boolean).join(', ')}>
                     {row.status === 'unresolved_concern' && !checker && <span className="tm-unit-pulse" aria-hidden="true" />}
                     <span className="tm-pane" aria-hidden="true">
@@ -406,20 +403,20 @@ export function TownshipView() {
           })}
         </div>
         {top - 2 > 1 && <button type="button" className={`tm-more below ${belowAlerts ? 'has-alerts' : ''}`} onClick={() => step(-1)}>
-          <ChevronDown size={14} aria-hidden="true" />{plural(top - 3, 'floor')} below · {belowAlerts ? plural(belowAlerts, 'alert') : 'all clear'}
+          <ChevronDown size={14} aria-hidden="true" />{t.floorsBelow(top - 3)} · {belowAlerts ? t.alerts(belowAlerts) : t.allClear}
         </button>}
         {top - 2 === 1 && <div className="tm-row">
           <div className="tm-floor-label"><span className="tm-floor-num is-ground">G</span></div>
           <div>
-            <div className="tm-lobby"><span>Lobby · {responder} on duty</span><span aria-hidden="true" /></div>
+            <div className="tm-lobby"><span>{t.lobby(responder)}</span><span aria-hidden="true" /></div>
             <div className="tm-lobby-ground" aria-hidden="true" />
           </div>
         </div>}
-        <p className="tm-floor-scroll-hint" id="tm-floor-scroll-hint">Scroll to browse floors. Use ↑ and ↓ when the building is focused.</p>
-        <p className="tm-bar-key"><span aria-hidden="true"><span /></span>Each bar shows how long the home has been quiet, against that resident's usual longest gap.</p>
+        <p className="tm-floor-scroll-hint" id="tm-floor-scroll-hint">{t.scrollHint}</p>
+        <p className="tm-bar-key"><span aria-hidden="true"><span /></span>{t.barKey}</p>
       </section>
 
-      <aside className="tm-aside" aria-label="Response">
+      <aside className="tm-aside" aria-label={t.response}>
         {/* While the check pop-up is open it is the only place the incident shows; the panel returns if the guard closes it. */}
         {activeIncident && activeUnit && !dialogOpen && <IncidentPanel key={activeIncident.incident_id} incident={activeIncident} unit={activeUnit}
           floor={activeRow?.floor ?? 1} onDone={finish} inAlertBar={!!waiting}
@@ -427,7 +424,7 @@ export function TownshipView() {
 
         <section className="tm-attention" aria-labelledby="tm-attention-heading">
           <div className="tm-attention-head">
-            <h2 id="tm-attention-heading">Needs attention</h2>
+            <h2 id="tm-attention-heading">{t.needsAttention}</h2>
             <span className={attention.some(row => row.status === 'unresolved_concern') ? 'is-urgent' : ''}>{attention.length}</span>
           </div>
           {attention.length > 0 ? <ul className="tm-attention-list">
@@ -438,15 +435,15 @@ export function TownshipView() {
                 <button type="button" data-attention={row.id} aria-current={selected === row.id ? 'true' : undefined}
                   className={`tm-attention-item s-${row.status}`} onClick={() => select(row)}>
                   <Icon className="tm-attention-icon" size={16} strokeWidth={2.25} aria-hidden="true" />
-                  <span className="tm-attention-who"><strong>{row.id}</strong><span>{row.short}{checker ? ` · ${checker} checking` : ''}</span></span>
+                  <span className="tm-attention-who"><strong>{row.id}</strong><span>{row.short}{checker ? ` · ${t.checking(checker)}` : ''}</span></span>
                   <span className="tm-attention-tag">{row.status === 'unresolved_concern'
-                    ? (checker ? 'Checking' : 'Check now')
+                    ? (checker ? t.checkingTag : t.checkNow)
                     : <><Timer size={12} strokeWidth={2.5} aria-hidden="true" />{duration(row.elapsed)}</>}</span>
                   <ChevronRight size={16} aria-hidden="true" />
                 </button>
               </li>
             })}
-          </ul> : <p className="tm-empty">No enrolled homes need a response right now.</p>}
+          </ul> : <p className="tm-empty">{t.noAttention}</p>}
         </section>
       </aside>
     </div>
@@ -463,14 +460,15 @@ export function TownshipView() {
 function TownshipShell({ tab, onSelect, needsResponse, children }: {
   tab: 'live' | 'history'; onSelect: (tab: 'live' | 'history') => void; needsResponse: boolean; children: ReactNode
 }) {
+  const t = useT()
   const tabs = [
-    { id: 'live' as const, label: 'Live monitoring', Icon: Building2 },
-    { id: 'history' as const, label: 'Incident log', Icon: ClipboardList },
+    { id: 'live' as const, label: t.liveMonitoring, Icon: Building2 },
+    { id: 'history' as const, label: t.incidentLog, Icon: ClipboardList },
   ]
   return <div className="tm-workspace">
-    <nav className="tm-sidebar" aria-label="Township sections">
-      <p>Township</p>
-      <div role="tablist" aria-label="Township views">{tabs.map(({ id, label, Icon }, index) => <button type="button" role="tab" id={`tm-tab-${id}`} key={id}
+    <nav className="tm-sidebar" aria-label={t.townshipSections}>
+      <p>{t.township}</p>
+      <div role="tablist" aria-label={t.townshipViews}>{tabs.map(({ id, label, Icon }, index) => <button type="button" role="tab" id={`tm-tab-${id}`} key={id}
         aria-selected={tab === id} aria-controls={`tm-panel-${id}`} tabIndex={tab === id ? 0 : -1}
         onClick={() => onSelect(id)} onKeyDown={event => {
           if (!['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
@@ -479,10 +477,51 @@ function TownshipShell({ tab, onSelect, needsResponse, children }: {
           onSelect(next.id)
           document.getElementById(`tm-tab-${next.id}`)?.focus()
         }}>
-        <Icon size={19} aria-hidden="true" /><span>{label}</span>{id === 'live' && needsResponse && <span className="tm-sidebar-alert" aria-label="Responder needed" />}
+        <Icon size={19} aria-hidden="true" /><span>{label}</span>{id === 'live' && needsResponse && <span className="tm-sidebar-alert" aria-label={t.responderNeeded} />}
       </button>)}</div>
     </nav>
     <div className="tm-workspace-content">{children}</div>
+  </div>
+}
+
+const LANGUAGES: { id: Lang; name: string }[] = [
+  { id: 'en', name: 'English' },
+  { id: 'ms', name: 'Bahasa Melayu' },
+]
+
+/** A globe button that opens English or Malay for the whole dashboard; the choice is remembered in this browser. */
+export function LanguageSwitch() {
+  const lang = useLang()
+  const t = useT()
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  // Screen readers pick their voice from the page language.
+  useEffect(() => { document.documentElement.lang = lang }, [lang])
+  useEffect(() => {
+    if (!open) return
+    const outside = (event: PointerEvent) => { if (!ref.current?.contains(event.target as Node)) setOpen(false) }
+    const escape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      setOpen(false)
+      ref.current?.querySelector<HTMLElement>('.tm-lang-button')?.focus()
+    }
+    window.addEventListener('pointerdown', outside)
+    window.addEventListener('keydown', escape)
+    return () => { window.removeEventListener('pointerdown', outside); window.removeEventListener('keydown', escape) }
+  }, [open])
+  const current = LANGUAGES.find(item => item.id === lang)!
+  return <div className="tm-lang" ref={ref}>
+    <button type="button" className="tm-lang-button" aria-expanded={open} aria-controls="tm-lang-list"
+      aria-label={`${t.language}: ${current.name}`} title={t.language} onClick={() => setOpen(value => !value)}>
+      <Globe size={18} aria-hidden="true" />
+    </button>
+    {open && <ul id="tm-lang-list" className="tm-lang-list" aria-label={t.language}>
+      {LANGUAGES.map(item => <li key={item.id}>
+        <button type="button" lang={item.id} aria-pressed={lang === item.id} onClick={() => { setLang(item.id); setOpen(false) }}>
+          {item.name}{lang === item.id && <Check size={15} aria-hidden="true" />}
+        </button>
+      </li>)}
+    </ul>}
   </div>
 }
 

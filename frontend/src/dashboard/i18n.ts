@@ -1,0 +1,367 @@
+import { useSyncExternalStore } from 'react'
+import type { IncidentEventType, Outcome } from '../api/types'
+
+// The township dashboard in English or Malay. The choice is kept per browser.
+export type Lang = 'en' | 'ms'
+const KEY = 'temanmu.dashboard.lang'
+const listeners = new Set<() => void>()
+let current: Lang = (() => { try { return localStorage.getItem(KEY) === 'ms' ? 'ms' : 'en' } catch { return 'en' } })()
+
+export function setLang(lang: Lang) {
+  current = lang
+  try { localStorage.setItem(KEY, lang) } catch { /* Private mode: the choice lasts until reload. */ }
+  listeners.forEach(listener => listener())
+}
+const subscribe = (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener) } }
+
+export function useLang(): Lang {
+  return useSyncExternalStore(subscribe, () => current, () => current)
+}
+export const useT = (): Dict => DICTS[useLang()]
+/** Text with emphasis: every odd-numbered part is shown in bold. */
+export type Rich = string[]
+
+const en = {
+  locale: 'en-MY',
+  language: 'Language',
+  // App header
+  viewsNav: 'Presentation views', dashboardLink: 'Product dashboard', simulatorLink: 'Live 3D view', caregiverLink: 'Caregiver app',
+  waitingSnapshot: 'Waiting for the first snapshot…',
+
+  // Sidebar
+  township: 'Township', townshipSections: 'Township sections', townshipViews: 'Township views',
+  liveMonitoring: 'Live monitoring', incidentLog: 'Incident log', responderNeeded: 'Responder needed',
+
+  // Statuses and filter chips
+  status: {
+    routine: 'No action needed', possible_away: 'Possible away', unusual_inactivity: 'Unusual inactivity',
+    unresolved_concern: 'Unresolved concern', none: 'Not enrolled',
+  },
+  chipMeaning: { unresolved_concern: 'Family and guard alerted', unusual_inactivity: 'TemanMu is calling her' },
+  showOnly: 'Show only', showAll: 'Show all',
+
+  // Alert bar
+  alertBarLabel: 'Alert needing a responder',
+  homeNeedsCheck: (name: string) => `${name}'s home needs a check`,
+  needsResponderNow: (name: string) => `${name} needs a responder now`,
+  askedYouToVisit: (caregiver: string) => `${caregiver} asked you to visit`,
+  floor: (n: number | string) => `Floor ${n}`,
+  reminderIn: (n: number, time: string) => `reminder ${n} in ${time}`,
+  openLive: 'Open live monitoring',
+  call999: 'Call 999',
+  tabTitle: (unit: string) => `⚠ ${unit} needs a check`,
+  announceAlert: (unit: string, name: string) => `Alert: unit ${unit}, ${name}, needs a responder.`,
+  announceChecking: (who: string, unit: string) => `${who} is checking unit ${unit}.`,
+  aResponder: 'A responder',
+
+  // Building map
+  blockA: 'Block A',
+  blockSummary: (floors: number, units: number) => `Block A · ${floors} floors · ${units} units`,
+  live: 'Live',
+  floorMap: 'Block A floor map',
+  searchPlaceholder: 'Unit or name', searchLabel: 'Find a unit or resident',
+  searchFull: 'Type the full unit number, e.g. 1204',
+  noUnit: (digits: string) => `No unit ${digits} in Block A`,
+  noResident: (text: string) => `No resident called “${text}”`,
+  matchOf: (id: string, index: number, count: number) => `${id}: ${index} of ${count}. Press Enter for the next.`,
+  alerts: (n: number) => `${n} alert${n === 1 ? '' : 's'}`,
+  floorsKey: 'floors', nextAlertKey: 'next alert',
+  floorBelow: 'Floor below', floorAbove: 'Floor above',
+  floorsRange: (top: number, bottom: number) => `Floors ${top}–${bottom}`,
+  floorsWithAlerts: 'Floors with alerts',
+  floorsAbove: (n: number) => `${n} floor${n === 1 ? '' : 's'} above`,
+  floorsBelow: (n: number) => `${n} floor${n === 1 ? '' : 's'} below`,
+  allClear: 'all clear',
+  floorViewport: 'Scrollable three-floor condo view',
+  floorWord: 'Floor',
+  inHospital: 'In hospital', away: 'Away',
+  checking: (name: string) => `${name} checking`,
+  checkNow: 'Check now', checkingTag: 'Checking',
+  unitLabel: (id: string) => `Unit ${id}`,
+  quietFor: (time: string) => `quiet for ${time}`,
+  isChecking: (name: string) => `${name} is checking`,
+  needsResponder: 'needs a responder',
+  lobby: (guard: string) => `Lobby · ${guard} on duty`,
+  scrollHint: 'Scroll to browse floors. Use ↑ and ↓ when the building is focused.',
+  barKey: "Each bar shows how long the home has been quiet, against that resident's usual longest gap.",
+  response: 'Response',
+  needsAttention: 'Needs attention',
+  noAttention: 'No enrolled homes need a response right now.',
+
+  // Incident panel
+  alertReason: {
+    homeCheck: (caregiver: string) => `Activity at home while she is marked away. ${caregiver} asked you to check the home`,
+    notBack: "She tapped out at the lobby and has not come back, and she did not answer TemanMu's call",
+    arrival: "She tapped in at the lobby but nothing has been used in the flat since, and she did not answer TemanMu's call",
+    outing: 'She has been out longer than her usual outing',
+    sinceConfirmed: 'No water use since she was confirmed okay',
+    quietGap: 'No water use for longer than her usual quiet gap',
+    noAnswer: (why: string) => `${why}, and she did not answer TemanMu's call`,
+  },
+  lastTap: 'Last card tap', tapOut: 'Out', tapIn: 'In', lobbyWord: 'lobby',
+  lookNotBack: (place: string): Rich => ['She is not at home. Call her, check CCTV and search the township, starting near the ', place, '.'],
+  lookArrival: (place: string, unit: string, floor: number): Rich => ['Check the lift, stairs and corridor between the ', place, ' and unit ', unit, ` on floor ${floor}.`],
+  lookGo: (unit: string, floor: number, reason: string): Rich => ['Go to unit ', unit, ` on floor ${floor}. ${reason}.`],
+  steps: { detected: 'Detected', alerted: 'Alerted', checking: 'Checking', closed: 'Closed', next: 'Next' },
+  responseProgress: 'Response progress',
+  recording: 'Recording…', checkNowButton: "I'll Check Now",
+  errorChanged: 'This incident changed before your action. Check the latest status, then try again.',
+  errorNotMine: 'Only the person who said "I\'ll Check Now" can record this.',
+  errorGeneric: 'That did not go through. Try again.',
+  errorTime: 'Choose a valid transfer time that is not in the future. Times are Malaysia time.',
+  whatFoundHome: 'What did you find at the home?', whatFound: 'What did you find?',
+  hospitalName: 'Hospital name (if known)', hospitalTime: 'Time sent to hospital (Malaysia time)',
+  hospitalHelp: 'The time starts at now; change it if the transfer was earlier. Leave the hospital blank if unknown.',
+  record999First: 'Record a 999 call to choose another outcome.',
+  noteLabel: 'Note for the caregiver', notePlaceholder: 'Anything the caregiver should know', addNote: 'Add a note for the caregiver',
+  recordClose: 'Record and close', chooseFound: 'Choose what you found',
+  on999: (unit: string): Rich => ['On a 999 call, give unit ', unit, ', Block A, and the access route.'],
+  report999: 'Report a 999 call or unverified safety', called999: 'I called 999, record it', cantVerify: "I can't verify she is safe",
+  unitFloorBlock: (floor: number) => `Floor ${floor} · Block A`,
+  closePopup: 'Close the pop-up. The check stays open beside the map.', close: 'Close',
+  kindNotBack: 'Not back yet · search outside', kindArrival: 'Tapped in, no activity · check the way home',
+  statusClosed: (at: string | null) => at ? `Closed at ${at}` : 'Closed',
+  statusGrace: (left: string) => `Calling the resident · ${left} left`,
+  statusNotified: (n: number, time: string) => `Needs a responder · reminder ${n} in ${time}`,
+  statusMine: (since: string | null) => `You're checking · reminders off${since ? ` since ${since}` : ''}`,
+  someone: 'Someone',
+  leadGrace: 'TemanMu noticed a break in her routine and is calling her first. Nobody is alerted yet.',
+  leadAlertedTogether: ' Her caregiver and you were alerted together.',
+  askedTownship: (caregiver: string) => `${caregiver} asked the township to visit.`,
+  checkingInRemotely: (caregiver: string) => `${caregiver} is checking in remotely. Her safety is not confirmed.`,
+  called999At: (at: string) => `999 call recorded at ${at}. Keep this open until you know the outcome.`,
+  safetyNotVerified: 'Safety not verified. Contact the duty supervisor and caregiver.',
+  openPopup: 'Open the check form as a pop-up',
+  willRecord: (name: string) => `${name} will record the outcome.`,
+  recordedBy: (name: string) => `Recorded by ${name}.`,
+  closedAuto: 'Closed automatically after activity at home.',
+  caregiverTold: ' The caregiver has been told.',
+  done: 'Done',
+
+  outcome: {
+    resident_ok: 'Resident OK', assistance_provided: 'Assistance provided', sent_to_hospital: 'Sent to hospital',
+    resident_away: 'Resident was away', resident_activity_detected: 'Resident activity detected',
+    home_secure: 'Home secure, nobody inside', known_person_home: 'Family or helper at home',
+    resident_returned: 'Resident back home', security_concern: 'Security concern reported',
+  } satisfies Record<Outcome, string>,
+  outcomeHelp: {
+    home_secure: 'Nothing wrong, or closed or locked up', known_person_home: 'Someone the family knows, with permission',
+    resident_returned: 'Back early; this ends the away period', security_concern: 'Break-in signs or a stranger; reported on',
+  } as Partial<Record<Outcome, string>>,
+  resolved: 'Resolved',
+
+  // Incident log
+  finishedMalaysia: 'Finished incidents · Malaysia time',
+  historyPeriod: 'Incident history period',
+  days: (n: number) => `${n} days`, all: 'All',
+  sourceMock: 'Simulated demo data · Reset Demo clears this history.', sourceLive: 'Backend records',
+  connectionLost: ' Connection lost. Showing the last received records; updates may be delayed.',
+  finishedIncidents: 'Finished incidents',
+  acrossHistory: 'Across available history', completedPast: (n: number) => `Completed in the past ${n} days`,
+  townshipHelp: 'Township help requested', reachedTownship: 'Reached the township alert stage',
+  enrolled: 'Enrolled residents', enrolledHelp: 'Current enrolment, including away and hospital',
+  noFinished: (all: boolean) => `No finished incidents ${all ? 'yet' : 'in this period'}`,
+  noFinishedHelp: 'Completed checks and automatically resolved incidents will appear here.',
+  scrollTable: 'Scroll across the table to see outcomes and details.',
+  recordsRegion: 'Finished incident records',
+  tableCaption: 'Finished incidents, newest completion first. All times are Malaysia time.',
+  col: { completed: 'Completed', unit: 'Unit / resident', trigger: 'Trigger', responder: 'Responder', outcome: 'Outcome', details: 'Details' },
+  notRecorded: 'Not recorded',
+  viewDetailsFor: (unit: string, id: string) => `View details for ${unit}, ${id}`, viewDetails: 'View details',
+  pagesNav: 'Incident log pages', previous: 'Previous', next: 'Next',
+  pageOf: (page: number, count: number) => `Page ${page} of ${count}`,
+  rangeOf: (from: number, to: number, total: number) => `${from}–${to} of ${total}`,
+  autoNotConfirmed: 'Automatically resolved · safety not confirmed',
+  incidentDetails: 'Incident details', closeDetails: 'Close incident details',
+  originalTrigger: 'Original trigger', opened: 'Opened', accepted: 'Accepted',
+  hospital: 'Hospital', timeSent: 'Time sent to hospital', savedNote: 'Saved note', timeline: 'Event timeline',
+  role: { township: 'township', caregiver: 'caregiver' } as Record<string, string>,
+  event: {
+    detected: 'Incident detected', voice_call_started: 'Simulated call started', voice_call_no_answer: 'Simulated call unanswered',
+    voice_call_cancelled: 'Simulated call cancelled', notified: 'Family and township alert stage', reminder: 'Reminder recorded',
+    acknowledged: 'Responder accepted', caregiver_checking_in: 'Caregiver checking in', township_requested: 'Township check requested',
+    unable_to_verify: 'Safety could not be verified', emergency_called: '999 call reported; dispatch not confirmed',
+    closed: 'Incident closed', auto_resolved: 'Automatically resolved',
+  } satisfies Record<IncidentEventType, string>,
+  // Detection details recorded by the backend (reasons.DETECTED_*); other text is shown as recorded.
+  detected: {} as Record<string, string>,
+}
+export type Dict = typeof en
+
+// Malay in simple, everyday words that any guard on duty can read quickly.
+// Short sentences, common words (tap kad, skrol, CCTV), no formal or technical Malay.
+// "Incident" is "kes", the township side is "pengawal", and the caregiver is "keluarga".
+const ms: Dict = {
+  locale: 'ms-MY',
+  language: 'Bahasa',
+  viewsNav: 'Pilih skrin', dashboardLink: 'Skrin pengawal', simulatorLink: 'Bangunan 3D', caregiverLink: 'App keluarga',
+  waitingSnapshot: 'Tunggu sekejap…',
+
+  township: 'Pengawal', townshipSections: 'Menu pengawal', townshipViews: 'Skrin pengawal',
+  liveMonitoring: 'Pantau rumah', incidentLog: 'Senarai kes', responderNeeded: 'Perlu pergi cek',
+
+  status: {
+    routine: 'OK', possible_away: 'Mungkin keluar', unusual_inactivity: 'Rumah senyap lama',
+    unresolved_concern: 'Perlu pergi cek', none: 'Tidak daftar',
+  },
+  chipMeaning: { unresolved_concern: 'Keluarga dan pengawal sudah diberitahu', unusual_inactivity: 'TemanMu sedang telefon dia' },
+  showOnly: 'Tunjuk', showAll: 'Tunjuk semua',
+
+  alertBarLabel: 'Amaran: rumah perlu dicek',
+  homeNeedsCheck: name => `Rumah ${name} perlu dicek`,
+  needsResponderNow: name => `${name}: pergi cek sekarang`,
+  askedYouToVisit: caregiver => `${caregiver} minta anda pergi cek`,
+  floor: n => `Tingkat ${n}`,
+  reminderIn: (n, time) => `ingatan ke-${n} dalam ${time}`,
+  openLive: 'Buka skrin pantau',
+  call999: 'Telefon 999',
+  tabTitle: unit => `⚠ ${unit} perlu dicek`,
+  announceAlert: (unit, name) => `Amaran: unit ${unit}, ${name}, perlu dicek sekarang.`,
+  announceChecking: (who, unit) => `${who} sedang cek unit ${unit}.`,
+  aResponder: 'Seseorang',
+
+  blockA: 'Blok A',
+  blockSummary: (floors, units) => `Blok A · ${floors} tingkat · ${units} unit`,
+  live: 'Sekarang',
+  floorMap: 'Peta Blok A',
+  searchPlaceholder: 'Unit atau nama', searchLabel: 'Cari unit atau nama',
+  searchFull: 'Taip nombor unit penuh, contoh 1204',
+  noUnit: digits => `Tiada unit ${digits} di Blok A`,
+  noResident: text => `Tiada orang nama “${text}”`,
+  matchOf: (id, index, count) => `${id}: ${index} dari ${count}. Tekan Enter untuk seterusnya.`,
+  alerts: n => `${n} amaran`,
+  floorsKey: 'tingkat', nextAlertKey: 'amaran seterusnya',
+  floorBelow: 'Tingkat bawah', floorAbove: 'Tingkat atas',
+  floorsRange: (top, bottom) => `Tingkat ${top}–${bottom}`,
+  floorsWithAlerts: 'Tingkat ada amaran',
+  floorsAbove: n => `${n} tingkat di atas`,
+  floorsBelow: n => `${n} tingkat di bawah`,
+  allClear: 'semua OK',
+  floorViewport: 'Bangunan, tiga tingkat, boleh skrol',
+  floorWord: 'Tingkat',
+  inHospital: 'Di hospital', away: 'Keluar',
+  checking: name => `${name} sedang cek`,
+  checkNow: 'Cek sekarang', checkingTag: 'Sedang dicek',
+  unitLabel: id => `Unit ${id}`,
+  quietFor: time => `senyap ${time}`,
+  isChecking: name => `${name} sedang cek`,
+  needsResponder: 'perlu dicek',
+  lobby: guard => `Lobi · ${guard} bertugas`,
+  scrollHint: 'Skrol untuk tengok tingkat lain. Boleh juga tekan ↑ dan ↓.',
+  barKey: 'Bar ini tunjuk berapa lama air tidak dipakai di rumah itu. Lagi panjang bar, lagi lama senyap dari biasa.',
+  response: 'Tindakan',
+  needsAttention: 'Perlu dicek',
+  noAttention: 'Semua rumah OK. Tiada yang perlu dicek sekarang.',
+
+  alertReason: {
+    homeCheck: caregiver => `Ada orang guna rumah, tapi tuan rumah sepatutnya tiada. ${caregiver} minta anda pergi cek rumah itu`,
+    notBack: 'Dia tap kad keluar di lobi tapi belum balik. Dia juga tidak angkat telefon TemanMu',
+    arrival: 'Dia tap kad masuk di lobi tapi tidak guna apa-apa di rumah sejak itu. Dia juga tidak angkat telefon TemanMu',
+    outing: 'Dia keluar lebih lama dari biasa',
+    sinceConfirmed: 'Air tidak dipakai sejak kali terakhir dia OK',
+    quietGap: 'Air tidak dipakai lebih lama dari biasa',
+    noAnswer: why => `${why}. Dia juga tidak angkat telefon TemanMu`,
+  },
+  lastTap: 'Tap kad terakhir', tapOut: 'Keluar', tapIn: 'Masuk', lobbyWord: 'lobi',
+  lookNotBack: place => ['Dia tiada di rumah. Telefon dia, cek CCTV, dan cari di kawasan. Mula cari dekat ', place, '.'],
+  lookArrival: (place, unit, floor) => ['Cek lif, tangga dan koridor dari ', place, ' sampai unit ', unit, ` di tingkat ${floor}.`],
+  lookGo: (unit, floor, reason) => ['Pergi ke unit ', unit, ` di tingkat ${floor}. ${reason}.`],
+  steps: { detected: 'Dikesan', alerted: 'Diberitahu', checking: 'Dicek', closed: 'Tutup', next: 'Seterusnya' },
+  responseProgress: 'Status kes',
+  recording: 'Sedang simpan…', checkNowButton: 'Saya Pergi Cek',
+  errorChanged: 'Kes ini sudah berubah. Tengok status terbaru, kemudian cuba lagi.',
+  errorNotMine: 'Hanya orang yang tekan "Saya Pergi Cek" boleh simpan ini.',
+  errorGeneric: 'Tidak berjaya. Cuba lagi.',
+  errorTime: 'Masa salah. Masa tidak boleh lepas dari sekarang. Guna waktu Malaysia.',
+  whatFoundHome: 'Apa yang anda jumpa di rumah itu?', whatFound: 'Apa yang anda jumpa?',
+  hospitalName: 'Nama hospital (kalau tahu)', hospitalTime: 'Masa dihantar ke hospital (waktu Malaysia)',
+  hospitalHelp: 'Masa sudah diisi ikut sekarang. Tukar kalau dia dihantar lebih awal. Kalau tidak tahu nama hospital, biar kosong.',
+  record999First: 'Tekan rekod telefon 999 dulu, baru boleh pilih yang lain.',
+  noteLabel: 'Nota untuk keluarga', notePlaceholder: 'Apa-apa yang keluarga perlu tahu', addNote: 'Tulis nota untuk keluarga',
+  recordClose: 'Simpan dan tutup', chooseFound: 'Pilih apa yang anda jumpa',
+  on999: unit => ['Bila telefon 999, beritahu unit ', unit, ', Blok A, dan jalan masuk ke bangunan.'],
+  report999: 'Sudah telefon 999, atau tidak pasti dia selamat?', called999: 'Saya sudah telefon 999', cantVerify: 'Saya tidak pasti dia selamat',
+  unitFloorBlock: floor => `Tingkat ${floor} · Blok A`,
+  closePopup: 'Tutup. Kes ini masih ada di tepi peta.', close: 'Tutup',
+  kindNotBack: 'Belum balik · cari di luar', kindArrival: 'Sudah tap masuk, tapi senyap · cek jalan ke rumah',
+  statusClosed: at => at ? `Tutup pada ${at}` : 'Tutup',
+  statusGrace: left => `Sedang telefon dia · tinggal ${left}`,
+  statusNotified: (n, time) => `Perlu pergi cek · ingatan ke-${n} dalam ${time}`,
+  statusMine: since => `Anda sedang cek · ingatan berhenti${since ? ` sejak ${since}` : ''}`,
+  someone: 'Seseorang',
+  leadGrace: 'Rutin dia lain dari biasa. TemanMu sedang telefon dia dulu. Belum ada orang diberitahu.',
+  leadAlertedTogether: ' Keluarga dia dan anda diberitahu sama-sama.',
+  askedTownship: caregiver => `${caregiver} minta pengawal pergi cek.`,
+  checkingInRemotely: caregiver => `${caregiver} sedang cuba hubungi dia. Belum tahu dia selamat atau tidak.`,
+  called999At: at => `Telefon 999 pada ${at}. Jangan tutup kes ini sampai tahu keadaan dia.`,
+  safetyNotVerified: 'Belum tahu dia selamat atau tidak. Hubungi supervisor dan keluarga dia.',
+  openPopup: 'Buka borang dalam skrin besar',
+  willRecord: name => `${name} akan isi keputusan.`,
+  recordedBy: name => `Diisi oleh ${name}.`,
+  closedAuto: 'Tutup sendiri kerana ada orang guna rumah.',
+  caregiverTold: ' Keluarga sudah diberitahu.',
+  done: 'Selesai',
+
+  outcome: {
+    resident_ok: 'Dia OK', assistance_provided: 'Sudah tolong dia', sent_to_hospital: 'Dihantar ke hospital',
+    resident_away: 'Dia tiada di rumah', resident_activity_detected: 'Ada orang guna rumah',
+    home_secure: 'Rumah OK, tiada orang', known_person_home: 'Keluarga atau maid ada di rumah',
+    resident_returned: 'Dia sudah balik', security_concern: 'Ada masalah keselamatan',
+  },
+  outcomeHelp: {
+    home_secure: 'Tiada masalah, pintu tutup atau berkunci', known_person_home: 'Orang yang keluarga kenal, dan dibenarkan',
+    resident_returned: 'Balik awal dari biasa', security_concern: 'Ada tanda pecah masuk atau orang asing. Sudah lapor',
+  },
+  resolved: 'Selesai',
+
+  finishedMalaysia: 'Kes selesai · waktu Malaysia',
+  historyPeriod: 'Pilih tempoh',
+  days: n => `${n} hari`, all: 'Semua',
+  sourceMock: 'Data demo · tekan Reset Demo untuk padam.', sourceLive: 'Rekod sistem',
+  connectionLost: ' Internet terputus. Ini rekod terakhir. Data baru mungkin lambat.',
+  finishedIncidents: 'Kes selesai',
+  acrossHistory: 'Semua rekod', completedPast: n => `Selesai dalam ${n} hari lepas`,
+  townshipHelp: 'Pengawal diminta cek', reachedTownship: 'Kes yang sampai ke pengawal',
+  enrolled: 'Orang yang daftar', enrolledHelp: 'Termasuk yang keluar dan di hospital',
+  noFinished: all => all ? 'Belum ada kes selesai' : 'Tiada kes selesai dalam tempoh ini',
+  noFinishedHelp: 'Kes yang sudah dicek atau tutup sendiri akan keluar di sini.',
+  scrollTable: 'Skrol ke kanan untuk tengok lagi.',
+  recordsRegion: 'Rekod kes selesai',
+  tableCaption: 'Kes selesai, yang baru di atas. Semua masa ikut waktu Malaysia.',
+  col: { completed: 'Selesai', unit: 'Unit / nama', trigger: 'Sebab', responder: 'Siapa cek', outcome: 'Keputusan', details: 'Lagi' },
+  notRecorded: 'Tiada rekod',
+  viewDetailsFor: (unit, id) => `Tengok lagi ${unit}, ${id}`, viewDetails: 'Tengok lagi',
+  pagesNav: 'Muka surat', previous: 'Sebelum', next: 'Seterusnya',
+  pageOf: (page, count) => `Muka ${page} dari ${count}`,
+  rangeOf: (from, to, total) => `${from}–${to} dari ${total}`,
+  autoNotConfirmed: 'Tutup sendiri · belum tahu dia selamat',
+  incidentDetails: 'Maklumat kes', closeDetails: 'Tutup',
+  originalTrigger: 'Sebab amaran', opened: 'Mula', accepted: 'Mula dicek',
+  hospital: 'Hospital', timeSent: 'Masa dihantar ke hospital', savedNote: 'Nota', timeline: 'Apa yang berlaku',
+  role: { township: 'pengawal', caregiver: 'keluarga' },
+  event: {
+    detected: 'Kes bermula', voice_call_started: 'TemanMu telefon dia', voice_call_no_answer: 'Dia tidak angkat telefon',
+    voice_call_cancelled: 'Telefon dibatalkan', notified: 'Keluarga dan pengawal diberitahu', reminder: 'Ingatan dihantar',
+    acknowledged: 'Mula dicek', caregiver_checking_in: 'Keluarga cuba hubungi dia', township_requested: 'Keluarga minta pengawal cek',
+    unable_to_verify: 'Tidak pasti dia selamat', emergency_called: 'Sudah telefon 999; belum tahu bantuan sampai',
+    closed: 'Kes ditutup', auto_resolved: 'Tutup sendiri',
+  },
+  detected: {
+    'Water quiet gap exceeded': 'Air tidak dipakai lebih lama dari biasa',
+    'Outing longer than usual': 'Keluar lebih lama dari biasa',
+    'Not back yet': 'Belum balik',
+    'Tapped in, no activity at home': 'Sudah tap masuk, tapi rumah senyap',
+    'No water activity since away period ended': 'Air tidak dipakai sejak dia patut balik',
+    'Continuous water flow longer than expected': 'Air terbuka terlalu lama',
+    'Sustained high electricity use': 'Elektrik guna banyak terlalu lama',
+    'Activity at home during an away period': 'Ada orang guna rumah masa dia tiada',
+    'No water activity since confirmed contact': 'Air tidak dipakai sejak kali terakhir dia OK',
+  },
+}
+
+const DICTS: Record<Lang, Dict> = { en, ms }
+
+/** Outcome label in the dashboard language; mirrors copy.outcomeLabel. */
+export const outcomeText = (t: Dict, outcome: Outcome | null | undefined) => (outcome && t.outcome[outcome]) || t.resolved
+/** A backend detection detail in the dashboard language, or as recorded when it is free text. */
+export const detailText = (t: Dict, detail: string) => t.detected[detail] ?? detail
