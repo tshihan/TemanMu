@@ -457,7 +457,7 @@ export function TownshipView() {
   </TownshipShell>
 }
 
-function TownshipShell({ tab, onSelect, needsResponse, children }: {
+export function TownshipShell({ tab, onSelect, needsResponse, children }: {
   tab: 'live' | 'history'; onSelect: (tab: 'live' | 'history') => void; needsResponse: boolean; children: ReactNode
 }) {
   const t = useT()
@@ -526,7 +526,7 @@ export function LanguageSwitch() {
 }
 
 /** A native modal dialog: the browser traps focus, makes the page behind inert and closes on Esc. */
-function CheckDialog({ open, onClose, children }: { open: boolean; onClose: () => void; children: ReactNode }) {
+export function CheckDialog({ open, onClose, children }: { open: boolean; onClose: () => void; children: ReactNode }) {
   const ref = useRef<HTMLDialogElement>(null)
   useEffect(() => {
     const dialog = ref.current

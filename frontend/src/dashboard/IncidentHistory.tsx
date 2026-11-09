@@ -7,6 +7,7 @@ import { detailText, outcomeText, useT, type Dict } from './i18n'
 import './incident-history.css'
 
 const PAGE_SIZE = 20
+type HistoryUnit = Pick<Unit, 'unit_id' | 'resident_name'>
 const dateFormats = new Map<string, Intl.DateTimeFormat>()
 const dateLabel = (t: Dict, value: string | null | undefined) => {
   if (!value || !Number.isFinite(Date.parse(value))) return t.notRecorded
@@ -30,8 +31,8 @@ const trigger = (t: Dict, incident: Incident) => {
   return text === 'Not recorded' ? t.notRecorded : detailText(t, text)
 }
 
-export function IncidentHistory({ incidents, units, now, connected, active, snapshotRevision }: {
-  incidents: Incident[]; units: Unit[]; now: number; connected: boolean; active: boolean; snapshotRevision: number
+export function IncidentHistory({ incidents, units, now, connected, active, snapshotRevision, sourceLabel }: {
+  incidents: Incident[]; units: HistoryUnit[]; now: number; connected: boolean; active: boolean; snapshotRevision: number; sourceLabel?: string
 }) {
   const t = useT()
   const [period, setPeriod] = useState<HistoryPeriod>(7)
@@ -54,7 +55,7 @@ export function IncidentHistory({ incidents, units, now, connected, active, snap
       </div>
     </header>
     <p className="tm-history-source" role="status">
-      {usingMock ? t.sourceMock : t.sourceLive}
+      {sourceLabel ?? (usingMock ? t.sourceMock : t.sourceLive)}
       {!connected && <strong>{t.connectionLost}</strong>}
     </p>
     <dl className="tm-history-stats">
@@ -94,7 +95,7 @@ export function IncidentHistory({ incidents, units, now, connected, active, snap
   </section>
 }
 
-function IncidentDetails({ incident, unit, onClose }: { incident?: Incident; unit?: Unit; onClose: () => void }) {
+function IncidentDetails({ incident, unit, onClose }: { incident?: Incident; unit?: HistoryUnit; onClose: () => void }) {
   const t = useT()
   const dialogRef = useRef<HTMLDialogElement>(null)
   useEffect(() => {

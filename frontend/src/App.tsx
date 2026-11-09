@@ -12,9 +12,10 @@ const Landing = lazy(() => import('./landing/Landing').then(module => ({ default
 const HomeEnvironment = lazy(() => import('./home/HomeEnvironment').then(module => ({ default: module.HomeEnvironment })))
 const Slides = lazy(() => import('./slides/Slides').then(module => ({ default: module.Slides })))
 const Present = lazy(() => import('./slides/Present').then(module => ({ default: module.Present })))
-type Page = 'landing' | 'dashboard' | 'simulator' | 'caregiver' | 'slides' | 'present'
+const LandedTownship = lazy(() => import('./township/LandedTownship'))
+type Page = 'landing' | 'dashboard' | 'simulator' | 'caregiver' | 'slides' | 'present' | 'landed'
 // Routes are real paths (/dashboard, /caregiver, ...). Anything else, including the landing page's own #how / #faq anchors, stays on the landing page.
-const PAGES: Record<string, Page> = { '/simulator': 'simulator', '/dashboard': 'dashboard', '/caregiver': 'caregiver', '/slides': 'slides', '/present': 'present' }
+const PAGES: Record<string, Page> = { '/simulator': 'simulator', '/dashboard': 'dashboard', '/caregiver': 'caregiver', '/slides': 'slides', '/present': 'present', '/township-landed': 'landed' }
 const pageFromPath = (): Page => PAGES[window.location.pathname.replace(/\/+$/, '')] ?? 'landing'
 // Old hash links (/#caregiver) keep working: rewrite them to the path form.
 const legacy = window.location.pathname === '/' ? window.location.hash.slice(1) : ''
@@ -28,7 +29,7 @@ export default function App() {
   const activeUnread = notifications.filter(item => item.role === role && !item.read).length
 
   useEffect(() => {
-    if (page === 'slides' || page === 'present') return
+    if (page === 'slides' || page === 'present' || page === 'landed') return
     return connectStore()
   }, [page])
   useEffect(() => {
@@ -88,7 +89,8 @@ export default function App() {
         </div>
       </a>
       <nav className="view-navigation" aria-label={t.viewsNav}>
-        <a href="/dashboard" target="_blank" rel="noopener" aria-current="page">{t.dashboardLink}</a>
+        <a href="/dashboard" target="_blank" rel="noopener" aria-current={page === 'dashboard' ? 'page' : undefined}>{t.dashboardLink}</a>
+        <a href="/township-landed" aria-current={page === 'landed' ? 'page' : undefined}>Landed demo</a>
         <a href="/simulator" target="_blank" rel="noopener">{t.simulatorLink} <span aria-hidden="true">↗</span></a>
         <a href="/caregiver" target="_blank" rel="noopener">{t.caregiverLink} <span aria-hidden="true">↗</span></a>
       </nav>
@@ -108,7 +110,7 @@ export default function App() {
           <h1>Caregiver <em>view</em></h1>
         </div>}
         <div className="dashboard-content">
-          {!loaded ? <p className="loading-state" role="status">{t.waitingSnapshot}</p> : role === 'caregiver' ? <CaregiverApp /> : <TownshipView />}
+          {page === 'landed' ? <Suspense fallback={<p className="loading-state" role="status">Preparing the landed township demo…</p>}><LandedTownship /></Suspense> : !loaded ? <p className="loading-state" role="status">{t.waitingSnapshot}</p> : role === 'caregiver' ? <CaregiverApp /> : <TownshipView />}
         </div>
       </section>
     </main>
