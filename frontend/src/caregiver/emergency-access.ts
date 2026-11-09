@@ -19,7 +19,9 @@ const madamLeeAgreement: EmergencyAccessRecord = {
 }
 
 export const EMERGENCY_ACCESS_STATUS = 'Opted in · Agreement on file'
-export const EMERGENCY_ACCESS_SAFEGUARD = 'Two responders must be present, or a single guard must have an active body-worn camera or a live video call with the caregiver before crossing the threshold and throughout the check.'
+export const EMERGENCY_ACCESS_CHECK = 'After attempts to contact the resident and an external wellness check are complete with no response from the resident, the appointed team may enter under the resident’s existing opt-in, subject to the entry safeguard below.'
+export const EMERGENCY_ACCESS_SAFEGUARD = 'At least two guards or Auxiliary Police officers must enter together, or the single guard or officer entering must wear a body-worn camera activated before entry and recording throughout the check.'
+export const EMERGENCY_ACCESS_RESPONSE = 'If the team finds something wrong inside, such as the resident appearing injured, unwell or unresponsive, they call 999 immediately and coordinate emergency help.'
 
 // A reused unit ID alone must not attach this fictional consent to a different family.
 export function emergencyAccessFor(unit: Pick<Unit, 'unit_id' | 'resident_name' | 'caregiver_name'>): EmergencyAccessRecord | null {

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { ChevronLeft } from 'lucide-react'
-import { EMERGENCY_ACCESS_SAFEGUARD, EMERGENCY_ACCESS_STATUS, type EmergencyAccessRecord } from './emergency-access'
+import { EMERGENCY_ACCESS_CHECK, EMERGENCY_ACCESS_RESPONSE, EMERGENCY_ACCESS_SAFEGUARD, EMERGENCY_ACCESS_STATUS, type EmergencyAccessRecord } from './emergency-access'
 
 export function EmergencyAccessView({ record, onBack }: { record: EmergencyAccessRecord; onBack: () => void }) {
   const panelRef = useRef<HTMLDivElement>(null)
@@ -57,11 +57,11 @@ export function EmergencyAccessView({ record, onBack }: { record: EmergencyAcces
         <p className="cg-access-status">{EMERGENCY_ACCESS_STATUS}</p>
         <p>{record.residentName} and {record.caregiverName} are shown as having given standing conditional consent during onboarding with the Sime Darby Property team in this demo.</p>
         <ul>
-          <li>Sarah is the primary recipient of the alert. Contact attempts and an external wellness check come before entry.</li>
-          <li>Entry is limited to a suspected emergency, using an agreed means of access without forcing entry.</li>
+          <li>{EMERGENCY_ACCESS_CHECK}</li>
           <li>{EMERGENCY_ACCESS_SAFEGUARD}</li>
-          <li>Guards do not force entry. Public emergency responders handle emergencies requiring forced access.</li>
+          <li>{EMERGENCY_ACCESS_RESPONSE}</li>
         </ul>
+        <p>Sarah is the primary recipient of the alert. Guards do not force entry; public emergency responders handle emergencies requiring forced access.</p>
       </section>
 
       <article className="cg-card cg-agreement-document" aria-labelledby="cg-agreement-document-title">
@@ -85,7 +85,8 @@ export function EmergencyAccessView({ record, onBack }: { record: EmergencyAcces
         <section>
           <h3>2. Contact and external check first</h3>
           <p>The caregiver is the primary recipient of a TemanMu alert. The response team first attempts to contact the resident and caregiver. An appointed guard or Auxiliary Police responder conducts an external wellness check, such as ringing the doorbell, observing from outside, or asking for a response through the grille.</p>
-          <p>An activity alert or an unanswered call alone does not authorise entry. Entry is considered only if contact attempts and the external check do not establish the resident’s wellbeing and there is reason to suspect injury or an urgent need for assistance.</p>
+          <p>{EMERGENCY_ACCESS_CHECK}</p>
+          <p>An activity alert or an unanswered call alone is not enough: contact attempts and the external wellness check must both be completed first.</p>
         </section>
         <section>
           <h3>3. Limited standing permission</h3>
@@ -98,7 +99,8 @@ export function EmergencyAccessView({ record, onBack }: { record: EmergencyAcces
           <p>If neither safeguard can be maintained, the guard does not enter or continue the check alone. The team coordinates assistance from outside instead. Any recording is limited to the wellness check and handled under the separately agreed privacy and recording arrangements.</p>
         </section>
         <section>
-          <h3>5. No forced entry by guards</h3>
+          <h3>5. If something is wrong, call 999</h3>
+          <p>{EMERGENCY_ACCESS_RESPONSE}</p>
           <p>Guards do not break doors, force locks or use this agreement as permission for forced entry. If an emergency is suspected, the team contacts 999 and coordinates with Bomba / Fire and Rescue or medical emergency responders as appropriate. Public authorities determine and carry out any emergency access within their own authority.</p>
           <p>The on-site team helps responders locate the home, reach the resident and communicate with the caregiver. This sample agreement does not confer public-authority powers.</p>
         </section>
