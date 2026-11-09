@@ -13,6 +13,8 @@ import { HospitalDetails } from './HospitalDetails'
 import { latestHospitalTransfer } from './hospital-transfer'
 import { IncidentView, type AckError } from './IncidentView'
 import { SettingsTab, type Theme } from './SettingsTab'
+import { EmergencyAccessView } from './EmergencyAccessView'
+import { emergencyAccessFor } from './emergency-access'
 import { playTone, unlockAudio, type ToneKind } from './sound'
 import { TogetherTab } from './TogetherTab'
 import { UpdatesTab } from './UpdatesTab'
@@ -48,6 +50,7 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
   const [incidentOpen, setIncidentOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [routineOpen, setRoutineOpen] = useState(false)
+  const [emergencyAccessUnitId, setEmergencyAccessUnitId] = useState<string | null>(null)
   const [hospitalOpen, setHospitalOpen] = useState(false)
   // A past alert opened from the history; the current one opens through incidentOpen.
   const [pastIncidentId, setPastIncidentId] = useState<string | null>(null)
@@ -172,6 +175,7 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
     setIncidentOpen(false)
     setHistoryOpen(false)
     setRoutineOpen(false)
+    setEmergencyAccessUnitId(null)
     setPastIncidentId(null)
   }
   function openHistoryIncident(id: string) {
@@ -248,6 +252,7 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
   }
 
   const ctx = unit ? ctxFor(unit) : null
+  const emergencyAccess = unit ? emergencyAccessFor(unit) : null
   const incidentFor = (n: Notification) => incidents.find(item => item.incident_id === n.incident_id)
   const latestAlert = feed.find(item => item.kind === 'alert' || item.kind === 'reminder')
   const ackTargetId = incident?.state === 'notified' && latestAlert?.incident_id === incident.incident_id ? latestAlert.notification_id : null
@@ -301,7 +306,8 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
           : tab === 'updates' ? <UpdatesTab feed={feed} ctx={ctx} now={now} incidentFor={incidentFor} isUnread={isUnread} ackTargetId={ackTargetId}
             ackBusy={ackBusy} onOpen={open} onMarkAllRead={markAllRead} onAck={openIncident} />
           : tab === 'together' ? <TogetherTab unit={unit} ctx={ctx} companion={companion} onToast={showToast} />
-          : <SettingsTab unit={unit} ctx={ctx} now={now} awayReasons={awayReasons} theme={theme} onTheme={setTheme} onToast={showToast} onOpenRoutine={() => setRoutineOpen(true)} />}
+          : <SettingsTab unit={unit} ctx={ctx} now={now} awayReasons={awayReasons} theme={theme} onTheme={setTheme} onToast={showToast} onOpenRoutine={() => setRoutineOpen(true)}
+            emergencyAccess={emergencyAccess} onOpenEmergencyAccess={() => setEmergencyAccessUnitId(unit.unit_id)} />}
       </div>
 
       <nav className="cg-nav" aria-label="Main">
@@ -322,6 +328,8 @@ export function CaregiverApp({ standalone = false }: { standalone?: boolean }) {
         onBack={() => setHistoryOpen(false)} onOpenIncident={openHistoryIncident} />}
 
       {routineOpen && unit && ctx && <RoutineView unit={unit} ctx={ctx} onBack={() => setRoutineOpen(false)} />}
+
+      {tab === 'settings' && !showIncident && emergencyAccess && emergencyAccessUnitId === emergencyAccess.unitId && <EmergencyAccessView record={emergencyAccess} onBack={() => setEmergencyAccessUnitId(null)} />}
 
       {pastIncident && unit && ctx && <IncidentView key={pastIncident.incident_id} incident={pastIncident} unit={unit} ctx={ctx} now={now} liveNote={false}
         ackBusy={false} ackError={null} onAck={() => {}} onCheckIn={() => {}} onConfirmSafe={() => {}} onBack={() => setPastIncidentId(null)} />}
