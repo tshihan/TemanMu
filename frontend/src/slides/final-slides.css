@@ -116,6 +116,118 @@
   :where(.slides-root:not(.slides-fixed)) .final-pilot .final-market-opportunities { min-height: 250px; margin-top: 24px; }
 }
 
+.final-ml { padding-top: 40px; padding-bottom: 28px; background: #fef9ef; }
+.final-ml .final-model-heading { margin-top: 24px; }
+.final-ml .final-model-heading h2 { font-size: 46px; }
+.final-ml .final-model-heading > p:last-child { max-width: 1050px; font-size: 18px; }
+.final-ml-models { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 36px; margin-top: 24px; padding: 20px 0; border-block: 1px solid #d1c9bf; }
+.final-ml-models > section + section { border-left: 1px solid #d1c9bf; padding-left: 36px; }
+.final-ml-models h3 { margin: 8px 0; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: 30px; font-weight: 400; letter-spacing: -.025em; }
+.final-ml-question { margin: 0 0 16px; color: #8b4429; font-size: 16px; line-height: 1.4; }
+.final-ml-models dl { display: grid; gap: 12px; margin: 0; }
+.final-ml-models dl > div { display: grid; grid-template-columns: 88px 1fr; gap: 14px; font-size: 16px; line-height: 1.4; }
+.final-ml-models dt { color: #38352f; font-weight: 700; }
+.final-ml-models dd { margin: 0; color: #58534d; }
+.final-ml-validation { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 36px; margin-top: 20px; }
+.final-ml-validation > div { display: flex; align-items: flex-start; gap: 18px; }
+.final-ml-validation strong { flex: none; color: #a95130; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: 25px; font-weight: 400; }
+.final-ml-validation span { color: #58534d; font-size: 14px; line-height: 1.4; }
+.final-ml-response { margin: 20px 0 0; color: #38352f; font-size: 17px; line-height: 1.4; }
+.final-ml-response b { color: #8b4429; }
+.final-ml-note { max-width: 1200px; margin: 12px 0 0; color: #58534d; font-size: 12px; line-height: 1.45; }
+@media print {
+  .final-ml { padding-top: 28px; padding-bottom: 24px; }
+  .final-ml .final-model-heading { margin-top: 16px; }
+  .final-ml .final-model-heading h2 { font-size: 38px; }
+  .final-ml .final-model-heading > p:last-child { font-size: 16px; margin-top: 10px; }
+  .final-ml-models { margin-top: 18px; padding: 16px 0; }
+  .final-ml-models h3 { font-size: 27px; }
+  .final-ml-models dl > div { font-size: 14px; }
+  .final-ml-question { font-size: 14px; margin-bottom: 12px; }
+  .final-ml-models dl { gap: 10px; }
+  .final-ml-validation { margin-top: 16px; }
+  .final-ml-validation strong { font-size: 22px; }
+  .final-ml-validation span { font-size: 13px; }
+  .final-ml-response { margin-top: 16px; font-size: 15px; }
+  .final-ml-note { font-size: 11px; margin-top: 10px; }
+}
+@media print { .final-ml { min-height: 0; } }
+
+.final-no-app { padding-top: 40px; padding-bottom: 28px; background: #fef9ef; }
+.final-no-app-main { flex: 1; display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.15fr); gap: 48px; align-items: center; margin-top: 28px; }
+.final-no-app-devices { display: grid; grid-template-columns: 1fr; gap: 16px; }
+.final-no-app-devices > article { display: grid; grid-template-columns: 106px minmax(0, 1fr); align-items: center; gap: 16px; padding: 14px 20px; border: 1px solid #d1c9bf; background: #f4eddf; border-radius: 12px; }
+.final-no-app-mockup { position: relative; height: 100px; color: #58534d; }
+.final-no-app-device, .final-no-app-cross { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+.final-no-app-cross { color: #a95130; }
+.final-no-app-block h3 { margin: 0; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: 34px; font-weight: 400; letter-spacing: -.03em; color: #8b4429; }
+.final-no-app-block p { margin: 8px 0 0; font-size: 16px; line-height: 1.4; color: #58534d; }
+.final-no-app-phone { min-width: 0; }
+.final-no-app-phone figure { margin: 0; }
+.final-no-app-phone figure img { display: block; width: 100%; height: auto; max-height: 300px; object-fit: contain; border-radius: 12px; }
+.final-no-app-phone figcaption { margin-top: 14px; text-align: center; color: #8b4429; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: 32px; }
+.final-no-app-call { display: flex; align-items: center; gap: 18px; margin-top: 18px; padding-top: 18px; border-top: 1px solid #d1c9bf; }
+.final-no-app-call > svg { flex: none; color: #a95130; }
+.final-no-app-call strong { color: #38352f; font-size: 23px; }
+.final-no-app-call p { margin: 6px 0 0; color: #58534d; font-size: 17px; line-height: 1.4; }
+.final-no-app-note { margin: 14px 0 0; max-width: 1160px; color: #58534d; font-size: 11px; line-height: 1.4; }
+@media print {
+  .final-no-app { padding-top: 28px; padding-bottom: 24px; }
+  .final-no-app .final-model-heading { margin-top: 18px; }
+  .final-no-app .final-model-heading h2 { font-size: 38px; }
+  .final-no-app .final-model-heading > p:last-child { font-size: 16px; margin-top: 10px; }
+  .final-no-app-main { margin-top: 20px; gap: 36px; }
+  .final-no-app-devices { gap: 12px; }
+  .final-no-app-devices > article { padding: 10px 16px; grid-template-columns: 82px minmax(0, 1fr); gap: 12px; }
+  .final-no-app-mockup { height: 82px; }
+  .final-no-app-block h3 { font-size: 30px; }
+  .final-no-app-block p { font-size: 15px; }
+  .final-no-app-phone figure img { max-height: 230px; }
+  .final-no-app-phone figcaption { font-size: 28px; margin-top: 10px; }
+  .final-no-app-call { margin-top: 14px; padding-top: 14px; }
+  .final-no-app-call strong { font-size: 21px; }
+  .final-no-app-call p { font-size: 15px; }
+}
+@media print { .final-no-app { min-height: 0; } }
+
+.final-privacy { padding-top: 40px; padding-bottom: 28px; background: #fef9ef; }
+.final-privacy-boundary { display: grid; grid-template-columns: minmax(0, 1fr) 170px minmax(0, 1fr); gap: 26px; margin-top: 24px; flex: 1; align-items: center; }
+.final-privacy-boundary > section { align-self: stretch; padding: 28px; border: 1px solid #d1c9bf; border-radius: 14px; }
+.final-privacy-household { background: #f4eddf; }
+.final-privacy-boundary h3 { margin: 12px 0 20px; color: #38352f; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: 32px; font-weight: 400; letter-spacing: -.025em; }
+.final-privacy-household ul { padding: 0; margin: 0; list-style: none; display: grid; gap: 22px; }
+.final-privacy-household li { display: flex; gap: 16px; align-items: center; }
+.final-privacy-household li > svg { flex: none; width: 28px; height: 28px; color: #a95130; stroke-width: 1.6; }
+.final-privacy-household li strong { display: block; font-size: 19px; color: #38352f; }
+.final-privacy-household li span { display: block; margin-top: 4px; font-size: 15px; color: #58534d; }
+.final-privacy-gate { display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center; color: #8b4429; }
+.final-privacy-gate strong { font-size: 17px; line-height: 1.4; }
+.final-privacy-gate > span { font-size: 40px; line-height: 1; }
+.final-privacy-township > p { font-size: 17px; line-height: 1.45; color: #58534d; }
+.final-privacy-township ul { padding-left: 20px; color: #38352f; font-size: 18px; line-height: 1.5; }
+.final-privacy-township li + li { margin-top: 8px; }
+.final-privacy-township li::marker { color: #a95130; }
+.final-privacy-boundary .final-privacy-private-note { margin: 24px 0 0; padding-top: 16px; border-top: 1px solid #d1c9bf; color: #8b4429; font-size: 15px; line-height: 1.4; font-weight: 650; }
+.final-privacy-principles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 26px; padding-top: 20px; border-top: 1px solid #d1c9bf; color: #58534d; font-size: 15px; line-height: 1.4; }
+.final-privacy-principles b { color: #38352f; }
+.final-privacy-note { max-width: 1200px; margin: 16px 0 0; color: #58534d; font-size: 11px; line-height: 1.4; }
+@media print {
+  .final-privacy { padding-top: 28px; padding-bottom: 24px; }
+  .final-privacy .final-model-heading { margin-top: 18px; }
+  .final-privacy .final-model-heading h2 { font-size: 40px; }
+  .final-privacy-boundary { margin-top: 22px; }
+  .final-privacy-boundary > section { padding: 22px; }
+  .final-privacy-boundary h3 { font-size: 29px; margin-bottom: 16px; }
+  .final-privacy-household ul { gap: 16px; }
+  .final-privacy-household li strong { font-size: 17px; }
+  .final-privacy-household li span, .final-privacy-township > p { font-size: 14px; }
+  .final-privacy-township ul { font-size: 16px; }
+  .final-privacy-boundary .final-privacy-private-note { font-size: 13px; margin-top: 18px; }
+  .final-privacy-principles { margin-top: 18px; padding-top: 16px; font-size: 13px; }
+  .final-privacy-note { margin-top: 12px; }
+}
+@media print { .final-privacy { min-height: 0; } }
+
 .final-business-model { min-height: 100cqh; padding-top: 40px; padding-bottom: 28px; background: #fef9ef; }
 .final-model-heading { margin-top: 30px; }
 .final-model-heading .slides-eyebrow { margin: 0 0 8px; }

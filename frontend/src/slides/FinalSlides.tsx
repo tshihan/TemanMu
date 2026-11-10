@@ -213,11 +213,11 @@ export function FinalSlides() {
         </div>
       </PageFrame>
 
-      <PageFrame number={2} className="present-problem">
+      <PageFrame number={2} className="present-problem final-problem">
         <div className="slides-section-top"><TemanMuWordmark /><span>02 · The problem</span></div>
         <div className="present-problem-heading" data-slide-reveal>
           <p className="slides-eyebrow">The problem · Malaysia, aged 60+</p>
-          <h2>More older Malaysians live alone. <em>Many feel unsupported.</em></h2>
+          <h2>More older Malaysians live alone. <em>Who notices when something goes wrong?</em></h2>
         </div>
         <div className="present-problem-stats">
           <div className="present-problem-stat" data-slide-reveal>
@@ -234,14 +234,14 @@ export function FinalSlides() {
             </div>
           </div>
           <div className="present-problem-stat" data-slide-reveal>
-            <span className="present-problem-label">02 · Companionship</span>
+            <span className="present-problem-label">02 · Safety risk</span>
             <div className="present-problem-body">
-              <div className="present-problem-dots" aria-label="33 of 100 dots filled">
-                {Array.from({ length: 100 }, (_, i) => <i key={i} className={i < 33 ? 'is-filled' : ''} style={i < 33 ? { '--i': i } as CSSProperties : undefined} />)}
+              <div className="present-problem-dots" aria-label="14 of 100 dots filled, representing approximately 14.1 percent">
+                {Array.from({ length: 100 }, (_, i) => <i key={i} className={i < 14 ? 'is-filled' : ''} style={i < 14 ? { '--i': i } as CSSProperties : undefined} />)}
               </div>
               <div className="present-problem-figure">
-                <strong>33.1<small>%</small></strong>
-                <p>reported poor social support</p>
+                <strong>14.1<small>%</small></strong>
+                <p><mark>About 1 in 7</mark> adults aged 60+ had a fall in the previous 12 months · NHMS 2018</p>
               </div>
             </div>
           </div>
@@ -623,6 +623,117 @@ export function FinalSlides() {
         </ol>
         <p className="final-model-note">Proposed pilot scope. Confirm installation, household consent and responder arrangements before deployment.</p>
         <div className="slides-page-bottom"><span>TemanMu · Township care</span><span>Appendix A2</span></div>
+      </section>
+      <section className="slides-page final-ml" aria-label="Appendix A3: Machine learning models">
+        <img className="slides-sdp-logo" src="/images/sdp-logo.png" alt="Sime Darby Property" />
+        <div className="slides-section-top">
+          <p className="final-mentor-note">Mentor feedback: How does the system learn a resident’s routine?</p>
+          <span>Appendix A3 · Machine learning</span>
+        </div>
+        <div className="final-model-heading">
+          <p className="slides-eyebrow">Personalised routine limits</p>
+          <h2>Two models learn<br /><em>when a check-in is due.</em></h2>
+          <p>Gradient-boosting quantile regression learns durations from Madam Lee’s own history, using time of day and day of week.</p>
+        </div>
+        <div className="final-ml-models">
+          <section aria-labelledby="final-ml-quiet">
+            <span className="final-model-number">01 · At home</span>
+            <h3 id="final-ml-quiet">Quiet Gap Model</h3>
+            <p className="final-ml-question">“How long does she usually go without using water?”</p>
+            <dl>
+              <div><dt>Learn from</dt><dd>Gaps between water uses while at home. Exclude outings, planned absences and meter outages.</dd></div>
+              <div><dt>Predict</dt><dd>95th-percentile gap, with a 60-minute look-ahead to accommodate approaching rest periods.</dd></div>
+              <div><dt>Apply</dt><dd>A validation-tuned multiplier; limit bounded between <b>45 minutes and 9 hours</b>.</dd></div>
+            </dl>
+          </section>
+          <section aria-labelledby="final-ml-outing">
+            <span className="final-model-number">02 · Away from home</span>
+            <h3 id="final-ml-outing">Outing Model</h3>
+            <p className="final-ml-question">“How long is she usually out after tapping her card?”</p>
+            <dl>
+              <div><dt>Learn from</dt><dd>Completed tap-out / return pairs, including differences between weekdays and weekends.</dd></div>
+              <div><dt>Predict</dt><dd>Median outing duration for the departure time and day. Regular market trips can differ from walks.</dd></div>
+              <div><dt>Apply</dt><dd>Validation-tuned extra minutes; limit bounded between <b>30 minutes and 6 hours</b>.</dd></div>
+            </dl>
+          </section>
+        </div>
+        <div className="final-ml-validation">
+          <div><strong>8 weeks</strong><span>Simulated history: 6 weeks to train and tune; 2 untouched weeks to test against fixed-time rules.</span></div>
+          <div><strong>15-minute slots</strong><span>Export a limit for each day and time slot. The app reads these limits; it does not retrain live.</span></div>
+        </div>
+        <p className="final-ml-response"><b>Learned limit exceeded</b><span aria-hidden="true"> → </span>Resident check-in<span aria-hidden="true"> → </span>Family / responder follow-up if unresolved</p>
+        <p className="final-ml-note">Prototype: simulated history, compressed demo timing, no real-home accuracy claim. Electricity adds rule-based context; it is not an input to these two models. Unusual inactivity prompts a human check, not a diagnosis.</p>
+        <div className="slides-page-bottom"><span>TemanMu · Township care</span><span>Appendix A3</span></div>
+      </section>
+      <section className="slides-page final-no-app" aria-label="Appendix A4: No app for Madam Lee">
+        <img className="slides-sdp-logo" src="/images/sdp-logo.png" alt="Sime Darby Property" />
+        <div className="slides-section-top">
+          <p className="final-mentor-note">Mentor feedback: What if the elderly resident is not tech-savvy?</p>
+          <span>Appendix A4 · Elderly usability</span>
+        </div>
+        <div className="final-model-heading">
+          <p className="slides-eyebrow">No app for Madam Lee</p>
+          <h2>She lives her day.<br /><em>TemanMu works in the background.</em></h2>
+          <p>No new digital routine to learn. Household signals support monitoring while she goes about her usual day.</p>
+        </div>
+        <div className="final-no-app-main">
+        <div className="final-no-app-devices">
+          {[
+            { title: 'No apps', detail: 'Nothing to download, log into or tap every day.', art: <><rect x="66" y="12" width="108" height="180" rx="18" /><rect x="76" y="25" width="88" height="151" rx="8" fill="#efe6d8" /><path d="M106 31h28M111 184h18" /><text x="120" y="62" textAnchor="middle" stroke="none" fill="currentColor" fontSize="19" fontFamily="sans-serif">09:41</text>{[0, 1, 2, 3, 4, 5].map(i => <rect key={i} x={87 + (i % 3) * 24} y={82 + Math.floor(i / 3) * 31} width="17" height="18" rx="4" fill="#c9b9a3" stroke="none" />)}</> },
+            { title: 'No cameras', detail: 'No indoor video watching her private moments.', art: <><path d="M39 58h124l28 50H63Z" fill="#efe6d8" /><path d="m45 48 110-14 28 20-137 18M75 109l13 25h52l17-25M112 135v25H65v-12H45v40h20v-14h61v-39" /><path d="m163 59 31 47 13-9-30-47Z" fill="#c9b9a3" /><path d="m180 71 11 18" /></> },
+            { title: 'No wearables', detail: 'Nothing to remember to wear or keep charged.', art: <><path d="m93 58 6-44h42l6 44M93 148l6 46h42l6-46" fill="#efe6d8" /><rect x="76" y="54" width="88" height="98" rx="24" fill="#efe6d8" /><rect x="86" y="64" width="68" height="78" rx="16" /><path d="M165 86h7v19h-7M120 81v23l16 10" /><circle cx="120" cy="104" r="3" fill="currentColor" /><path d="M111 177h18" /></> },
+          ].map(item => <article key={item.title}>
+            <div className="final-no-app-mockup" aria-hidden="true">
+              <svg className="final-no-app-device" viewBox="0 0 240 210" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">{item.art}</svg>
+              <svg className="final-no-app-cross" viewBox="0 0 240 210" fill="none" stroke="currentColor" strokeWidth="12" strokeLinecap="round"><path d="m53 40 134 134M187 40 53 174" /></svg>
+            </div>
+            <div className="final-no-app-block"><h3>{item.title}</h3><p>{item.detail}</p></div>
+          </article>)}
+        </div>
+        <div className="final-no-app-phone">
+          <figure><img src="/images/final-slides/nokia-3310-photo.jpg" alt="Photo collage of a man holding a classic Nokia 3310, matching the photo in the Nokia meme" width="1084" height="610" /><figcaption>Yes, even a Nokia 3310.*</figcaption></figure>
+          <div className="final-no-app-call">
+            <PhoneCall aria-hidden="true" size={30} strokeWidth={1.7} />
+            <div><strong>Just answer an ordinary phone call.</strong><p>When TemanMu or her caregiver checks in, a basic mobile phone is enough.</p></div>
+          </div>
+        </div>
+        </div>
+        <p className="final-no-app-note">*A working phone with supported network coverage is needed. Proposed voice check-ins require integration and pilot testing. The app and dashboard are for caregivers and operators.</p>
+        <div className="slides-page-bottom"><span>TemanMu · Township care</span><span>Appendix A4</span></div>
+      </section>
+      <section className="slides-page final-privacy" aria-label="Appendix A5: Privacy and access">
+        <img className="slides-sdp-logo" src="/images/sdp-logo.png" alt="Sime Darby Property" />
+        <div className="slides-section-top">
+          <p className="final-mentor-note">Mentor question: Who can see Madam Lee’s household activity?</p>
+          <span>Appendix A5 · Privacy</span>
+        </div>
+        <div className="final-model-heading">
+          <p className="slides-eyebrow">Privacy without an indoor camera</p>
+          <h2>Her daily routine stays private.<br /><em>Help is shared when needed.</em></h2>
+        </div>
+        <div className="final-privacy-boundary">
+          <section className="final-privacy-household" aria-labelledby="final-privacy-private">
+            <span className="final-model-number">Resident + authorised caregiver</span>
+            <h3 id="final-privacy-private">Her everyday life</h3>
+            <ul>
+              <li><Droplets aria-hidden="true" /><div><strong>Water activity</strong><span>Water-use history and patterns</span></div></li>
+              <li><Zap aria-hidden="true" /><div><strong>Electricity usage</strong><span>Household power activity</span></div></li>
+              <li><CreditCard aria-hidden="true" /><div><strong>Outing activity</strong><span>Entry / exit history and routines</span></div></li>
+            </ul>
+            <p className="final-privacy-private-note">These records are not shared with township staff.</p>
+          </section>
+          <div className="final-privacy-gate"><ShieldCheck aria-hidden="true" size={34} /><strong>Only when an unusual event needs follow-up</strong><span aria-hidden="true">→</span></div>
+          <section className="final-privacy-township" aria-labelledby="final-privacy-shared">
+            <span className="final-model-number">Township response team</span>
+            <h3 id="final-privacy-shared">The information to help</h3>
+            <p>An incident notification with only the details needed to act:</p>
+            <ul><li>Home / location</li><li>Concern requiring a check</li><li>Resident check-in outcome</li><li>Response status and assigned responder</li></ul>
+            <p className="final-privacy-private-note">No routine usage charts, outing history or continuous home / away tracking.</p>
+          </section>
+        </div>
+        <div className="final-privacy-principles"><span><b>Voluntary participation</b> with clear permissions</span><span><b>Withdrawal</b> and defined retention</span><span><b>Minimal incident records</b> with logged access</span></div>
+        <p className="final-privacy-note">Intended access policy. The prototype still needs API and dashboard permissions aligned to this boundary. Sensor processing requires consent; closed incidents retain only an agreed minimum record.</p>
+        <div className="slides-page-bottom"><span>TemanMu · Township care</span><span>Appendix A5</span></div>
       </section>
     </div>
   </main>

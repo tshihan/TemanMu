@@ -17,7 +17,7 @@ The supplied PDFs are research drafts, not operating instructions or legal appro
 | A7 | What our routine models learn | Quiet gaps and outing duration; time/day context; simulated training history; learned limits used by rules; real-home evaluation next. |
 | A8 | Resting, going out, or a concern? | Personal limits, outing context, verification and caregiver away settings; false alarms and missed concerns measured separately. |
 | A9 | When a meter or connection fails | Missing data is not inactivity; device-health requirements; outage and delayed-data handling; no guaranteed monitoring during a failure. |
-| A10 | Privacy without an indoor camera | Utility and entry/exit data remain sensitive; voluntary participation; minimum necessary sharing; withdrawal and retention policy. |
+| A10 | Privacy without an indoor camera | Household routines stay with the resident and authorised caregiver. Township receives incident-only information for follow-up, not routine water, electricity or outing history. Voluntary participation, withdrawal and defined retention. |
 | A11 | Who pays, and what does the fee cover? | Installation plus recurring service; township pilot or caregiver subscription; response provision and maintenance included in costing; price not yet validated. |
 | A12 | What is proven, and what comes next? | Working software vs simulated inputs; standalone landed UI; proposed hardware; supervised pilot and measurable outcomes. |
 
@@ -259,21 +259,33 @@ Use Nokia 3310 as an illustrative joke, not a claim that a particular legacy han
 
 ## A10. Privacy and consent
 
+Implemented as **Appendix A5 · Privacy** in `/final-slides` (A10 is the Q&A topic number).
+
 **Question:** Is this surveillance, and who sees the resident's information?
 
 **Slide title:** Privacy without an indoor camera
 
 **On-slide copy:**
 
-- No indoor video or audio capture for household activity monitoring.
-- Utility and entry/exit records can still reveal sensitive routines.
-- Enrol voluntarily, explain what is shared and provide a withdrawal route.
-- Give each role only the information needed for its task.
-- Define retention, deletion, access logging and security controls before deployment.
+**Her daily routine stays private. Help is shared when needed.**
+
+| Resident and authorised caregiver | Township response team |
+| --- | --- |
+| Water-use activity, electricity usage and outing history | An unusual event requiring follow-up |
+| Personal routine insights and household activity timeline | Only the necessary incident details: home/location, concern, check-in result and response status |
+| Control over participation and authorised caregiver access | No routine usage charts, outing history or continuous home/away tracking |
+
+- No indoor camera for household activity monitoring.
+- Participation is voluntary; explain permissions and provide a withdrawal route.
+- Set retention and deletion periods; log and review access.
+
+**Design principle:** Township visibility should begin when an unusual event needs its attention, with only the context needed to act. Do not expose the underlying household timeline or live meter readings. After closure, retain only an agreed, minimal incident record for accountability, under a defined retention policy.
 
 **Short answer:**
 
-> “We avoid indoor camera monitoring, but routine data still deserves protection. Participation should be voluntary, residents should understand who can see what, and responders should receive only the context needed for a check. The pilot must establish retention, withdrawal and access controls alongside the hardware.”
+> “Madam Lee’s daily routine is for her and her authorised caregiver. The township does not need to know when she showers, how much electricity she uses or where her outings fit into her day. When an unusual event needs follow-up, the response team receives the home location, the concern and the check-in outcome so someone can act. We share the need for help, rather than her everyday life.”
+
+**Implementation requirement:** This is the intended access policy, not a claim that every prototype view already enforces it. Enforce permissions in the backend/API as well as the interface; hiding a chart alone is insufficient. Review township lists, maps, home/away labels, incident payloads and exports against this boundary. Service processing of sensor data still requires clear consent and security controls even when township staff cannot view it.
 
 **Important distinction:** A body-worn camera under the proposed entry safeguard creates a separate recording and privacy issue; it does not make the ambient home-monitoring design camera-based. Define activation, access and retention for that footage. Do not claim compliance certification or say the current township UI never shows any home/away information without checking the exact view.
 
@@ -349,6 +361,34 @@ These are the material items the supplied documents do not settle. They belong i
 | Legal responsibility and insurance | Obtain qualified review of contracts, duty allocation, liability, insurance and relevant entry/privacy requirements. Neither a waiver nor an SOP establishes immunity. |
 | Real phone workflow | Select the voice provider, confirmation method, language and accessible alternatives; define voicemail and unreachable-phone behaviour. |
 | Payment and resourcing | Who funds installation, response staffing/time, maintenance, communications and replacement equipment? |
+
+## Appendix A4: No app for Madam Lee
+
+Implemented after A3 in `/final-slides`. Mentor question: **What if the elderly resident is not tech-savvy?**
+
+- Three large crossed-out mockups: phone app, indoor CCTV and wristwatch.
+- Three emphasis blocks: **No apps**, **No cameras**, **No wearables**.
+- Madam Lee continues her ordinary routine; household signals support monitoring.
+- She only needs to answer an ordinary phone call for a check-in. A basic mobile phone is sufficient, with the light-hearted line: “Yes, even a Nokia 3310.” A working phone and supported network coverage are required.
+- The caregiver app and township dashboard are used by caregivers and operators. Proposed voice check-ins still require integration and pilot testing.
+
+## Appendix A3: Machine learning details
+
+Implemented after A2 in `/final-slides`. Mentor question: **How does the system learn a resident’s routine?**
+
+| Detail | Quiet Gap Model | Outing Model |
+| --- | --- | --- |
+| Training examples | Water-use gaps at home; exclude gaps crossing outings, planned absences or meter outages | Completed card tap-out / return pairs |
+| Inputs | Time of last water use; day of week | Departure time; day of week |
+| Method | Gradient-boosting quantile regression, 95th percentile | Gradient-boosting quantile regression, median |
+| Adjustment | Maximum predicted limit over the next 60 minutes, then a multiplier tuned on validation weeks | Extra minutes tuned on validation weeks |
+| Bounds | 45 minutes to 9 hours | 30 minutes to 6 hours |
+
+Both models use eight weeks of simulated Madam Lee history: six weeks for training and past-only validation, followed by two held-out test weeks. Tests compare nuisance alerts and simulated alert timing against fixed-time rules. The 95th percentile is a training target, **not 95% accuracy**.
+
+Training exports day/time lookup tables in 15-minute slots. At demo reset, the backend reads a scene-specific limit and converts it into compressed demo seconds; it does not retrain online. Exceeding a limit feeds the existing check-in and escalation rules, rather than diagnosing an emergency. Electricity provides separate rule-based context, not a feature for these two duration models. Real-home validation remains necessary.
+
+Implementation sources: `backend/ml/README.md`, `backend/ml/common.py`, `backend/ml/train_quiet_gap.py`, `backend/ml/train_outing.py`, and `backend/app/learned_baseline.py`. These current models supersede the earlier Isolation Forest pitch description.
 
 ## Source reconciliation
 
