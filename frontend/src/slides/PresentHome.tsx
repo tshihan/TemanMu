@@ -52,8 +52,9 @@ function Rig({ pin }: { pin: RefObject<HTMLSpanElement | null> }) {
     her.getWorldPosition(head.current)
     head.current.y += 2
     head.current.project(camera)
-    pin.current.style.left = `${(head.current.x + 1) / 2 * size.width}px`
-    pin.current.style.top = `${(1 - head.current.y) / 2 * size.height}px`
+    // Percentages, so the pin stays over her head whatever zoom the slide is shown at.
+    pin.current.style.left = `${(head.current.x + 1) / 2 * 100}%`
+    pin.current.style.top = `${(1 - head.current.y) / 2 * 100}%`
   })
   return null
 }
@@ -86,8 +87,20 @@ function Resident({ paused }: { paused: boolean }) {
     onStatus={onStatus} onReached={noop} onArrived={linger} onAnimationComplete={noop} />
 }
 
+/** Draws a fresh frame just before printing and reads it back. Without the read, Chrome can print this WebGL canvas blank when its size doesn't change between screen and print. */
+function PrintFrame() {
+  const get = useThree(state => state.get)
+  useEffect(() => {
+    const draw = () => { const { gl, scene, camera } = get(); gl.render(scene, camera); gl.domElement.toDataURL() }
+    window.addEventListener('beforeprint', draw)
+    return () => window.removeEventListener('beforeprint', draw)
+  }, [get])
+  return null
+}
+
 function Scene({ pin, paused }: { pin: RefObject<HTMLSpanElement | null>; paused: boolean }) {
   return <>
+    <PrintFrame />
     <Rig pin={pin} />
     <ambientLight intensity={.35} />
     <hemisphereLight args={['#fff4db', '#d8c5ad', .85]} />

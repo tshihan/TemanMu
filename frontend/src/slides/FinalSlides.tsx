@@ -55,12 +55,16 @@ function useHowFlowDot() {
       const rowEls = rowRefs.map(r => r.current)
       if (!wrap || !box2 || !feed || !dot || rowEls.some(r => !r)) return
       const wr = wrap.getBoundingClientRect()
-      const rel = (el: Element) => { const r = el.getBoundingClientRect(); return { x: r.left - wr.left, y: r.top - wr.top, w: r.width, h: r.height } }
+      // The slide is scaled with CSS zoom; screen measurements are divided by it so the line and dot land in slide pixels.
+      const z = parseFloat(getComputedStyle(wrap.closest('.slides-page') ?? wrap).zoom) || 1
+      const rel = (el: Element) => { const r = el.getBoundingClientRect(); return { x: (r.left - wr.left) / z, y: (r.top - wr.top) / z, w: r.width / z, h: r.height / z } }
       const b = rel(box2)
-      const fy = b.y + b.h / 2
+      const rows = rowEls.map(r => rel(r!))
+      // Leave box 2 at its middle, kept within the branch line's span (first to last result) so the two always meet.
+      const top = rows[0].y + rows[0].h / 2, bottom = rows[2].y + rows[2].h / 2
+      const fy = Math.min(Math.max(b.y + b.h / 2, top), bottom, b.y + b.h - 12)
       feed.style.top = `${fy}px`
       if (reduce) return
-      const rows = rowEls.map(r => rel(r!))
       const x0 = b.x + b.w, xs = rows[0].x - 28, xe = rows[0].x - 4
       const el = Math.max(0, now - start), i = Math.floor(el / cycle) % 3
       let t = el % cycle, x: number, y: number, show = true, glow = false
@@ -84,6 +88,8 @@ function useHowFlowDot() {
 
 // /final-slides: copy of /present for the final round. Door sensor replaced by the lobby access card.
 // /present: a short presenting deck of Madam Lee alone at home (3D), the problem, the cover (TemanMu + team names), the solution, and how it works.
+const SLIDE_CANVAS_WIDTH = 1600 // matches .slides-fixed .slides-page in slides.css
+
 export function FinalSlides() {
   const howFlow = useHowFlowDot()
   const sceneRef = useRef<HTMLDivElement>(null)
@@ -122,15 +128,20 @@ export function FinalSlides() {
       setPptxExporting(false)
     }
   }
-  // Printing (Save as PDF) uses the same still frames as the PowerPoint export.
+  // Every slide is a fixed 1600×900 (16:9) canvas, scaled to the window; printing uses the same still frames as the PowerPoint export.
   useEffect(() => {
     const root = rootRef.current
     if (!root) return
+    const fit = () => root.style.setProperty('--slides-zoom', String(root.clientWidth / SLIDE_CANVAS_WIDTH))
+    const resize = new ResizeObserver(fit)
+    resize.observe(root)
+    fit()
     const freeze = () => root.classList.add('slides-exporting')
     const unfreeze = () => root.classList.remove('slides-exporting')
     window.addEventListener('beforeprint', freeze)
     window.addEventListener('afterprint', unfreeze)
     return () => {
+      resize.disconnect()
       window.removeEventListener('beforeprint', freeze)
       window.removeEventListener('afterprint', unfreeze)
     }
@@ -180,7 +191,7 @@ export function FinalSlides() {
     }
   }, [])
 
-  return <main ref={rootRef} className="slides-root">
+  return <main ref={rootRef} className="slides-root slides-fixed">
     {/* Kept small and out of the way so it doesn't distract while presenting; hidden in the PDF and PPTX. */}
     <div className="final-export">
       <span className="slides-export-status" role="status">{pptxStatus}</span>
@@ -426,26 +437,27 @@ export function FinalSlides() {
           <p>The same household monitoring, connected to an agreed township response team.</p>
         </div>
         <div className="final-landed-content">
-          <section className="final-landed-responders" aria-labelledby="final-landed-response-title">
-            <img className="final-police-art" src="/images/final-slides/auxiliary-police.png" alt="Illustration of two approachable Auxiliary Police community responders" width="1024" height="1536" />
-            <div>
-              <h3 id="final-landed-response-title">Support beyond the guardhouse</h3>
-              <p>Build on Sime Darby Property’s Auxiliary Police network for agreed local welfare checks.</p>
-              <p className="final-landed-coverage">No dedicated guard at the home? A designated township team can respond within its agreed service area.</p>
-            </div>
-          </section>
           <figure className="final-landed-dashboard">
-            <figcaption><div><span>Example · City of Elmina</span><h3>Ilham Residence 3</h3></div><a href="/township-landed" target="_blank" rel="noopener noreferrer">Open dashboard <span className="sr-only">in a new tab</span> ↗</a></figcaption>
-            <a className="final-landed-preview" href="/township-landed" target="_blank" rel="noopener noreferrer" aria-label="Open the Ilham Residence 3 demo dashboard in a new tab"><img src="/images/final-slides/ilham-residence-3-dashboard.png" alt="Existing Ilham Residence 3 dashboard showing the 3D neighbourhood, sample household concerns and response panel" width="1180" height="790" /></a>
-            <p className="final-landed-demo-note">Existing UI demo · simulated households and cases, not a live deployment.</p>
+            <figcaption>
+              <span>Example · City of Elmina · Ilham Residence 3</span>
+              <a href="/township-landed" target="_blank" rel="noopener noreferrer">Open dashboard <span className="sr-only">in a new tab</span> ↗</a>
+            </figcaption>
+            <a className="final-landed-preview" href="/township-landed" target="_blank" rel="noopener noreferrer" aria-label="Open the Ilham Residence 3 demo dashboard in a new tab">
+              <img src="/images/final-slides/ilham-residence-3-dashboard.png" alt="Ilham Residence 3 dashboard showing the 3D neighbourhood, sample household concerns and response panel" width="1640" height="786" />
+            </a>
           </figure>
+          <div className="final-landed-answers">
+            <div className="final-landed-officers">
+              <img src="/images/final-slides/auxiliary-police.png" alt="Two Auxiliary Police community responders" width="1024" height="1536" />
+              <p>Sime Darby Property’s Auxiliary Police</p>
+            </div>
+            <ol>
+              <li><span>01</span><div><h3>Checked by <em>the township</em></h3><p>With the family’s consent, the home appears on the Auxiliary Police dashboard for its patrol area.</p></div></li>
+              <li><span>02</span><div><h3>Sensed at <em>the front door</em></h3><p>No lobby access-card taps, so a door sensor marks possible outings, checked against water and electricity.</p></div></li>
+            </ol>
+          </div>
         </div>
-        <ol className="final-landed-flow" aria-label="Proposed landed-home response workflow">
-          <li><span>01</span><div><strong>Household concern</strong><p>Unusual activity remains unresolved after the resident check-in.</p></div></li>
-          <li><span>02</span><div><strong>Family + township notified</strong><p>The designated team receives the home and concern details.</p></div></li>
-          <li><span>03</span><div><strong>A responder accepts the check</strong><p>Follow the agreed procedure, record the outcome and escalate when needed.</p></div></li>
-        </ol>
-        <p className="final-landed-scope">Proposed Auxiliary Police engagement, subject to confirmed coverage and agreed duties. Outside coverage, arrange a nominated local contact or response partner.</p>
+        <p className="final-landed-scope">Proposed Auxiliary Police engagement, subject to confirmed coverage and agreed duties. Dashboard: existing UI demo, simulated households and cases.</p>
       </PageFrame>
       <PageFrame number={8} className="slides-impact final-impact">
         <div className="slides-section-top"><TemanMuWordmark /><span>08 · Impact</span></div>

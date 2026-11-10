@@ -1,23 +1,23 @@
 /* No toolbar on /present, so the cover fills the whole screen. */
-.present-cover { min-height: 100svh; }
+.present-cover { min-height: 100cqh; }
 /* Keep the copy high, like the /slides cover, so the trees don't run under the words. */
 .present-cover .slides-cover-main { align-items: flex-start; }
-.present-cover .slides-cover-copy { padding-top: clamp(24px, 6svh, 72px); }
-.present-names { max-width: 480px; margin: 28px 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 6px 18px; color: #6b655e; font-size: clamp(12px, 1vw, 15px); font-weight: 600; letter-spacing: .08em; }
+.present-cover .slides-cover-copy { padding-top: clamp(24px, 6cqh, 72px); }
+.present-names { max-width: 480px; margin: 28px 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 6px 18px; color: #6b655e; font-size: clamp(12px, 1cqw, 15px); font-weight: 600; letter-spacing: .08em; }
 .present-team-name { margin-right: 115px; color: #8b4429; font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 
 /* Page 2 · The problem (from slide-1b.html) */
 /* Sized to the screen height so the whole page fits in one view when presenting. */
-.present-problem { --bars: clamp(100px, 44svh - 200px, 300px); --dot: clamp(10px, 2.8svh - 8px, 22px); --dot-gap: clamp(4px, .7svh, 8px); height: 100svh; min-height: 0; background: #fef9ef; }
-.present-problem-heading { margin-top: clamp(16px, 3svh, 36px); }
+.present-problem { --bars: clamp(100px, 44cqh - 200px, 300px); --dot: clamp(10px, 2.8cqh - 8px, 22px); --dot-gap: clamp(4px, .7cqh, 8px); height: 100cqh; min-height: 0; background: #fef9ef; }
+.present-problem-heading { margin-top: clamp(16px, 3cqh, 36px); }
 .present-problem-heading .slides-eyebrow { margin: 0; }
-.present-problem-heading h2 { margin: 12px 0 0; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: min(clamp(38px, 3.9vw, 56px), 6.5svh); font-weight: 400; line-height: 1.04; letter-spacing: -.04em; }
+.present-problem-heading h2 { margin: 12px 0 0; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: min(clamp(38px, 3.9cqw, 56px), 6.5cqh); font-weight: 400; line-height: 1.04; letter-spacing: -.04em; }
 .present-problem-heading em { color: #a95130; font-weight: 400; }
-.present-problem-stats { flex: 1; min-height: 0; margin-top: clamp(16px, 3svh, 36px); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid #d1c9bf; }
-.present-problem-stat { padding: clamp(16px, 3svh, 32px) 0 clamp(12px, 2svh, 24px) 56px; display: flex; flex-direction: column; }
-.present-problem-stat:first-child { padding: clamp(16px, 3svh, 32px) 56px clamp(12px, 2svh, 24px) 0; border-right: 1px solid #d1c9bf; }
+.present-problem-stats { flex: 1; min-height: 0; margin-top: clamp(16px, 3cqh, 36px); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid #d1c9bf; }
+.present-problem-stat { padding: clamp(16px, 3cqh, 32px) 0 clamp(12px, 2cqh, 24px) 56px; display: flex; flex-direction: column; }
+.present-problem-stat:first-child { padding: clamp(16px, 3cqh, 32px) 56px clamp(12px, 2cqh, 24px) 0; border-right: 1px solid #d1c9bf; }
 .present-problem-label { color: #8b4429; font-size: 13px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
-.present-problem-body { flex: 1; display: flex; align-items: flex-end; gap: clamp(24px, 3vw, 40px); padding-top: clamp(10px, 2svh, 20px); }
+.present-problem-body { flex: 1; display: flex; align-items: flex-end; gap: clamp(24px, 3cqw, 40px); padding-top: clamp(10px, 2cqh, 20px); }
 .present-problem-bars { display: flex; align-items: flex-end; gap: 20px; height: var(--bars); }
 .present-problem-bar { width: 96px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .present-problem-bar strong { font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: 36px; font-weight: 400; line-height: 1; letter-spacing: -.05em; }
@@ -29,11 +29,11 @@
 .present-problem-bar-from span { opacity: .7; }
 .present-problem-bar-to strong { color: #8b4429; }
 .present-problem-bar-to i { height: calc(var(--bars) * .79); background: #b05a36; }
-.present-problem-figure { padding-bottom: clamp(12px, 3svh, 30px); }
-.present-problem-figure strong { display: block; color: #8b4429; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: min(clamp(72px, 7.8vw, 112px), 9.5svh); font-weight: 400; line-height: .9; letter-spacing: -.06em; white-space: nowrap; }
-.present-problem-figure p { margin: clamp(8px, 1.4svh, 14px) 0 0; max-width: 260px; color: #4e4a45; font-size: min(20px, 2.4svh); font-weight: 600; line-height: 1.3; text-wrap: pretty; }
+.present-problem-figure { padding-bottom: clamp(12px, 3cqh, 30px); }
+.present-problem-figure strong { display: block; color: #8b4429; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: min(clamp(72px, 7.8cqw, 112px), 9.5cqh); font-weight: 400; line-height: .9; letter-spacing: -.06em; white-space: nowrap; }
+.present-problem-figure p { margin: clamp(8px, 1.4cqh, 14px) 0 0; max-width: 260px; color: #4e4a45; font-size: min(20px, 2.4cqh); font-weight: 600; line-height: 1.3; text-wrap: pretty; }
 .present-problem-figure mark { padding: 0 2px; background: linear-gradient(#e8bfa5, #e8bfa5) left bottom / 100% 40% no-repeat; color: inherit; }
-.present-problem-dots { display: grid; grid-template-columns: repeat(10, var(--dot)); gap: var(--dot-gap); padding-bottom: clamp(12px, 3svh, 30px); }
+.present-problem-dots { display: grid; grid-template-columns: repeat(10, var(--dot)); gap: var(--dot-gap); padding-bottom: clamp(12px, 3cqh, 30px); }
 .present-problem-dots i { width: var(--dot); height: var(--dot); border-radius: 50%; background: #e8d6c4; }
 .present-problem-dots i.is-filled { background: #b05a36; }
 /* Stat animations: play once the column is revealed (motion-ready is skipped under reduced motion, so the stats then render static). */
@@ -56,58 +56,57 @@
 @keyframes present-dot-fill { from { background: #e8d6c4; transform: scale(.6); } 60% { transform: scale(1.15); } to { background: #b05a36; transform: none; } }
 @media print { .present-problem-stat * { animation: none !important; transition: none !important; } .slides-motion-ready .present-problem-stat .present-problem-bar i { transform: none; } .slides-motion-ready .present-problem-stat strong { opacity: 1; } .slides-motion-ready .present-problem-stat .present-problem-dots i.is-filled { background: #b05a36; } .slides-motion-ready .present-problem-stat mark { background-size: 100% 40%; } }
 
-.present-problem .slides-problem-gap { margin-bottom: 8px; padding: clamp(10px, 1.8svh, 18px) 0 clamp(8px, 1.4svh, 14px); }
-.present-problem .slides-problem-gap-card { padding: clamp(8px, 1.4svh, 14px) 20px; }
-@media (max-width: 600px) { .present-problem .slides-problem-gap-items { grid-template-columns: 1fr; } }
+.present-problem .slides-problem-gap { margin-bottom: 8px; padding: clamp(10px, 1.8cqh, 18px) 0 clamp(8px, 1.4cqh, 14px); }
+.present-problem .slides-problem-gap-card { padding: clamp(8px, 1.4cqh, 14px) 20px; }
+@media (max-width: 600px) {:where(.slides-root:not(.slides-fixed)) .present-problem .slides-problem-gap-items { grid-template-columns: 1fr; } }
 .present-problem-sources { position: relative; z-index: 2; margin: 0 0 12px; color: #756d64; font-size: 11px; line-height: 1.35; }
 .present-problem-sources a { color: #8b4429; text-underline-offset: 2px; }
 .present-problem-sources a:hover { color: #a95130; }
 
-@media (max-width: 1100px) { .present-problem-body { flex-direction: column; align-items: flex-start; } .present-problem-figure { padding-bottom: 0; } }
-@media (max-width: 850px) {
-  .present-problem { height: auto; min-height: 100svh; }
-  .present-problem-stats { grid-template-columns: 1fr; }
-  .present-problem-stat, .present-problem-stat:first-child { padding: 28px 0; border-right: 0; }
-  .present-problem-stat:first-child { border-bottom: 1px solid #d1c9bf; }
-  .present-problem-bars { height: 220px; }
-  .present-problem-bar-to i { height: 160px; }
-  .present-problem-bar-from i { height: 54px; }
-  .present-problem-dots { grid-template-columns: repeat(10, 16px); gap: 6px; padding-bottom: 0; }
-  .present-problem-dots i { width: 16px; height: 16px; }
+@media (max-width: 1100px) {:where(.slides-root:not(.slides-fixed)) .present-problem-body { flex-direction: column; align-items: flex-start; } :where(.slides-root:not(.slides-fixed)) .present-problem-figure { padding-bottom: 0; } }
+@media (max-width: 850px) {:where(.slides-root:not(.slides-fixed)) .present-problem { height: auto; min-height: 100cqh; }
+  :where(.slides-root:not(.slides-fixed)) .present-problem-stats { grid-template-columns: 1fr; }
+  :where(.slides-root:not(.slides-fixed)) .present-problem-stat, :where(.slides-root:not(.slides-fixed)) .present-problem-stat:first-child { padding: 28px 0; border-right: 0; }
+  :where(.slides-root:not(.slides-fixed)) .present-problem-stat:first-child { border-bottom: 1px solid #d1c9bf; }
+  :where(.slides-root:not(.slides-fixed)) .present-problem-bars { height: 220px; }
+  :where(.slides-root:not(.slides-fixed)) .present-problem-bar-to i { height: 160px; }
+  :where(.slides-root:not(.slides-fixed)) .present-problem-bar-from i { height: 54px; }
+  :where(.slides-root:not(.slides-fixed)) .present-problem-dots { grid-template-columns: repeat(10, 16px); gap: 6px; padding-bottom: 0; }
+  :where(.slides-root:not(.slides-fixed)) .present-problem-dots i { width: 16px; height: 16px; }
 }
 
 /* Page 1 · Madam Lee at home: the simulator's 3D home as a still, full-bleed picture with the copy over the left. */
-.present-home { min-height: 100svh; background: radial-gradient(ellipse 60% 70% at 64% 56%, #f4e4d7 0%, #f5eee1 45%, #fef9ef 80%); }
+.present-home { min-height: 100cqh; background: radial-gradient(ellipse 60% 70% at 64% 56%, #f4e4d7 0%, #f5eee1 45%, #fef9ef 80%); }
 .present-home-canvas { position: absolute; inset: 4% 0 2% 34%; pointer-events: none; }
-.present-home-canvas canvas { display: block; width: 100%; height: 100%; }
+/* !important beats three.js's inline pixel size, which is measured after the slide's zoom and would shrink the home twice. */
+.present-home-canvas canvas { display: block; width: 100% !important; height: 100% !important; }
 .present-home > .slides-section-top, .present-home > .slides-page-bottom { position: relative; z-index: 2; }
 .present-home-copy { position: relative; z-index: 2; flex: 1; display: flex; flex-direction: column; justify-content: center; max-width: min(40%, 520px); padding-bottom: 48px; }
 .present-home-copy .slides-eyebrow { margin: 0 0 14px; }
-.present-home-copy h2 { margin: 0; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: clamp(52px, 5.6vw, 84px); font-weight: 400; line-height: 1; letter-spacing: -.045em; }
+.present-home-copy h2 { margin: 0; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: clamp(52px, 5.6cqw, 84px); font-weight: 400; line-height: 1; letter-spacing: -.045em; }
 .present-home-copy h2 em { color: #a95130; font-weight: 400; }
 .present-home-facts { max-width: 420px; margin: 28px 0 0; padding: 0; list-style: none; border-top: 1px solid #d1c9bf; }
-.present-home-facts li { padding: 14px 0; border-bottom: 1px solid #d1c9bf; color: #4e4a45; font-size: clamp(17px, 1.5vw, 21px); line-height: 1.35; }
+.present-home-facts li { padding: 14px 0; border-bottom: 1px solid #d1c9bf; color: #4e4a45; font-size: clamp(17px, 1.5cqw, 21px); line-height: 1.35; }
 .present-home-pin { position: absolute; left: -999px; transform: translate(-50%, -100%); display: inline-block; padding: 6px 12px; border-radius: 999px; background: #a95130; color: #fffaf2; font: 700 12px/1 'Avenir Next', Avenir, Inter, ui-sans-serif, system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; box-shadow: 0 6px 16px #8b442933; }
 .present-home-pin::after { content: ''; position: absolute; left: 50%; bottom: -5px; width: 10px; height: 10px; background: inherit; transform: translateX(-50%) rotate(45deg); z-index: -1; }
-@media (max-width: 850px) {
-  .present-home-canvas { inset: 30% 0 0 0; }
-  .present-home-copy { max-width: none; flex: 0; padding: 32px 0 0; }
+@media (max-width: 850px) {:where(.slides-root:not(.slides-fixed)) .present-home-canvas { inset: 30% 0 0 0; }
+  :where(.slides-root:not(.slides-fixed)) .present-home-copy { max-width: none; flex: 0; padding: 32px 0 0; }
 }
 /* Page 5 · How it works: overrides of the shared /slides styles so the page fits one screen when presenting. */
-.present-how { height: 100svh; min-height: 0; padding-top: clamp(20px, 4.5svh, 64px); padding-bottom: clamp(16px, 3svh, 64px); }
-.present-how .slides-how-heading { margin: clamp(8px, 2svh, 36px) 0 clamp(10px, 2svh, 28px); }
-.present-how .slides-how-heading h2 { font-size: min(clamp(42px, 4vw, 56px), 6.4svh); }
-.present-how .slides-how-flow2 { margin-bottom: clamp(10px, 1.6svh, 24px); }
-.present-how .slides-how-inputs { gap: clamp(6px, 1.2svh, 14px); padding-top: clamp(16px, 3svh, 26px); }
-.present-how .slides-how-box { gap: clamp(6px, 1svh, 10px); padding: clamp(12px, 1.8svh, 18px); }
-.present-how .slides-how-box h3 { font-size: min(24px, 2.8svh); }
-.present-how .slides-how-outcomes { gap: clamp(6px, 1svh, 10px); }
+.present-how { height: 100cqh; min-height: 0; padding-top: clamp(20px, 4.5cqh, 64px); padding-bottom: clamp(16px, 3cqh, 64px); }
+.present-how .slides-how-heading { margin: clamp(8px, 2cqh, 36px) 0 clamp(10px, 2cqh, 28px); }
+.present-how .slides-how-heading h2 { font-size: min(clamp(42px, 4cqw, 56px), 6.4cqh); }
+.present-how .slides-how-flow2 { margin-bottom: clamp(10px, 1.6cqh, 24px); }
+.present-how .slides-how-inputs { gap: clamp(6px, 1.2cqh, 14px); padding-top: clamp(16px, 3cqh, 26px); }
+.present-how .slides-how-box { gap: clamp(6px, 1cqh, 10px); padding: clamp(12px, 1.8cqh, 18px); }
+.present-how .slides-how-box h3 { font-size: min(24px, 2.8cqh); }
+.present-how .slides-how-outcomes { gap: clamp(6px, 1cqh, 10px); }
 .present-how .slides-how-outcomes-head, .present-how .slides-how-outcome { grid-template-columns: 230px minmax(0, 1fr); }
 .present-how .slides-how-outcomes-head { grid-template-columns: 28px 230px minmax(0, 1fr); }
-.present-how .slides-how-outcome { padding: clamp(8px, 1.3svh, 14px) 18px; }
-.present-how .slides-how-outcome h3 { font-size: min(22px, 2.6svh); }
-.present-how .slides-how-chain { gap: clamp(6px, 1svh, 10px); font-size: 14px; }
-.present-how .slides-how-chain b { padding: clamp(4px, .7svh, 7px) 12px; }
-.present-how .slides-how-companion2 { margin-bottom: clamp(8px, 1.2svh, 18px); padding: clamp(5px, .9svh, 9px) 0; }
-@media (max-width: 850px) { .present-how { height: auto; min-height: 100svh; } .present-how .slides-how-outcome, .present-how .slides-how-outcomes-head { grid-template-columns: 1fr; } }
-@media print { .present-home-canvas { inset: 4% 0 2% 34%; } .present-problem, .present-how { height: 7.5in; } }
+.present-how .slides-how-outcome { padding: clamp(8px, 1.3cqh, 14px) 18px; }
+.present-how .slides-how-outcome h3 { font-size: min(22px, 2.6cqh); }
+.present-how .slides-how-chain { gap: clamp(6px, 1cqh, 10px); font-size: 14px; }
+.present-how .slides-how-chain b { padding: clamp(4px, .7cqh, 7px) 12px; }
+.present-how .slides-how-companion2 { margin-bottom: clamp(8px, 1.2cqh, 18px); padding: clamp(5px, .9cqh, 9px) 0; }
+@media (max-width: 850px) {:where(.slides-root:not(.slides-fixed)) .present-how { height: auto; min-height: 100cqh; } :where(.slides-root:not(.slides-fixed)) .present-how .slides-how-outcome, :where(.slides-root:not(.slides-fixed)) .present-how .slides-how-outcomes-head { grid-template-columns: 1fr; } }
+@media print { :where(.slides-root:not(.slides-fixed)) .present-home-canvas { inset: 4% 0 2% 34%; } :where(.slides-root:not(.slides-fixed)) .present-problem, :where(.slides-root:not(.slides-fixed)) .present-how { height: 7.5in; } }
