@@ -9,6 +9,7 @@ import './final-slides.css'
 const PresentHome = lazy(() => import('./PresentHome').then(module => ({ default: module.PresentHome })))
 
 const PAGE_COUNT = 10
+const SHOW_APPENDIX_A1 = false
 const names = ['TAN SHIHAN', 'LIM JING JET', 'KHOR HONG JUN', 'LEE YANG', 'CHO JING LING']
 
 function TemanMuWordmark() {
@@ -441,7 +442,7 @@ export function FinalSlides() {
         </div>
         <div className="final-landed-heading">
           <h2>Extending TemanMu <em>to landed homes</em></h2>
-          <p>The same household monitoring, connected to an agreed township response team.</p>
+          <p>Connecting household monitoring to Sime Darby Property’s Auxiliary Police.</p>
         </div>
         <div className="final-landed-content">
           <figure className="final-landed-dashboard">
@@ -452,6 +453,7 @@ export function FinalSlides() {
             <a className="final-landed-preview" href="/township-landed" target="_blank" rel="noopener noreferrer" aria-label="Open the Ilham Residence 3 demo dashboard in a new tab">
               <img src="/images/final-slides/ilham-residence-3-dashboard.png" alt="Ilham Residence 3 dashboard showing the 3D neighbourhood, sample household concerns and response panel" width="1640" height="786" />
             </a>
+            <p className="final-landed-sensor-note">Household monitoring: water and electricity patterns, with a door sensor to help identify possible outings.</p>
           </figure>
           <div className="final-landed-answers">
             <div className="final-landed-officers">
@@ -459,12 +461,12 @@ export function FinalSlides() {
               <p>Sime Darby Property’s Auxiliary Police</p>
             </div>
             <ol>
-              <li><span>01</span><div><h3>Checked by <em>the township</em></h3><p>With the family’s consent, the home appears on the Auxiliary Police dashboard for its patrol area.</p></div></li>
-              <li><span>02</span><div><h3>Sensed at <em>the front door</em></h3><p>No lobby access-card taps, so a door sensor marks possible outings, checked against water and electricity.</p></div></li>
+              <li><span>01</span><div><h3>Auxiliary Police <em>in Elmina</em></h3><p>Sime Darby Property has deployed Auxiliary Police in Elmina East, providing a foundation for exploring support for landed households.</p></div></li>
+              <li><span>02</span><div><h3>From alerts <em>to welfare checks</em></h3><p>Where a landed neighbourhood has no dedicated guardhouse, the agreed Auxiliary Police team could receive unresolved alerts and carry out consented welfare checks.</p></div></li>
             </ol>
           </div>
         </div>
-        <p className="final-landed-scope">Proposed Auxiliary Police engagement, subject to confirmed coverage and agreed duties. Dashboard: existing UI demo, simulated households and cases.</p>
+        <p className="final-landed-scope">Subject to confirmed household coverage and agreed response duties. Dashboard: UI demo with simulated households and cases.<br />Source: <a href="https://www.simedarbyproperty.com/press-releases/sime-darby-property-launches-auxiliary-police-unit-enhance-security-across-townships" target="_blank" rel="noopener noreferrer">Sime Darby Property Auxiliary Police announcement, 1 June 2016<span className="sr-only"> (opens in a new tab)</span></a>.</p>
       </PageFrame>
       <PageFrame number={8} className="slides-impact final-impact">
         <div className="slides-section-top"><TemanMuWordmark /><span>08 · Impact</span></div>
@@ -583,7 +585,7 @@ export function FinalSlides() {
           </figure>
         </div>
       </PageFrame>
-      <section className="slides-page final-business-model" aria-label="Appendix A1: Proposed business model">
+      {SHOW_APPENDIX_A1 && <section className="slides-page final-business-model" aria-label="Appendix A1: Proposed business model">
         <img className="slides-sdp-logo" src="/images/sdp-logo.png" alt="Sime Darby Property" />
         <div className="slides-section-top">
           <p className="final-mentor-note">Mentor feedback: Who pays for installation and the ongoing service?</p>
@@ -614,7 +616,7 @@ export function FinalSlides() {
         </div>
         <p className="final-model-note">Proposed model, not a confirmed fee arrangement. Ongoing service is funded through the package; it is not cost-free. Validate cost per enrolled home and response capacity.</p>
         <div className="slides-page-bottom"><span>TemanMu · Township care</span><span>Appendix A1</span></div>
-      </section>
+      </section>}
       <section className="slides-page final-pilot" aria-label="Appendix A2: Pilot plan">
         <img className="slides-sdp-logo" src="/images/sdp-logo.png" alt="Sime Darby Property" />
         <div className="slides-section-top"><TemanMuWordmark /><span>Appendix A2 · Pilot plan</span></div>

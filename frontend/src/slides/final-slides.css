@@ -389,19 +389,22 @@
 .final-landed-dashboard figcaption a { flex: none; color: #8b4429; font-size: 13px; text-underline-offset: 4px; }
 .final-landed-preview { display: block; border: 1px solid #d1c9bf; border-radius: 10px; overflow: hidden; background: #fff; }
 .final-landed-preview img { display: block; width: 100%; height: auto; }
+.final-landed-sensor-note { margin: 0; color: #58534d; font-size: 14px; line-height: 1.4; }
 .final-landed-preview:focus-visible, .final-landed-dashboard figcaption a:focus-visible { outline: 3px solid #8b4429; outline-offset: 4px; }
 .final-landed-answers { display: flex; flex-direction: column; min-width: 0; }
-.final-landed-officers { display: flex; align-items: flex-end; gap: 18px; padding-bottom: 18px; border-bottom: 1px solid #d1c9bf; }
-.final-landed-officers img { display: block; width: auto; height: 170px; }
-.final-landed-officers p { margin: 0 0 6px; color: #8b4429; font-size: 13px; font-weight: 700; line-height: 1.4; letter-spacing: .04em; }
+.final-landed-officers { display: flex; flex-direction: column; align-items: center; gap: 8px; padding-bottom: 12px; border-bottom: 1px solid #d1c9bf; text-align: center; }
+.final-landed-officers img { display: block; width: auto; height: 230px; }
+.final-landed-officers p { margin: 0; color: #8b4429; font-size: 15px; font-weight: 700; line-height: 1.4; letter-spacing: .04em; }
 .final-landed-answers ol { margin: 0; padding: 0; list-style: none; }
-.final-landed-answers li { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 10px; padding: 20px 0; }
+.final-landed-answers li { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 10px; padding: 16px 0; }
 .final-landed-answers li + li { border-top: 1px solid #e0d7ca; padding-bottom: 0; }
 .final-landed-answers li > span { color: #a95130; font-family: Georgia, serif; font-size: 22px; line-height: 1.3; }
 .final-landed-answers h3 { margin: 0 0 8px; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: 30px; font-weight: 400; line-height: 1.1; letter-spacing: -.025em; }
 .final-landed-answers h3 em { color: #a95130; }
 .final-landed-answers li p { margin: 0; color: #4e4a45; font-size: 16px; line-height: 1.45; text-wrap: pretty; }
 .final-landed-scope { margin: auto 0 12px; padding-top: 16px; color: #756d64; font-size: 12px; line-height: 1.4; }
+.final-landed-scope a { color: #8b4429; text-underline-offset: 3px; }
+.final-landed-scope a:focus-visible { outline: 3px solid #8b4429; outline-offset: 4px; }
 
 /* Slide 04 · Learns her day */
 .slides-solution:has(.final-learns) .slides-solution-columns { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 52px; }
