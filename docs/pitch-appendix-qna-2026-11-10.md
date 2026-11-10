@@ -285,21 +285,24 @@ Use Nokia 3310 as an illustrative joke, not a claim that a particular legacy han
 
 **On-slide copy:**
 
-- **Pilot:** proposed township/developer or CSR funding for selected homes.
-- **Continuation:** test a caregiver subscription or an operator-funded package.
-- **One-off:** equipment, professional installation and commissioning.
-- **Recurring:** connectivity, platform operation, support, maintenance and agreed response provision.
-- Individual-title participation can be voluntary; do not assume access to a shared maintenance fund.
+- **Preferred proposal for participating managed developments:** buyer pays the one-off installation; ongoing service is budgeted within the agreed maintenance package.
+- **One-off:** equipment, professional installation, commissioning and onboarding.
+- **Recurring:** management pays TemanMu under a service contract covering connectivity, voice check-ins, platform operation, upkeep, replacement allowance and agreed response provision.
+- **Approval and affordability:** confirm eligible funding, budget and management/resident approvals; existing fees may need adjustment or a subsidy. Bundling removes a separate TemanMu bill, not the underlying cost.
+- **Individual-title homes without shared maintenance:** an agreed estate-service package or an opt-in household plan is needed.
+- **Pilot support:** township/developer or CSR sponsorship remains a possible subsidy route.
 
-**Suggested visual:** Payer → installation + recurring service → three cost groups: equipment/installation, technology/support, response provision.
+**Suggested visual:** Two payment columns: buyer-funded installation and management-funded ongoing service. This model is presented as Appendix A1 after the main slides in `/final-slides`; it is separate from the slide 9 market-opportunity argument.
 
 **Short answer:**
 
-> “An individual-title home can join through a voluntary caregiver subscription rather than a mandatory maintenance fund. We propose separating installation from recurring service, and testing township or CSR sponsorship for the pilot. The final price must include maintenance and agreed response provision, not just app hosting.”
+> “Our proposed model is a one-off installation paid by the buyer, with the ongoing service included in an agreed maintenance package for participating managed developments. Management would pay TemanMu through a service contract. We still need to confirm the eligible funding route, approvals and cost, so this does not promise unchanged maintenance fees. Homes without a shared arrangement would need an estate-service package or an opt-in household plan.”
 
 **Pricing note:** RM39/month in `SDP Hack.pdf`, page 4, is an illustrative proposal, not a validated price or quotation. Do not present it as covering hardware and staffed response until the cost model supports that. A resident's income or an area-average household income does not establish willingness to pay.
 
 **Simple viability check:** enrolled homes × monthly fee, less connectivity, platform/support, maintenance allowance and response costs. Model installation separately or explicitly amortise it. Test uptake, renewal and workload; do not assume existing patrol teams supply free capacity.
+
+**Funding check:** distinguish TemanMu's contract price from the way a managing body may collect charges. Do not assume a per-enrolled-home service cost can automatically be passed on as an identical statutory per-unit maintenance charge. Obtain qualified review of the funding route, cost allocation and approvals. Official context: [Seremban City Council's management-body guidance](https://www.mbs.gov.my/en/citizens/services/municipality-services/joint-management-body) and [MBIP's strata-management guidance](https://mbip.gov.my/en/perkhidmatan/strata-management). Neither establishes that TemanMu is automatically an eligible maintenance expense.
 
 ## A12. Proof and next steps
 

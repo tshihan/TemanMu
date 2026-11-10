@@ -8,7 +8,7 @@ import './final-slides.css'
 // The 3D home pulls in three.js and the house models, so it loads on its own after the deck appears.
 const PresentHome = lazy(() => import('./PresentHome').then(module => ({ default: module.PresentHome })))
 
-const PAGE_COUNT = 8
+const PAGE_COUNT = 10
 const names = ['TAN SHIHAN', 'LIM JING JET', 'KHOR HONG JUN', 'LEE YANG', 'CHO JING LING']
 
 function TemanMuWordmark() {
@@ -90,6 +90,23 @@ export function FinalSlides() {
   const rootRef = useRef<HTMLElement>(null)
   const [pptxStatus, setPptxStatus] = useState('')
   const [pptxExporting, setPptxExporting] = useState(false)
+  const [closingScene, setClosingScene] = useState<0 | 1>(0)
+  const [closingVisible, setClosingVisible] = useState(false)
+  const [closingReducedMotion, setClosingReducedMotion] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+  const closingArtRef = useRef<HTMLElement>(null)
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const update = () => setClosingReducedMotion(media.matches)
+    media.addEventListener('change', update)
+    const observer = new IntersectionObserver(([entry]) => setClosingVisible(entry.isIntersecting), { threshold: .35 })
+    if (closingArtRef.current) observer.observe(closingArtRef.current)
+    return () => { observer.disconnect(); media.removeEventListener('change', update) }
+  }, [])
+  useEffect(() => {
+    if (!closingVisible || closingReducedMotion) return
+    const timer = window.setTimeout(() => setClosingScene(scene => scene === 0 ? 1 : 0), 6500)
+    return () => window.clearTimeout(timer)
+  }, [closingVisible, closingReducedMotion, closingScene])
   const onExportPptx = async () => {
     if (!rootRef.current || pptxExporting) return
     setPptxExporting(true)
@@ -474,6 +491,127 @@ export function FinalSlides() {
         </div>
         <p className="slides-impact-caveat">Proposed pilot targets, not achieved results · Measure resident confidence, caregiver reassurance, and prospective buyer perceptions through surveys.</p>
       </PageFrame>
+      <PageFrame number={9} className="final-market">
+        <div className="slides-section-top">
+          <p className="final-mentor-note">Mentor feedback: How does TemanMu support Sime Darby Property’s business?</p>
+          <span>09 · Business viability</span>
+        </div>
+        <div className="final-market-heading">
+          <p className="slides-eyebrow">The family need</p>
+          <h2>Parents want independence.<br /><em>Families need peace of mind.</em></h2>
+          <p>A Care-Ready Home could give families another reason to choose SDP.</p>
+        </div>
+        <ol className="final-market-opportunities" aria-label="Three commercial opportunities for SDP" data-slide-reveal>
+          <li><span>01</span>
+            <svg className="final-opportunity-art" viewBox="0 0 100 76" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M10 35 36 13l26 22M17 30v34h38V30M29 64V46h14v18" />
+              <circle cx="73" cy="45" r="18" fill="#f5eee1" />
+              <path className="final-opportunity-check" pathLength="1" d="m64 45 6 6 12-13" />
+            </svg>
+            <h3>Differentiation</h3><p>Give families another reason to choose SDP through support for parents living independently.</p>
+          </li>
+          <li><span>02</span>
+            <svg className="final-opportunity-art" viewBox="0 0 100 76" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M9 35 34 14l25 21M16 30v34h36V30M28 64V47h12v17" />
+              <g className="final-opportunity-key"><circle cx="70" cy="30" r="10" fill="#f5eee1" /><path d="m70 40 0 24m0-7h9m-9-8h6" /><circle cx="70" cy="28" r="2" /></g>
+            </svg>
+            <h3>Premium positioning</h3><p>Create an optional Care-Ready home package for families seeking added reassurance.</p>
+          </li>
+          <li><span>03</span>
+            <svg className="final-opportunity-art" viewBox="0 0 100 76" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M5 29 22 15l17 14M10 25v26h24V25M18 51V38h8v13M61 29l17-14 17 14M66 25v26h24V25M74 51V38h8v13" />
+              <path className="final-opportunity-link" d="M22 59v6h56v-6" strokeDasharray="4 5" />
+              <g className="final-opportunity-heart"><path d="M50 47s-10-6-10-12a5.5 5.5 0 0 1 10-3 5.5 5.5 0 0 1 10 3c0 6-10 12-10 12Z" fill="#f5eee1" /></g>
+            </svg>
+            <h3>Multigenerational demand</h3><p>Attract families considering a home for their parents nearby, with potential second-unit interest.</p>
+          </li>
+        </ol>
+        <div className="final-market-numbers" aria-label="Supporting market context from SDP, DOSM and NHMS">
+          <div><span>Elmina · Household context</span><strong><small>RM</small>16,667<small> / month</small></strong><p>Estimated average household income · SDP</p></div>
+          <div><span>Elmina · Existing scale</span><strong>11,000<small>+</small></strong><p>Completed homes reported by SDP</p></div>
+          <div><span>Malaysia · Ageing population</span><strong>8.4<small>%</small></strong><p>Aged 65+ in 2026 · DOSM</p></div>
+          <div><span>Malaysia · Living alone</span><strong>18.8<small>%</small></strong><p>Aged 60+ in 2025 · NHMS<br />6.3% in 2018 · nearly 3×<br />≈770,000 people (rough estimate)</p></div>
+        </div>
+        <p className="final-market-note">Market context, not proven demand. Pricing, take-up and sales impact require pilot validation.</p>
+        <p className="final-market-sources">Sources: <a href="https://www.simedarbyproperty.com/commercial/city-of-elmina" target="_blank" rel="noopener noreferrer">SDP · City of Elmina</a> · <a href="https://www.dosm.gov.my/portal-main/release-content/current-population-estimates-2026" target="_blank" rel="noopener noreferrer">DOSM · Population 2026</a> · <a href="https://iku.nih.gov.my/images/nhms-2025/infographic-eng.pdf" target="_blank" rel="noopener noreferrer">MOH · NHMS 2025, infographics 1 &amp; 3</a></p>
+      </PageFrame>
+      <PageFrame number={10} className="final-closing">
+        <div className="slides-section-top"><TemanMuWordmark /><span>10 · Our promise</span></div>
+        <div className="final-closing-main">
+          <div className="final-closing-copy">
+            <p className="slides-eyebrow">TemanMu · Independent living, connected care</p>
+            <h2>Mum keeps her independence.<br /><em>Sarah stays connected.</em></h2>
+            <p className="final-closing-value">A quiet change at home becomes a check-in. An unresolved concern reaches family and nearby support.</p>
+            <p className="final-closing-township">Connecting the home, the family and the township.</p>
+          </div>
+          <figure ref={closingArtRef} className={`final-closing-art${closingVisible ? ' is-visible' : ''}`}>
+            <div className="final-close-scenes">
+              <div className={`final-close-scene final-close-work${closingScene === 0 ? ' is-active' : ''}`} aria-hidden={closingScene !== 0}>
+                <img className="final-close-work-art" src="/images/final-slides/sarah-at-work.png" alt="Sarah working at her laptop while TemanMu keeps her connected to her mother at home" width="1536" height="1024" />
+                <svg className="final-close-connection" viewBox="0 0 700 460" fill="none" aria-hidden="true"><path d="M165 145C270 145 230 280 370 280" stroke="currentColor" strokeWidth="2" strokeDasharray="5 7" /></svg>
+                <div className="final-close-update">
+                  <span>TemanMu</span>
+                  <div><img src="/images/mum-profile.jpg" alt="" width="48" height="48" /><p><strong>Mum’s day has started</strong><span>Morning activity recorded</span></p></div>
+                  <small>Illustrative routine update</small>
+                </div>
+              </div>
+              <div className={`final-close-scene final-close-together${closingScene === 1 ? ' is-active' : ''}`} aria-hidden={closingScene !== 1}>
+                <div className="final-close-family"><img src="/images/final-slides/sarah-and-madam-lee.png" alt="Sarah sitting beside Madam Lee, holding hands and smiling together" width="1536" height="1024" /></div>
+                <svg className="final-close-heart" viewBox="0 0 60 60" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M30 46S10 34 10 22a11 11 0 0 1 20-6 11 11 0 0 1 20 6c0 12-20 24-20 24Z" /></svg>
+              </div>
+            </div>
+            <figcaption><span className="final-close-caption-scene">{closingScene === 0 ? 'At work. Still connected.' : 'Together, when she can be.'}</span><span>Sarah &amp; Madam Lee · connected through TemanMu</span></figcaption>
+          </figure>
+        </div>
+      </PageFrame>
+      <section className="slides-page final-business-model" aria-label="Appendix A1: Proposed business model">
+        <img className="slides-sdp-logo" src="/images/sdp-logo.png" alt="Sime Darby Property" />
+        <div className="slides-section-top">
+          <p className="final-mentor-note">Mentor feedback: Who pays for installation and the ongoing service?</p>
+          <span>Appendix A1 · Business model</span>
+        </div>
+        <div className="final-model-heading">
+          <p className="slides-eyebrow">Proposed funding model</p>
+          <h2>Install once.<br /><em>Support through the township.</em></h2>
+          <p>For participating managed developments: a buyer-funded installation, with ongoing service budgeted within agreed maintenance fees.</p>
+        </div>
+        <div className="final-model-columns">
+          <section aria-labelledby="final-model-buyer">
+            <span className="final-model-number">01 · One-off</span>
+            <h3 id="final-model-buyer">Buyer pays for installation</h3>
+            <ul><li>Household monitoring equipment</li><li>Professional installation and commissioning</li><li>Setup, connectivity checks and onboarding</li></ul>
+            <p className="final-model-summary">A clear setup cost when the household joins.</p>
+          </section>
+          <section aria-labelledby="final-model-operator">
+            <span className="final-model-number">02 · Ongoing</span>
+            <h3 id="final-model-operator">Included in the agreed maintenance package</h3>
+            <ul><li>Platform, data connectivity and voice check-ins</li><li>Device upkeep, support and a replacement allowance</li><li>Agreed local response provision</li></ul>
+            <p className="final-model-summary">Management pays TemanMu under a service contract.</p>
+          </section>
+        </div>
+        <div className="final-model-conditions">
+          <div><strong>Budget it explicitly</strong><p>Confirm the eligible funding route, approvals and service cost with management. Inclusion may require a fee adjustment or subsidy.</p></div>
+          <div><strong>Individual-title homes</strong><p>Where no shared maintenance arrangement exists, use an agreed estate-service package or an opt-in household plan.</p></div>
+        </div>
+        <p className="final-model-note">Proposed model, not a confirmed fee arrangement. Ongoing service is funded through the package; it is not cost-free. Validate cost per enrolled home and response capacity.</p>
+        <div className="slides-page-bottom"><span>TemanMu · Township care</span><span>Appendix A1</span></div>
+      </section>
+      <section className="slides-page final-pilot" aria-label="Appendix A2: Pilot plan">
+        <img className="slides-sdp-logo" src="/images/sdp-logo.png" alt="Sime Darby Property" />
+        <div className="slides-section-top"><TemanMuWordmark /><span>Appendix A2 · Pilot plan</span></div>
+        <div className="final-model-heading">
+          <p className="slides-eyebrow">Proposed first pilot</p>
+          <h2>Start small.<br /><em>Learn from real homes.</em></h2>
+          <p>A supervised pilot to test the technology and the human response together.</p>
+        </div>
+        <ol className="final-market-opportunities" aria-label="Three pilot stages">
+          <li><span>01</span><h3>5–10 consenting homes</h3><p>Begin with participating households and an agreed local response team.</p></li>
+          <li><span>02</span><h3>Test the whole workflow</h3><p>Install real sensors and test data delivery, phone check-ins and welfare-check procedures.</p></li>
+          <li><span>03</span><h3>Measure what matters</h3><p>Evaluate reliability, nuisance alerts, resident acceptance and responder workload.</p></li>
+        </ol>
+        <p className="final-model-note">Proposed pilot scope. Confirm installation, household consent and responder arrangements before deployment.</p>
+        <div className="slides-page-bottom"><span>TemanMu · Township care</span><span>Appendix A2</span></div>
+      </section>
     </div>
   </main>
 }

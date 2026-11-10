@@ -39,7 +39,7 @@ Target **4 minutes 45 seconds of content**, leaving **15 seconds for slide chang
 | 7 | Apartments and landed homes | 25 s | Two small deployment diagrams. Apartments use an agreed building responder; landed homes use an agreed township responder or other designated local contact. Explicitly answer the no-guard case: a family alert is possible, but nearby attendance requires a separately arranged responder. Use a landed-dashboard screenshot only as a labelled UI illustration. |
 | 8 | A feasible first installation | 25 s | Show the preferred **CT electricity monitor at the distribution board** and **NB-IoT water meter at a surveyed household pipe**, plus access integration or a door sensor. Label hardware/data links “proposed pilot”. State that one-minute measurement/reporting is a target to validate. Potential TNB/Air Selangor discussions support deployment and authorised integration; they are not confirmed partnerships. |
 | 9 | Value for residents, families and townships | 25 s | Three short benefits: resident independence with less device burden; family context and a follow-up path; township coordination and a proposed resident-service differentiator. Add a simple business line: “Installation fee + recurring per-enrolled-home service fee.” Proposed buyer: township/developer-funded package, with family-paid continuation to test. Do not promise higher property values, sales or proven demand. |
-| 10 | Pilot TemanMu in one community | 15 s | Ask for a small, consented pilot, such as **5–10 homes**, with an agreed responder and installation partner. Measure data reliability, nuisance alerts, response workload, acceptance and installed/service cost. Return to Madam Lee: “Help her keep her independence, with a clear way for someone to check when her routine changes.” |
+| 10 | Mum keeps her independence. Sarah stays connected. | 15 s | Automatically alternate Sarah working at her laptop with an illustrative TemanMu update from Mum, and Sarah together with Madam Lee. Explain that a quiet change becomes a check-in and an unresolved concern reaches family and nearby support. End on the home–family–township connection. No scene controls, pilot section or funding/partnership ask on the closing slide. The pilot plan is in Appendix A2: 5–10 consenting homes, real sensors and phone delivery, agreed local response, and evaluation of reliability, nuisance alerts, acceptance and workload. |
 | | Content total | **285 s** | **4:45 content + 0:15 buffer = 5:00** |
 
 ## The 90-second demo recording
@@ -143,5 +143,5 @@ Separate team biographies, companion matching, full technology stack, algorithm 
 - No-guard landed case answered without assuming a responder exists.
 - Buyer, revenue structure and principal costs briefly explained.
 - Hardware, minute-level data and partnerships labelled as pilot proposals.
-- Pilot asks for people, site access and operating arrangements as well as hardware.
+- Closing explains a small supervised pilot rather than making a funding or partnership ask.
 - Rehearsed with the embedded video to stay within five minutes.
