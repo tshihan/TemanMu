@@ -1,0 +1,31 @@
+/* /final-slides only: the access card demo on the Solution page (replaces the door sensor). */
+.slides-card-reader { position: relative; width: 38px; height: 62px; border-radius: 8px; background: #8b4429; box-shadow: inset 0 0 0 4px #a95130; transform: translateX(14px); }
+.slides-card-reader-light { position: absolute; top: 9px; left: 50%; width: 8px; height: 8px; margin-left: -4px; border-radius: 50%; background: #f0b25a; opacity: .35; animation: slides-card-light 3.2s ease-in-out infinite; }
+.slides-card-pass { position: absolute; top: 50%; left: 50%; display: grid; place-items: center; width: 46px; height: 32px; margin: -10px 0 0 -52px; border-radius: 6px; background: #fef9ef; border: 1px solid #ddcfc0; color: #a95130; box-shadow: 0 3px 8px #2a2b2f1f; animation: slides-card-tap 3.2s ease-in-out infinite; }
+.slides-card-pass svg { width: 24px; height: 24px; }
+.slides-card-wave { position: absolute; top: 16px; right: 18px; width: 13px; height: 13px; border-radius: 50%; background: #a95130; animation: slides-contact-pulse 3.2s ease-in-out infinite; }
+@keyframes slides-card-tap { 0%, 18%, 100% { transform: translateX(0) rotate(-8deg); } 42%, 78% { transform: translateX(26px) rotate(0); } }
+@keyframes slides-card-light { 0%, 18%, 100% { opacity: .35; box-shadow: none; } 42%, 78% { opacity: 1; box-shadow: 0 0 8px #f0b25a; } }
+@media (prefers-reduced-motion: reduce) {
+  .slides-card-pass, .slides-card-reader-light, .slides-card-wave { animation: none; }
+  .slides-card-pass { transform: translateX(26px); }
+  .slides-card-reader-light { opacity: 1; }
+}
+.slides-exporting .slides-card-pass, .slides-exporting .slides-card-reader-light, .slides-exporting .slides-card-wave { animation: none !important; }
+.slides-exporting .slides-card-pass { transform: translateX(26px); }
+.slides-exporting .slides-card-reader-light { opacity: 1; }
+
+/* Export buttons: a quiet pill at the bottom centre, full strength on hover or keyboard focus. */
+.final-export { position: fixed; left: 50%; bottom: 14px; z-index: 20; display: flex; align-items: center; gap: 8px; padding: 6px; border: 1px solid #d1c9bf; border-radius: 999px; background: #fef9eff2; backdrop-filter: blur(10px); transform: translateX(-50%); opacity: .35; transition: opacity 200ms ease; font-size: 13px; }
+.final-export:hover, .final-export:focus-within { opacity: 1; }
+.final-export button { border: 0; border-radius: 999px; padding: 8px 14px; background: #a95130; color: #fffaf2; font: inherit; font-weight: 700; cursor: pointer; }
+.final-export button:disabled { opacity: .6; cursor: wait; }
+.final-export .slides-export-status:empty { display: none; }
+.final-export .slides-export-status { padding-left: 8px; }
+@media print { .final-export { display: none !important; } }
+/* Page 2 bars and dots: show the finished state in the PPTX, as print already does. */
+.slides-exporting .present-problem-stat * { animation: none !important; transition: none !important; }
+.slides-exporting .present-problem-stat .present-problem-bar i { transform: none; }
+.slides-exporting .present-problem-stat strong { opacity: 1; }
+.slides-exporting .present-problem-stat .present-problem-dots i.is-filled { background: #b05a36; }
+.slides-exporting .present-problem-stat mark { background-size: 100% 40%; }

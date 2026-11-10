@@ -97,8 +97,8 @@ function useHowFlowDot() {
   return { wrapRef, box2Ref, feedRef, dotRef, rowRefs }
 }
 
-// Temporarily hidden while the repo is public; flip to true to restore PDF/PPTX export.
-const EXPORT_ENABLED = false
+// Set to false to hide the PDF/PPTX export buttons (e.g. while the repo is public).
+const EXPORT_ENABLED = true
 
 export function Slides() {
   const howFlow = useHowFlowDot()

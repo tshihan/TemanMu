@@ -4,7 +4,7 @@ import pptxgen from 'pptxgenjs'
 const SLIDE_WIDTH = 13.333
 const SLIDE_HEIGHT = 7.5
 
-export async function exportSlidesToPptx(root: HTMLElement, onProgress: (current: number, total: number) => void) {
+export async function exportSlidesToPptx(root: HTMLElement, onProgress: (current: number, total: number) => void, fileName = 'TemanMu-pitch-deck.pptx') {
   const pages = Array.from(root.querySelectorAll<HTMLElement>('.slides-page'))
   if (!pages.length) throw new Error('No slides are available to export.')
 
@@ -38,7 +38,7 @@ export async function exportSlidesToPptx(root: HTMLElement, onProgress: (current
       slide.background = { color: 'FEF9EF' }
       slide.addImage({ data: image, x: (SLIDE_WIDTH - imageWidth) / 2, y: (SLIDE_HEIGHT - imageHeight) / 2, w: imageWidth, h: imageHeight })
     }
-    await pptx.writeFile({ fileName: 'TemanMu-pitch-deck.pptx', compression: true })
+    await pptx.writeFile({ fileName, compression: true })
   } finally {
     root.classList.remove('slides-exporting')
   }
