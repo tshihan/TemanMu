@@ -430,6 +430,18 @@ export function FinalSlides() {
             </ol>
             <p className="final-utility-path">Water meter <span>→</span> NB-IoT network / platform <span>→</span> TemanMu</p>
           </section>
+          <section className="final-installation-column" aria-labelledby="final-access-title">
+            <header className="final-utility-header">
+              <div><span className="final-utility-label">03 · Access Card</span><h3 id="final-access-title">SDP access-card system</h3></div>
+              <img className="final-access-card" src="/images/partners/sdp-access-card.png" alt="Sime Darby Property resident access card" width="640" height="363" />
+            </header>
+            <ol className="final-installation-steps">
+              <li><span>1</span><div><h4>Who · Link her card to her unit</h4><p>Building management tags her existing card as a TemanMu resident. No new card or device.</p></div></li>
+              <li><span>2</span><div><h4>Where · Choose which readers count</h4><p>Mark lobby, lift and gate readers as “going out” or “coming home”. Existing readers stay in place.</p></div></li>
+              <li><span>3</span><div><h4>When · Every tap is time-stamped</h4><p>Tapped out with no activity at home: probably out. Tapped in but no water or electricity use soon after: someone checks.</p></div></li>
+            </ol>
+            <p className="final-utility-path">Card tap <span>→</span> SDP access system <span>→</span> TemanMu</p>
+          </section>
         </div>
       </PageFrame>
       <PageFrame number={7} className="final-landed">
