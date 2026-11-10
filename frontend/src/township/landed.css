@@ -14,7 +14,7 @@
 .lt-map-views button { min-height: 44px; padding: 7px 10px; border: 1px solid var(--color-warm-taupe); border-radius: 8px; background: transparent; color: var(--color-charcoal); font-size: 12px; }
 .lt-map-views button[aria-pressed="true"] { border-color: var(--color-ink); background: var(--color-aged-paper); font-weight: 650; }
 .lt-map-views button:hover { border-color: var(--color-ink); }
-.lt-map-stage { position: relative; isolation: isolate; height: clamp(470px, 48vw, 650px); overflow: hidden; border: 1px solid var(--color-warm-taupe); border-radius: 14px; background: #edeadb; }
+.lt-map-stage { position: relative; isolation: isolate; height: clamp(470px, 48vw, 650px); overflow: hidden; border: 1px solid var(--color-warm-taupe); border-radius: 14px; background: #ebe5d6; }
 .lt-map-stage canvas { touch-action: none; }
 .lt-label-layer { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
 .lt-label-layer > * { position: absolute; top: 0; left: 0; visibility: hidden; }
