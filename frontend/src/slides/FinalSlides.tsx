@@ -236,9 +236,12 @@ export function FinalSlides() {
           <div className="present-problem-stat" data-slide-reveal>
             <span className="present-problem-label">02 · Safety risk</span>
             <div className="present-problem-body">
-              <div className="present-problem-dots" aria-label="14 of 100 dots filled, representing approximately 14.1 percent">
-                {Array.from({ length: 100 }, (_, i) => <i key={i} className={i < 14 ? 'is-filled' : ''} style={i < 14 ? { '--i': i } as CSSProperties : undefined} />)}
-              </div>
+              <svg className="final-problem-people" viewBox="0 0 300 270" role="img" aria-label="Seven people, with one slightly larger and shaded to represent about one in seven">
+                {[{ x: 42, y: 52 }, { x: 114, y: 52 }, { x: 186, y: 52 }, { x: 258, y: 52 }, { x: 68, y: 179 }, { x: 150, y: 179 }, { x: 232, y: 179 }].map((person, i) => <g key={i} className={i === 5 ? 'is-highlighted' : undefined} transform={`translate(${person.x} ${person.y}) scale(${i === 5 ? 1.18 : 1})`}>
+                  <circle cy="-12" r="20" />
+                  <path d="M-30 48v-8a30 30 0 0 1 60 0v8a6 6 0 0 1-6 6h-48a6 6 0 0 1-6-6Z" />
+                </g>)}
+              </svg>
               <div className="present-problem-figure">
                 <strong>14.1<small>%</small></strong>
                 <p><mark>About 1 in 7</mark> adults aged 60+ had a fall in the previous 12 months · NHMS 2018</p>
