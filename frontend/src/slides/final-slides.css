@@ -1,4 +1,6 @@
 /* /final-slides only: the access card demo on the Solution page (replaces the door sensor). */
+.final-problem-people { display: block; flex: none; width: 300px; height: 270px; margin-bottom: 24px; fill: #e8d6c4; }
+.final-problem-people .is-highlighted { fill: #b05a36; }
 .slides-card-reader { position: relative; width: 38px; height: 62px; border-radius: 8px; background: #8b4429; box-shadow: inset 0 0 0 4px #a95130; transform: translateX(14px); }
 .slides-card-reader-light { position: absolute; top: 9px; left: 50%; width: 8px; height: 8px; margin-left: -4px; border-radius: 50%; background: #f0b25a; opacity: .35; animation: slides-card-light 3.2s ease-in-out infinite; }
 .slides-card-pass { position: absolute; top: 50%; left: 50%; display: grid; place-items: center; width: 46px; height: 32px; margin: -10px 0 0 -52px; border-radius: 6px; background: #fef9ef; border: 1px solid #ddcfc0; color: #a95130; box-shadow: 0 3px 8px #2a2b2f1f; animation: slides-card-tap 3.2s ease-in-out infinite; }
