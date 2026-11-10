@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { Camera, CreditCard, Droplets, Faucet, HeartHandshake, Lightbulb, MousePointer2, Watch, Zap } from 'lucide-react'
+import { Camera, CreditCard, Droplets, Faucet, HeartHandshake, Home, Lightbulb, MousePointer2, PhoneCall, ShieldCheck, Users, Watch, Zap } from 'lucide-react'
 import { startScene } from '../landing/scene'
 import './slides.css'
 import './present.css'
@@ -8,7 +8,7 @@ import './final-slides.css'
 // The 3D home pulls in three.js and the house models, so it loads on its own after the deck appears.
 const PresentHome = lazy(() => import('./PresentHome').then(module => ({ default: module.PresentHome })))
 
-const PAGE_COUNT = 5
+const PAGE_COUNT = 8
 const names = ['TAN SHIHAN', 'LIM JING JET', 'KHOR HONG JUN', 'LEE YANG', 'CHO JING LING']
 
 function TemanMuWordmark() {
@@ -362,6 +362,117 @@ export function FinalSlides() {
           <HeartHandshake aria-hidden="true" />
           <p><strong>Companion on ordinary days</strong> · Family can invite her to nearby activities, match her with a volunteer buddy, or introduce her to a neighbour on the same routine.</p>
         </div>
+      </PageFrame>
+      <PageFrame number={6} className="final-installation">
+        <div className="slides-section-top">
+          <p className="final-mentor-note">Mentor feedback: How can TemanMu be implemented in existing homes?</p>
+          <span>06 · Feasibility</span>
+        </div>
+        <div className="final-installation-heading">
+          <h2>Implementing TemanMu <em>in existing homes</em></h2>
+          <p>Retrofit household monitoring, installed by qualified professionals.</p>
+        </div>
+        <div className="final-installation-columns">
+          <section className="final-installation-column" aria-labelledby="final-electricity-title">
+            <header className="final-utility-header">
+              <div><span className="final-utility-label">01 · Electricity</span><h3 id="final-electricity-title">CT electricity monitor</h3></div>
+              <img src="/images/partners/tnb.svg" alt="Tenaga Nasional Berhad (TNB)" width="170" height="70" />
+            </header>
+            <ol className="final-installation-steps">
+              <li><span>1</span><div><h4>Survey the distribution board</h4><p>Check the home’s phase arrangement, load and suitable measurement point.</p></div></li>
+              <li><span>2</span><div><h4>Install the CT monitor</h4><p>A registered electrical contractor fits matched current sensors and the monitor. The TNB billing meter stays in place.</p></div></li>
+              <li><span>3</span><div><h4>Connect and commission</h4><p>Send readings over LAN/Wi-Fi or a managed gateway. Verify appliance changes and the household standby baseline.</p></div></li>
+            </ol>
+            <p className="final-utility-path">CT monitor <span>→</span> Home network / gateway <span>→</span> TemanMu</p>
+          </section>
+          <section className="final-installation-column" aria-labelledby="final-water-title">
+            <header className="final-utility-header">
+              <div><span className="final-utility-label">02 · Water</span><h3 id="final-water-title">NB-IoT water meter</h3></div>
+              <img src="/images/partners/air-selangor.svg" alt="Air Selangor" width="150" height="85" />
+            </header>
+            <ol className="final-installation-steps">
+              <li><span>1</span><div><h4>Survey the household supply</h4><p>Check pipe branches and storage tanks so the meter captures the intended indoor water use.</p></div></li>
+              <li><span>2</span><div><h4>Install at the selected pipe</h4><p>A plumber fits the activity meter at the surveyed point. Preserve the utility billing meter and its seals.</p></div></li>
+              <li><span>3</span><div><h4>Connect and test water use</h4><p>Provision NB-IoT connectivity and agreed data access. Test small tap uses, reporting delay and signal coverage.</p></div></li>
+            </ol>
+            <p className="final-utility-path">Water meter <span>→</span> NB-IoT network / platform <span>→</span> TemanMu</p>
+          </section>
+        </div>
+      </PageFrame>
+      <PageFrame number={7} className="final-landed">
+        <div className="slides-section-top">
+          <p className="final-mentor-note">Mentor feedback: How does this work for landed homes without a dedicated guardhouse?</p>
+          <span>07 · Landed homes</span>
+        </div>
+        <div className="final-landed-heading">
+          <h2>Extending TemanMu <em>to landed homes</em></h2>
+          <p>The same household monitoring, connected to an agreed township response team.</p>
+        </div>
+        <div className="final-landed-content">
+          <section className="final-landed-responders" aria-labelledby="final-landed-response-title">
+            <img className="final-police-art" src="/images/final-slides/auxiliary-police.png" alt="Illustration of two approachable Auxiliary Police community responders" width="1024" height="1536" />
+            <div>
+              <h3 id="final-landed-response-title">Support beyond the guardhouse</h3>
+              <p>Build on Sime Darby Property’s Auxiliary Police network for agreed local welfare checks.</p>
+              <p className="final-landed-coverage">No dedicated guard at the home? A designated township team can respond within its agreed service area.</p>
+            </div>
+          </section>
+          <figure className="final-landed-dashboard">
+            <figcaption><div><span>Example · City of Elmina</span><h3>Ilham Residence 3</h3></div><a href="/township-landed" target="_blank" rel="noopener noreferrer">Open dashboard <span className="sr-only">in a new tab</span> ↗</a></figcaption>
+            <a className="final-landed-preview" href="/township-landed" target="_blank" rel="noopener noreferrer" aria-label="Open the Ilham Residence 3 demo dashboard in a new tab"><img src="/images/final-slides/ilham-residence-3-dashboard.png" alt="Existing Ilham Residence 3 dashboard showing the 3D neighbourhood, sample household concerns and response panel" width="1180" height="790" /></a>
+            <p className="final-landed-demo-note">Existing UI demo · simulated households and cases, not a live deployment.</p>
+          </figure>
+        </div>
+        <ol className="final-landed-flow" aria-label="Proposed landed-home response workflow">
+          <li><span>01</span><div><strong>Household concern</strong><p>Unusual activity remains unresolved after the resident check-in.</p></div></li>
+          <li><span>02</span><div><strong>Family + township notified</strong><p>The designated team receives the home and concern details.</p></div></li>
+          <li><span>03</span><div><strong>A responder accepts the check</strong><p>Follow the agreed procedure, record the outcome and escalate when needed.</p></div></li>
+        </ol>
+        <p className="final-landed-scope">Proposed Auxiliary Police engagement, subject to confirmed coverage and agreed duties. Outside coverage, arrange a nominated local contact or response partner.</p>
+      </PageFrame>
+      <PageFrame number={8} className="slides-impact final-impact">
+        <div className="slides-section-top"><TemanMuWordmark /><span>08 · Impact</span></div>
+        <div className="slides-impact-heading" data-slide-reveal>
+          <p className="slides-eyebrow">Impact · Three wins</p>
+          <h2>More independence. <em>More peace of mind.</em><br />A stronger community.</h2>
+        </div>
+        <div className="slides-impact-grid" aria-label="Expected benefits for three groups">
+          <article className="slides-impact-card slides-impact-residents" data-slide-reveal>
+            <div className="slides-impact-art slides-impact-art-home" aria-hidden="true"><Home className="slides-impact-home" /><span className="slides-impact-person"><i /><i /></span><HeartHandshake className="slides-impact-heart" /></div>
+            <span className="slides-impact-who">Who benefits · 01</span>
+            <h3>Older residents</h3>
+            <ul className="slides-impact-benefits">
+              <li><strong>Greater independence</strong> in familiar surroundings</li>
+              <li><strong>Stronger privacy</strong> without cameras or wearables</li>
+              <li><strong>Closer connection</strong> through buddies and local activities</li>
+            </ul>
+            <div className="slides-impact-target"><strong>70%</strong><span>of residents expected to report greater confidence living independently after the pilot</span></div>
+          </article>
+          <article className="slides-impact-card slides-impact-caregivers" data-slide-reveal>
+            <div className="slides-impact-art slides-impact-art-family" aria-hidden="true"><Home /><span className="slides-impact-connection" /><PhoneCall /></div>
+            <span className="slides-impact-who">Who benefits · 02</span>
+            <h3>Caregivers</h3>
+            <ul className="slides-impact-benefits">
+              <li><strong>Clearer reassurance</strong> about daily routines</li>
+              <li><strong>Earlier awareness</strong> when something changes</li>
+              <li><strong>Better coordination</strong> with nearby responders</li>
+            </ul>
+            <div className="slides-impact-target"><strong>80%</strong><span>report greater reassurance about their loved one’s day</span></div>
+          </article>
+          <article className="slides-impact-card slides-impact-township" data-slide-reveal>
+            <div className="slides-impact-art slides-impact-art-township" aria-hidden="true"><Home /><span className="slides-impact-route" /><Users /><ShieldCheck className="slides-impact-shield" /></div>
+            <span className="slides-impact-who">Who benefits · 03</span>
+            <h3>Township</h3>
+            <ul className="slides-impact-benefits">
+              <li><strong>Better coordinated care</strong> with clear priorities and nearby follow-up</li>
+              <li><strong>Stronger accountability</strong> through recorded actions and outcomes</li>
+              <li><strong>Stronger township reputation</strong> as a caring, age-friendly community</li>
+              <li><strong>Potential sales growth</strong> through greater appeal to families planning for ageing parents</li>
+            </ul>
+            <div className="slides-impact-target"><strong>70%</strong><span>of surveyed prospective buyers expected to view the township more positively after learning about TemanMu</span></div>
+          </article>
+        </div>
+        <p className="slides-impact-caveat">Proposed pilot targets, not achieved results · Measure resident confidence, caregiver reassurance, and prospective buyer perceptions through surveys.</p>
       </PageFrame>
     </div>
   </main>
