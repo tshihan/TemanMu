@@ -12,10 +12,11 @@ const Landing = lazy(() => import('./landing/Landing').then(module => ({ default
 const HomeEnvironment = lazy(() => import('./home/HomeEnvironment').then(module => ({ default: module.HomeEnvironment })))
 const Slides = lazy(() => import('./slides/Slides').then(module => ({ default: module.Slides })))
 const Present = lazy(() => import('./slides/Present').then(module => ({ default: module.Present })))
+const FinalSlides = lazy(() => import('./slides/FinalSlides').then(module => ({ default: module.FinalSlides })))
 const LandedTownship = lazy(() => import('./township/LandedTownship'))
-type Page = 'landing' | 'dashboard' | 'simulator' | 'caregiver' | 'slides' | 'present' | 'landed'
+type Page = 'landing' | 'dashboard' | 'simulator' | 'caregiver' | 'slides' | 'present' | 'final-slides' | 'landed'
 // Routes are real paths (/dashboard, /caregiver, ...). Anything else, including the landing page's own #how / #faq anchors, stays on the landing page.
-const PAGES: Record<string, Page> = { '/simulator': 'simulator', '/dashboard': 'dashboard', '/caregiver': 'caregiver', '/slides': 'slides', '/present': 'present', '/township-landed': 'landed' }
+const PAGES: Record<string, Page> = { '/simulator': 'simulator', '/dashboard': 'dashboard', '/caregiver': 'caregiver', '/slides': 'slides', '/present': 'present', '/final-slides': 'final-slides', '/township-landed': 'landed' }
 const pageFromPath = (): Page => PAGES[window.location.pathname.replace(/\/+$/, '')] ?? 'landing'
 // Old hash links (/#caregiver) keep working: rewrite them to the path form.
 const legacy = window.location.pathname === '/' ? window.location.hash.slice(1) : ''
@@ -29,7 +30,7 @@ export default function App() {
   const activeUnread = notifications.filter(item => item.role === role && !item.read).length
 
   useEffect(() => {
-    if (page === 'slides' || page === 'present' || page === 'landed') return
+    if (page === 'slides' || page === 'present' || page === 'final-slides' || page === 'landed') return
     return connectStore()
   }, [page])
   useEffect(() => {
@@ -45,6 +46,7 @@ export default function App() {
 
   if (page === 'slides') return <Suspense fallback={null}><Slides /></Suspense>
   if (page === 'present') return <Suspense fallback={null}><Present /></Suspense>
+  if (page === 'final-slides') return <Suspense fallback={null}><FinalSlides /></Suspense>
 
   // The installed caregiver app (PWA start page): the phone screen only, no dashboard chrome.
   if (page === 'caregiver') return <CaregiverApp standalone />
