@@ -364,7 +364,6 @@
 /* Settings */
 .cg-access-record { gap: 8px; }
 .cg-access-status { color: var(--sageink); font-size: 14px; font-weight: 750; line-height: 1.5; }
-.cg-access-demo-note { color: var(--mut); font-size: 12px; line-height: 1.5; }
 .cg-access-link { width: 100%; min-height: 46px; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0 0; border: 0; border-top: 1px solid var(--line); background: transparent; color: var(--accent); text-align: left; font-size: 15px; font-weight: 750; }
 .cg-access-link svg { flex: none; }
 .cg-access-link:hover { text-decoration: underline; text-underline-offset: 3px; }
@@ -374,7 +373,6 @@
 .cg-agreement-head h1 { min-width: 0; font-size: 20px; font-weight: 800; line-height: 1.2; }
 .cg-agreement-head .cg-icon-btn { width: 44px; height: 44px; }
 .cg-agreement-head .cg-icon-btn:hover { background: var(--sagewash); }
-.cg-agreement-demo { padding: 0 20px; color: var(--sageink); font-size: 13px; font-weight: 750; line-height: 1.5; }
 .cg-agreement-body { min-height: 0; gap: 12px; overscroll-behavior: contain; overflow-wrap: anywhere; }
 .cg-agreement-body:focus-visible { outline: 2.5px solid var(--blue); outline-offset: -3px; }
 .cg-agreement-body .cg-card { flex: none; gap: 16px; }
@@ -432,6 +430,9 @@
 .cg-segmented { display: grid; grid-template-columns: 1fr 1fr; margin-top: 12px; padding: 3px; border-radius: 14px; background: var(--chip); }
 .cg-segmented button { height: 40px; border: 0; border-radius: 11px; background: transparent; color: var(--mut); display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 15px; font-weight: 700; transition: background-color .2s, color .2s; }
 .cg-segmented button[aria-checked='true'] { background: var(--tile); color: var(--ink); }
+.cg-settings-head { align-items: flex-start; gap: 12px; }
+.cg-page-head.is-row > .cg-theme-switch { display: grid; flex: none; margin-top: 0; grid-template-columns: 44px 44px; }
+.cg-theme-switch button { height: 38px; }
 
 /* Incident view */
 .cg-sheet { position: absolute; inset: 0; z-index: 20; display: flex; flex-direction: column; padding-top: inherit; background: var(--bg); animation: cg-up .35s var(--ease) both; }

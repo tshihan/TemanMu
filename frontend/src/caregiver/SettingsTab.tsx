@@ -15,9 +15,15 @@ interface Props {
 
 export function SettingsTab({ unit, ctx, theme, onTheme, onOpenRoutine, emergencyAccess, onOpenEmergencyAccess }: Props) {
   return <div className="cg-page">
-    <header className="cg-page-head">
-      <p className="cg-kicker">Settings</p>
-      <h1 className="cg-large-title">Your setup.</h1>
+    <header className="cg-page-head is-row cg-settings-head">
+      <div>
+        <p className="cg-kicker">Settings</p>
+        <h1 className="cg-large-title">Your setup.</h1>
+      </div>
+      <div role="radiogroup" aria-label="Theme" className="cg-segmented cg-theme-switch">
+        <button type="button" role="radio" aria-checked={theme === 'light'} aria-label="Light" title="Light" onClick={() => onTheme('light')}><Sun size={18} aria-hidden="true" /></button>
+        <button type="button" role="radio" aria-checked={theme === 'dark'} aria-label="Dark" title="Dark" onClick={() => onTheme('dark')}><Moon size={18} aria-hidden="true" /></button>
+      </div>
     </header>
     <section className="cg-card cg-profile" aria-label="Resident">
       <div className="cg-profile-who">
@@ -38,7 +44,6 @@ export function SettingsTab({ unit, ctx, theme, onTheme, onOpenRoutine, emergenc
       {emergencyAccess ? <>
         <p className="cg-access-status">{EMERGENCY_ACCESS_STATUS}</p>
         <p className="cg-card-lead">{ctx.R}’s conditional emergency access consent was recorded during onboarding with the Sime Darby Property team.</p>
-        <p className="cg-access-demo-note">Sample record · Demo</p>
         <button type="button" className="cg-access-link" onClick={onOpenEmergencyAccess} aria-haspopup="dialog">
           <span>View signed agreement</span><ChevronRight size={18} aria-hidden="true" />
         </button>
@@ -48,15 +53,6 @@ export function SettingsTab({ unit, ctx, theme, onTheme, onOpenRoutine, emergenc
       <button type="button" className="cg-menu-row" onClick={onOpenRoutine}>
         <span>{ctx.R}’s routine</span><ChevronRight size={18} aria-hidden="true" />
       </button>
-    </section>
-    <section className="cg-card cg-settings">
-      <div>
-        <h2 className="cg-section-title">Appearance</h2>
-        <div role="radiogroup" aria-label="Theme" className="cg-segmented">
-          <button type="button" role="radio" aria-checked={theme === 'light'} onClick={() => onTheme('light')}><Sun size={16} aria-hidden="true" />Light</button>
-          <button type="button" role="radio" aria-checked={theme === 'dark'} onClick={() => onTheme('dark')}><Moon size={16} aria-hidden="true" />Dark</button>
-        </div>
-      </div>
     </section>
     <p className="cg-fineprint">Times are Malaysia time (MYT). TemanMu knows only water, electricity and door activity.</p>
   </div>

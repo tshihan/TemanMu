@@ -43,19 +43,17 @@ export function EmergencyAccessView({ record, onBack }: { record: EmergencyAcces
     }
   }, [])
 
-  return <div ref={panelRef} className="cg-sheet cg-emergency-access" role="dialog" aria-modal="true" aria-labelledby="cg-agreement-title" aria-describedby="cg-agreement-demo">
+  return <div ref={panelRef} className="cg-sheet cg-emergency-access" role="dialog" aria-modal="true" aria-labelledby="cg-agreement-title" aria-describedby="cg-agreement-disclaimer">
     <header className="cg-agreement-head">
       <div className="cg-sheet-head">
         <button type="button" className="cg-icon-btn" aria-label="Back to Settings" onClick={onBack}><ChevronLeft size={22} aria-hidden="true" /></button>
         <h1 id="cg-agreement-title">Emergency access</h1>
       </div>
-      <p id="cg-agreement-demo" className="cg-agreement-demo">Sample agreement · Demo</p>
     </header>
     <div className="cg-sheet-body cg-agreement-body" tabIndex={0} role="region" aria-label="Emergency access agreement document">
-      <section className="cg-card cg-agreement-summary" aria-labelledby="cg-agreement-summary-title">
-        <h2 id="cg-agreement-summary-title">At a glance</h2>
+      <section className="cg-card cg-agreement-summary" aria-label="Agreement summary">
         <p className="cg-access-status">{EMERGENCY_ACCESS_STATUS}</p>
-        <p>{record.residentName} and {record.caregiverName} are shown as having given standing conditional consent during onboarding with the Sime Darby Property team in this demo.</p>
+        <p>{record.residentName} and {record.caregiverName} gave standing conditional consent during onboarding with the Sime Darby Property team.</p>
         <ul>
           <li>{EMERGENCY_ACCESS_CHECK}</li>
           <li>{EMERGENCY_ACCESS_SAFEGUARD}</li>
@@ -113,16 +111,15 @@ export function EmergencyAccessView({ record, onBack }: { record: EmergencyAcces
           <p>For a real service, changes or withdrawal would be recorded with the onboarding team, with an updated agreement and effective date. This demonstration shows an existing record only; viewing or closing it does not grant, renew, change or withdraw consent.</p>
         </section>
         <section>
-          <h3>8. Sample signatures</h3>
-          <p>These typed sample signature fields illustrate the onboarding record. They are not actual signatures.</p>
+          <h3>8. Signatures</h3>
           <dl className="cg-agreement-signatures">
-            <div><dt>Resident · Sample signature</dt><dd>{record.residentName}</dd><dd>Sample signed on {record.sampleSignedOn}</dd></div>
-            <div><dt>Primary caregiver · Sample signature</dt><dd>{record.caregiverName}</dd><dd>Sample signed on {record.sampleSignedOn}</dd></div>
-            <div><dt>Team representative · Sample signature</dt><dd>{record.representative}</dd><dd>Sample signed on {record.sampleSignedOn}</dd></div>
+            <div><dt>Resident</dt><dd>{record.residentName}</dd><dd>Signed on {record.sampleSignedOn}</dd></div>
+            <div><dt>Primary caregiver</dt><dd>{record.caregiverName}</dd><dd>Signed on {record.sampleSignedOn}</dd></div>
+            <div><dt>Team representative</dt><dd>{record.representative}</dd><dd>Signed on {record.sampleSignedOn}</dd></div>
           </dl>
         </section>
       </article>
-      <p className="cg-agreement-disclaimer">Illustrative demo record only. This is not an executed contract or evidence of a confirmed Sime Darby Property partnership. Operational and legal approval remain separate.</p>
+      <p id="cg-agreement-disclaimer" className="cg-agreement-disclaimer">Illustrative demo record only. This is not an executed contract or evidence of a confirmed Sime Darby Property partnership. Operational and legal approval remain separate.</p>
     </div>
   </div>
 }

@@ -13,7 +13,7 @@ const madamLeeAgreement: EmergencyAccessRecord = {
   unitId: 'A-105',
   residentName: 'Madam Lee Mei Ling',
   caregiverName: 'Sarah Lee',
-  representative: 'Sime Darby Property representative (sample)',
+  representative: 'Sime Darby Property representative',
   version: 'Demo 1.0',
   sampleSignedOn: '6 November 2026',
 }
