@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { Camera, CreditCard, Droplets, Faucet, HeartHandshake, Home, Lightbulb, MousePointer2, PhoneCall, ShieldCheck, Users, Watch, Zap } from 'lucide-react'
+import { Camera, CreditCard, Droplets, Faucet, HeartHandshake, Home, Lightbulb, PhoneCall, ShieldCheck, Users, Watch, Zap } from 'lucide-react'
 import { startScene } from '../landing/scene'
 import './slides.css'
 import './present.css'
@@ -297,30 +297,34 @@ export function FinalSlides() {
                 <p><b>Taps out at the lobby, then home stays quiet</b> → Possible Away. If she is out longer than her usual outing, TemanMu checks in and alerts the caregiver if unanswered.</p>
               </article>
             </div>
-            <div className="slides-learning-note">
-              <strong>Two models learn her normal day</strong>
-              <p>The <b>Quiet Gap Model</b> learns how long she usually goes without water. The <b>Outing Model</b> learns how long she is usually out after tapping her card. Both models use a different time limit for morning, afternoon and night, based on her usual routine.</p>
-            </div>
           </section>
-          <section className="slides-solution-companion" aria-labelledby="present-companion-title" data-slide-reveal>
-            <h3 id="present-companion-title">Companion</h3>
-            <div className="slides-buddy-stage">
-              <div className="slides-buddy-ui" aria-hidden="true">
-                <div className="slides-buddy-phone">
-                  <div className="slides-buddy-phone-top"><span>TemanMu</span><span>Together</span></div>
-                  <div className="slides-buddy-phone-card">
-                    <span className="slides-buddy-phone-kicker">02 · A buddy</span>
-                    <strong>Someone who shares Mum’s interests</strong>
-                    <p>A local volunteer matched on what Mum enjoys.</p>
-                    <span className="slides-buddy-phone-button">Find a buddy <span aria-hidden="true">→</span></span>
-                    <MousePointer2 className="slides-buddy-pointer" />
-                    <span className="slides-buddy-phone-pending">Looking for someone nearby…</span>
-                  </div>
-                </div>
+          <section className="slides-solution-companion final-learns" aria-labelledby="present-learns-title" data-slide-reveal>
+            <h3 id="present-learns-title">Learns <em>her</em> day</h3>
+            <p className="final-learns-lead">No fixed timer. Limits come from her own routine and keep updating.</p>
+
+            <article className="final-learns-card final-learns-water">
+              <span className="final-learns-label">Quiet Gap Model · water</span>
+              <p className="final-learns-question">No water used. When does TemanMu check?</p>
+              <p className="final-learns-example">Example for Madam Lee this month</p>
+              <div className="final-learns-moments">
+                <div><i /><span>Morning</span><strong>~2 h</strong><small>she is usually up</small></div>
+                <div><i /><span>After lunch</span><strong>~4 h</strong><small>her usual nap</small></div>
+                <div><i /><span>Before bed</span><strong>~9 h</strong><small>she is asleep</small></div>
               </div>
-              <img className="slides-buddy-art" src="/images/community-buddy.png" alt="An older resident walking and chatting with a Community Buddy" />
-            </div>
-            <p><strong>Two ways to connect.</strong> A <strong>Community Buddy</strong> (a township volunteer) joins a resident for nearby activities. <strong>Neighbour matching</strong> introduces residents with similar routines, such as two early walkers on the same street.</p>
+            </article>
+
+            <article className="final-learns-card final-learns-outing">
+              <span className="final-learns-label">Outing Model · card taps</span>
+              <p className="final-learns-question">She taps out. When does TemanMu check?</p>
+              <p className="final-learns-example">Example for Madam Lee this month</p>
+              <div className="final-learns-bars">
+                <div><b>Morning walk</b><span style={{ '--usual': '44%', '--check': '75%' } as CSSProperties}><i>Usually ~1 h 20</i><em>Check ~2 h 15</em></span></div>
+                <div><b>Market day</b><span style={{ '--usual': '78%', '--check': '100%' } as CSSProperties}><i>Usually ~2 h 20</i><em>Check ~3 h</em></span></div>
+              </div>
+              <p className="final-learns-buffer"><span aria-hidden="true" /><strong>~55 min buffer</strong> on her usual time, so running late isn’t an alarm.</p>
+            </article>
+
+            <p className="final-learns-note"><strong>Retrained on her latest weeks,</strong> so these times shift as her routine changes. About 1 false alarm a week, against 6.5 for a fixed 4-hour rule.</p>
           </section>
         </div>
       </PageFrame>
