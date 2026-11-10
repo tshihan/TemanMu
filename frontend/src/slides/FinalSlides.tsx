@@ -1,5 +1,5 @@
-import { lazy, Suspense, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { Camera, CreditCard, Droplets, Faucet, HeartHandshake, Home, Lightbulb, PhoneCall, ShieldCheck, Users, Watch, Zap } from 'lucide-react'
+import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react'
+import { BellRing, Camera, CreditCard, Droplets, Faucet, HeartHandshake, Home, Lightbulb, Lock, PhoneCall, ShieldCheck, Smartphone, Users, Watch, Zap } from 'lucide-react'
 import { startScene } from '../landing/scene'
 import './slides.css'
 import './present.css'
@@ -10,7 +10,9 @@ const PresentHome = lazy(() => import('./PresentHome').then(module => ({ default
 
 const PAGE_COUNT = 10
 const SHOW_APPENDIX_A1 = false
-const names = ['TAN SHIHAN', 'LIM JING JET', 'KHOR HONG JUN', 'LEE YANG', 'CHO JING LING']
+// Hourly allowance, 6 AM to 11 PM. 'o' marks the outing allowance (card taps); the rest are quiet-gap allowances.
+const LEARNS_HOURS: Array<[number, string?]> = [[22],[20],[22],[52,'o'],[52,'o'],[18],[20],[44],[50],[44],[20],[18],[22],[20],[24],[28],[88],[100]]
+const names = ['TAN SHI HAN', 'LIM JING JET', 'KHOR HONG JUN', 'LEE YANG', 'CHO JING LING']
 
 function TemanMuWordmark() {
   return <span className="slides-wordmark">
@@ -306,29 +308,24 @@ export function FinalSlides() {
             <h3 id="present-learns-title">Learns <em>her</em> day</h3>
             <p className="final-learns-lead">No fixed timer. Limits come from her own routine and keep updating.</p>
 
-            <article className="final-learns-card final-learns-water">
-              <span className="final-learns-label">Quiet Gap Model · water</span>
-              <p className="final-learns-question">No water used. When does TemanMu check?</p>
-              <p className="final-learns-example">Example for Madam Lee this month</p>
-              <div className="final-learns-moments">
-                <div><i /><span>Morning</span><strong>~2 h</strong><small>she is usually up</small></div>
-                <div><i /><span>After lunch</span><strong>~4 h</strong><small>her usual nap</small></div>
-                <div><i /><span>Before bed</span><strong>~9 h</strong><small>she is asleep</small></div>
+            <article className="fl-card">
+              <span className="final-learns-label">Two ML models · one daily routine</span>
+              <p className="final-learns-question">How long can it stay quiet before TemanMu checks?</p>
+              <p className="final-learns-example">Illustrative · her limit changes through the day</p>
+              <div className="fl-chart" role="img" aria-label="Illustrative bar chart: allowed quiet time is shortest in the morning and afternoon, longer during her usual nap and outings, and longest overnight">
+                {LEARNS_HOURS.map(([h, k], i) => <div key={i}><span style={{ height: `${h}%`, background: k ? '#f5eee1' : h > 40 ? '#a95130' : '#c98d67', border: k ? '2px dashed #a95130' : 0, animationDelay: `${0.2 + i * 0.05}s` }} /></div>)}
+                <span className="fl-tag" style={{ top: 56, left: '16.6%', width: '11.1%' }}>Out walking</span>
+                <span className="fl-tag" style={{ top: 64, left: '38.9%', width: '16.7%' }}>Usual nap</span>
+                <span className="fl-tag" style={{ top: 4, right: 0, width: '11.1%' }}>Asleep</span>
+              </div>
+              <div className="fl-axis"><span>6 AM</span><span>NOON</span><span>6 PM</span><span>MIDNIGHT</span></div>
+              <div className="fl-models">
+                <div><i /><div><b>Quiet Gap Model</b><p>Water and electricity. Learns how long her home is usually quiet at each time of day.</p></div></div>
+                <div><i className="dash" /><div><b>Outing Model</b><p>Card taps. Learns how long her outings usually last, with a buffer so running late isn’t an alarm.</p></div></div>
               </div>
             </article>
 
-            <article className="final-learns-card final-learns-outing">
-              <span className="final-learns-label">Outing Model · card taps</span>
-              <p className="final-learns-question">She taps out. When does TemanMu check?</p>
-              <p className="final-learns-example">Example for Madam Lee this month</p>
-              <div className="final-learns-bars">
-                <div><b>Morning walk</b><span style={{ '--usual': '44%', '--check': '75%' } as CSSProperties}><i>Usually ~1 h 20</i><em>Check ~2 h 15</em></span></div>
-                <div><b>Market day</b><span style={{ '--usual': '78%', '--check': '100%' } as CSSProperties}><i>Usually ~2 h 20</i><em>Check ~3 h</em></span></div>
-              </div>
-              <p className="final-learns-buffer"><span aria-hidden="true" /><strong>~55 min buffer</strong> on her usual time, so running late isn’t an alarm.</p>
-            </article>
-
-            <p className="final-learns-note"><strong>Retrained on her latest weeks,</strong> so these times shift as her routine changes. About 1 false alarm a week, against 6.5 for a fixed 4-hour rule.</p>
+            <p className="final-learns-note"><strong>Retrained on her latest weeks,</strong> so these limits shift as her routine changes. About 1 false alarm a week, against 6.5 for a fixed 4-hour rule.</p>
           </section>
         </div>
       </PageFrame>
@@ -569,7 +566,7 @@ export function FinalSlides() {
             <div className="final-close-scenes">
               <div className={`final-close-scene final-close-work${closingScene === 0 ? ' is-active' : ''}`} aria-hidden={closingScene !== 0}>
                 <img className="final-close-work-art" src="/images/final-slides/sarah-at-work.png" alt="Sarah working at her laptop while TemanMu keeps her connected to her mother at home" width="1536" height="1024" />
-                <svg className="final-close-connection" viewBox="0 0 700 460" fill="none" aria-hidden="true"><path d="M165 145C270 145 230 280 370 280" stroke="currentColor" strokeWidth="2" strokeDasharray="5 7" /></svg>
+                <svg className="final-close-connection" viewBox="0 0 690 460" fill="none" aria-hidden="true"><path d="M165 150C195 252 320 262 419 243" stroke="currentColor" strokeWidth="2" strokeDasharray="5 7" /><circle cx="423" cy="242" r="4" fill="currentColor" /></svg>
                 <div className="final-close-update">
                   <span>TemanMu</span>
                   <div><img src="/images/mum-profile.jpg" alt="" width="48" height="48" /><p><strong>Mum’s day has started</strong><span>Morning activity recorded</span></p></div>
@@ -720,25 +717,50 @@ export function FinalSlides() {
           <p className="slides-eyebrow">Privacy without an indoor camera</p>
           <h2>Her daily routine stays private.<br /><em>Help is shared when needed.</em></h2>
         </div>
-        <div className="final-privacy-boundary">
-          <section className="final-privacy-household" aria-labelledby="final-privacy-private">
-            <span className="final-model-number">Resident + authorised caregiver</span>
-            <h3 id="final-privacy-private">Her everyday life</h3>
-            <ul>
-              <li><Droplets aria-hidden="true" /><div><strong>Water activity</strong><span>Water-use history and patterns</span></div></li>
-              <li><Zap aria-hidden="true" /><div><strong>Electricity usage</strong><span>Household power activity</span></div></li>
-              <li><CreditCard aria-hidden="true" /><div><strong>Outing activity</strong><span>Entry / exit history and routines</span></div></li>
-            </ul>
-            <p className="final-privacy-private-note">These records are not shared with township staff.</p>
-          </section>
-          <div className="final-privacy-gate"><ShieldCheck aria-hidden="true" size={34} /><strong>Only when an unusual event needs follow-up</strong><span aria-hidden="true">→</span></div>
-          <section className="final-privacy-township" aria-labelledby="final-privacy-shared">
-            <span className="final-model-number">Township response team</span>
-            <h3 id="final-privacy-shared">The information to help</h3>
-            <p>An incident notification with only the details needed to act:</p>
-            <ul><li>Home / location</li><li>Concern requiring a check</li><li>Resident check-in outcome</li><li>Response status and assigned responder</li></ul>
-            <p className="final-privacy-private-note">No routine usage charts, outing history or continuous home / away tracking.</p>
-          </section>
+        <div className="final-privacy-flow">
+          <div className="fp-home">
+            <span className="fp-kicker">At home</span>
+            <div className="fp-home-title"><span><Home aria-hidden="true" /></span><h3>Madam Lee’s home</h3></div>
+            <div className="fp-signals">
+              <div><Droplets aria-hidden="true" /><strong>Water activity</strong></div>
+              <div><Zap aria-hidden="true" /><strong>Electricity usage</strong></div>
+              <div><CreditCard aria-hidden="true" /><strong>Outing activity</strong></div>
+            </div>
+          </div>
+          <div className="fp-line" aria-hidden="true"><span /><span /></div>
+          <div className="fp-hub">
+            <span><svg width="40" height="40" viewBox="0 0 64 64" aria-hidden="true"><path d="M14 29 L32 15 L50 29 V50 H14 Z" fill="none" stroke="#fef9ef" strokeWidth="3.6" strokeLinejoin="round" /><path d="M14 31 H50 M32 31 V50" stroke="#fef9ef" strokeWidth="3.6" /><rect x="35" y="34" width="12" height="13" fill="#f0b25a" /></svg></span>
+            <strong>TemanMu</strong>
+            <em>Compares today with her usual routine</em>
+          </div>
+          <div className="fp-split" aria-hidden="true">
+            <span className="s1" /><span className="s2" /><span className="s3" /><span className="s4" /><span className="s5" />
+            <span className="lbl l1">Every day</span>
+            <span className="lock"><Lock /></span>
+            <span className="lbl l2">Only if unusual</span>
+          </div>
+          <div className="fp-audiences">
+            <section className="fp-aud-people" aria-labelledby="final-privacy-private">
+              <div>
+                <span className="fp-kicker">Resident + authorised caregiver</span>
+                <h3 id="final-privacy-private">Her everyday life</h3>
+                <p>Water-use history, household power activity and entry / exit routines.</p>
+                <p className="fp-private">These records are not shared with township staff.</p>
+              </div>
+              <span className="fp-phone"><Smartphone aria-hidden="true" /></span>
+            </section>
+            <section className="fp-aud-team" aria-labelledby="final-privacy-shared">
+              <div>
+                <span className="fp-kicker">Township response team</span>
+                <h3 id="final-privacy-shared">The information to help</h3>
+                <p style={{ fontSize: 15 }}>No routine usage charts, outing history or continuous home / away tracking.</p>
+              </div>
+              <div className="fp-alert">
+                <div className="fp-alert-head"><BellRing aria-hidden="true" /><span>Check needed</span></div>
+                <ul><li>Home / location</li><li>Concern requiring a check</li><li>Resident check-in outcome</li><li>Response status and assigned responder</li></ul>
+              </div>
+            </section>
+          </div>
         </div>
         <div className="final-privacy-principles"><span><b>Voluntary participation</b> with clear permissions</span><span><b>Withdrawal</b> and defined retention</span><span><b>Minimal incident records</b> with logged access</span></div>
         <p className="final-privacy-note">Intended access policy. The prototype still needs API and dashboard permissions aligned to this boundary. Sensor processing requires consent; closed incidents retain only an agreed minimum record.</p>
