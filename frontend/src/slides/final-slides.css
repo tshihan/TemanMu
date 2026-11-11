@@ -308,33 +308,31 @@
 
 .final-market { min-height: 100cqh; padding-top: 40px; padding-bottom: 24px; background: #fef9ef; }
 /* Slide 9 · numbers lead, then what they mean for SDP */
-.final-viability-numbers { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 56px; margin-top: 40px; }
+.final-viability-numbers { display: grid; grid-template-columns: 470px minmax(0, 1fr); gap: 64px; margin-top: 40px; }
 .final-viability-label { margin: 0; color: #2a2b2f; font-size: 17px; font-weight: 650; line-height: 1.3; text-wrap: balance; }
-.final-viability-national { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto 1fr auto; column-gap: 56px; }
-.final-viability-national > .final-viability-label { grid-column: 1 / -1; margin-bottom: 14px; }
-.final-viability-hero { grid-row: 2 / 4; display: flex; flex-direction: column; }
-.final-viability-hero strong { color: #a95130; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: 176px; font-weight: 400; line-height: .86; letter-spacing: -.04em; font-variant-numeric: lining-nums; }
-.final-viability-hero strong small { margin-left: 4px; font-size: .36em; letter-spacing: 0; }
-.final-viability-hero p { max-width: 330px; margin: 18px 0 0; color: #2a2b2f; font-size: 21px; line-height: 1.3; }
-.final-viability-hero p span { display: block; margin-top: 8px; color: #58534d; font-size: 13px; }
-.final-viability-bars { align-self: end; display: grid; gap: 14px; padding-bottom: 4px; }
-.final-viability-bar { display: flex; align-items: center; gap: 14px; color: #58534d; font-size: 15px; font-variant-numeric: tabular-nums; }
-.final-viability-bar > span { flex: none; width: 48px; }
-.final-viability-bar > i { flex: none; display: block; height: 26px; width: calc(var(--bar) * 72%); border-radius: 0 3px 3px 0; background: #d8cdbd; transform-origin: left center; }
-.final-viability-bar > b { color: #58534d; font-size: 17px; font-weight: 650; }
-.final-viability-bar.is-now > i { background: #a95130; }
-.final-viability-bar.is-now > b { color: #a95130; }
-.final-viability-multiple { margin: 6px 0 0 62px; color: #2a2b2f; font-size: 18px; }
-.final-viability-multiple strong { color: #a95130; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: 34px; font-weight: 400; letter-spacing: -.03em; }
-.final-viability-aside { grid-column: 2; display: flex; align-items: baseline; gap: 16px; margin-top: 22px; padding-top: 16px; border-top: 1px solid #d1c9bf; }
-.final-viability-aside strong, .final-viability-local strong { color: #2a2b2f; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-weight: 400; line-height: 1; letter-spacing: -.035em; white-space: nowrap; font-variant-numeric: lining-nums; }
-.final-viability-aside strong { font-size: 48px; }
-.final-viability-aside strong small, .final-viability-local strong small { font-size: .42em; letter-spacing: 0; }
-.final-viability-local strong small:first-child { margin-right: 6px; }
-.final-viability-aside p { margin: 0; color: #58534d; font-size: 15px; line-height: 1.4; }
-.final-viability-local { display: grid; align-content: start; gap: 26px; padding-left: 48px; border-left: 1px solid #d1c9bf; }
-.final-viability-local strong { display: block; font-size: 76px; }
-.final-viability-local p { margin: 8px 0 0; color: #58534d; font-size: 15px; line-height: 1.4; }
+.final-viability-hero { display: flex; flex-direction: column; }
+.final-viability-hero > strong { margin-top: 22px; color: #a95130; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: 124px; font-weight: 400; line-height: .86; letter-spacing: -.04em; white-space: nowrap; font-variant-numeric: lining-nums; }
+.final-viability-hero p { max-width: 420px; margin: 20px 0 0; color: #2a2b2f; font-size: 21px; line-height: 1.3; }
+.final-viability-hero p span { display: block; max-width: 380px; margin-top: 10px; color: #58534d; font-size: 13px; line-height: 1.45; text-wrap: pretty; }
+.final-viability-districts { display: flex; flex-direction: column; padding-left: 56px; border-left: 1px solid #d1c9bf; }
+.final-viability-districts-head { display: flex; align-items: baseline; justify-content: space-between; gap: 24px; }
+.final-viability-key { display: flex; align-items: center; gap: 8px; margin: 0; color: #58534d; font-size: 13px; white-space: nowrap; }
+.final-viability-key i { display: inline-block; width: 12px; height: 12px; margin-left: 10px; border-radius: 2px; background: #d8cdbd; }
+.final-viability-key i.is-alone { margin-left: 0; background: #a95130; }
+.final-viability-rows { display: grid; gap: 22px; margin: 26px 0 0; }
+.final-viability-row { display: grid; grid-template-columns: 200px minmax(0, 1fr) 150px 96px; align-items: center; column-gap: 28px; }
+.final-viability-row dt b { display: block; color: #2a2b2f; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: 30px; font-weight: 400; line-height: 1.05; letter-spacing: -.02em; }
+.final-viability-row dt span { display: block; margin-top: 4px; color: #58534d; font-size: 13px; line-height: 1.35; }
+.final-viability-row dd { margin: 0; }
+.final-viability-bar > i { display: flex; height: 34px; width: calc(var(--bar) * 100%); overflow: hidden; border-radius: 0 3px 3px 0; background: #d8cdbd; transform-origin: left center; }
+.final-viability-bar > i > span { width: 18.8%; background: #a95130; }
+.final-viability-count strong, .final-viability-growth strong { display: block; color: #2a2b2f; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: 40px; font-weight: 400; line-height: 1; letter-spacing: -.03em; white-space: nowrap; font-variant-numeric: lining-nums tabular-nums; }
+.final-viability-count span, .final-viability-growth span { display: block; margin-top: 6px; color: #58534d; font-size: 14px; line-height: 1.3; white-space: nowrap; }
+.final-viability-count span { color: #a95130; font-weight: 650; }
+.final-viability-growth strong { color: #a95130; font-size: 32px; }
+.final-viability-national { margin: auto 0 0; padding-top: 18px; border-top: 1px solid #d1c9bf; color: #58534d; font-size: 16px; line-height: 1.4; }
+.final-viability-national strong { color: #2a2b2f; font-weight: 650; }
+.final-viability-national em { color: #a95130; font-style: normal; font-weight: 650; }
 .final-viability-bridge { display: flex; align-items: baseline; justify-content: space-between; gap: 40px; margin-top: 48px; padding-top: 32px; border-top: 1px solid #d1c9bf; }
 .final-viability-bridge h2 { flex: none; margin: 0; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: 42px; font-weight: 400; line-height: 1.1; letter-spacing: -.03em; }
 .final-viability-bridge h2 em { color: #a95130; font-weight: 400; }
@@ -348,10 +346,11 @@
 .final-viability-moves.is-visible .final-opportunity-key { transform-box: fill-box; transform-origin: center; animation: final-key-turn 1.4s ease-in-out 3; }
 .final-viability-moves.is-visible .final-opportunity-link { animation: final-link-travel 1.4s linear 3; }
 .final-viability-moves.is-visible .final-opportunity-heart { transform-box: fill-box; transform-origin: center; animation: final-heart-beat 1.4s ease-in-out 3; }
-.final-viability-numbers.is-visible .final-viability-bar.is-now > i { animation: final-bar-grow 1.5s cubic-bezier(.16, 1, .3, 1) .35s both; }
+.final-viability-numbers.is-visible .final-viability-bar > i { animation: final-bar-grow 1.4s cubic-bezier(.16, 1, .3, 1) .3s both; }
+.final-viability-numbers.is-visible .final-viability-row + .final-viability-row .final-viability-bar > i { animation-delay: .45s; }
 /* Caveat and sources sit just above the page footer */
 .final-market .final-market-note { margin-top: auto; }
-@keyframes final-bar-grow { from { transform: scaleX(.335); } to { transform: none; } }
+@keyframes final-bar-grow { from { transform: scaleX(.12); } to { transform: none; } }
 @media (prefers-reduced-motion: reduce) { .final-viability-bar > i { animation: none !important; } }
 .slides-exporting .final-viability-bar > i { animation: none !important; }
 .final-market-opportunities { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; flex: 1; margin: 28px 0 0; padding: 0; list-style: none; }

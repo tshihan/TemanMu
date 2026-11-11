@@ -451,7 +451,7 @@ export function FinalSlides() {
         </div>
         <div className="final-landed-heading">
           <h2>Extending TemanMu <em>to landed homes</em></h2>
-          <p>Connecting household monitoring to Sime Darby Property’s Auxiliary Police.</p>
+          <p>Connecting household monitoring to each neighbourhood’s own guards.</p>
         </div>
         <div className="final-landed-content">
           <figure className="final-landed-dashboard">
@@ -466,16 +466,16 @@ export function FinalSlides() {
           </figure>
           <div className="final-landed-answers">
             <div className="final-landed-officers">
-              <img src="/images/final-slides/auxiliary-police.png" alt="Two Auxiliary Police community responders" width="1024" height="1536" />
-              <p>Sime Darby Property’s Auxiliary Police</p>
+              <img src="/images/final-slides/auxiliary-police.png" alt="Two neighbourhood guards" width="1024" height="1536" />
+              <p>Guards appointed by the residents’ association</p>
             </div>
             <ol>
-              <li><span>01</span><div><h3>Auxiliary Police <em>in Elmina</em></h3><p>Sime Darby Property has deployed Auxiliary Police in Elmina East, providing a foundation for exploring support for landed households.</p></div></li>
-              <li><span>02</span><div><h3>From alerts <em>to welfare checks</em></h3><p>Where a landed neighbourhood has no dedicated guardhouse, the agreed Auxiliary Police team could receive unresolved alerts and carry out consented welfare checks.</p></div></li>
+              <li><span>01</span><div><h3>Every neighbourhood <em>has its own guards</em></h3><p>Residents pay their residents’ association, which appoints the guards.</p></div></li>
+              <li><span>02</span><div><h3>From alerts <em>to welfare checks</em></h3><p>Unresolved alerts go to the neighbourhood’s guard on duty, who can carry out consented welfare checks on the household.</p></div></li>
             </ol>
           </div>
         </div>
-        <p className="final-landed-scope">Subject to confirmed household coverage and agreed response duties. Dashboard: UI demo with simulated households and cases.<br />Source: <a href="https://www.simedarbyproperty.com/press-releases/sime-darby-property-launches-auxiliary-police-unit-enhance-security-across-townships" target="_blank" rel="noopener noreferrer">Sime Darby Property Auxiliary Police announcement, 1 June 2016<span className="sr-only"> (opens in a new tab)</span></a>.</p>
+        <p className="final-landed-scope">Subject to agreement with the residents’ association and household consent. Dashboard: UI demo with simulated households and cases.</p>
       </PageFrame>
       <PageFrame number={8} className="slides-impact final-impact">
         <div className="slides-section-top"><TemanMuWordmark /><span>08 · Impact</span></div>
@@ -526,24 +526,36 @@ export function FinalSlides() {
           <p className="final-mentor-note">Mentor feedback: How does TemanMu support Sime Darby Property’s business?</p>
           <span>09 · Business viability</span>
         </div>
-        <div className="final-viability-numbers" aria-label="Market context from NHMS, DOSM and SDP" data-slide-reveal>
-          <section className="final-viability-national" aria-labelledby="final-viability-alone">
-            <h3 className="final-viability-label">Malaysia is ageing, and more people are ageing alone</h3>
-            <div className="final-viability-hero">
-              <strong id="final-viability-alone">18.8<small>%</small></strong>
-              <p>of Malaysians aged 60+ live alone<span>NHMS 2025 · ≈770,000 people (rough estimate)</span></p>
-            </div>
-            <div className="final-viability-bars" aria-label="Share of people aged 60+ living alone: 6.3% in 2018, 18.8% in 2025">
-              <div className="final-viability-bar"><span>2018</span><i style={{ '--bar': 6.3 / 18.8 } as CSSProperties} /><b>6.3%</b></div>
-              <div className="final-viability-bar is-now"><span>2025</span><i style={{ '--bar': 1 } as CSSProperties} /><b>18.8%</b></div>
-              <p className="final-viability-multiple">Nearly <strong>3×</strong> in seven years</p>
-            </div>
-            <div className="final-viability-aside"><strong>8.4<small>%</small></strong><p>of Malaysians are aged 65+ in 2026 · DOSM</p></div>
+        <div className="final-viability-numbers" aria-label="Older residents in Sime Darby Property's home districts, from DOSM and NHMS" data-slide-reveal>
+          <section className="final-viability-hero" aria-labelledby="final-viability-alone-title">
+            <h3 className="final-viability-label" id="final-viability-alone-title">Seniors likely living alone around SDP’s townships</h3>
+            <strong>≈89,000</strong>
+            <p>older residents in Petaling and Klang districts<span>Estimate: 473,600 residents aged 60+ (DOSM 2026) × 18.8%, the national share of 60+ living alone (NHMS 2025)</span></p>
           </section>
-          <section className="final-viability-local" aria-labelledby="final-viability-local-title">
-            <h3 className="final-viability-label" id="final-viability-local-title">Elmina already has the families</h3>
-            <div><strong>11,000<small>+</small></strong><p>completed homes reported by SDP</p></div>
-            <div><strong><small>RM</small>16,667</strong><p>estimated average monthly household income · SDP</p></div>
+          <section className="final-viability-districts" aria-labelledby="final-viability-districts-title">
+            <div className="final-viability-districts-head">
+              <h3 className="final-viability-label" id="final-viability-districts-title">Residents aged 60+ in SDP’s home districts</h3>
+              <p className="final-viability-key" aria-hidden="true"><i className="is-alone" />Est. living alone<i />Others aged 60+</p>
+            </div>
+            <dl className="final-viability-rows">
+              <div className="final-viability-row">
+                <dt><b>Petaling</b><span>City of Elmina · Ara Damansara</span></dt>
+                <dd className="final-viability-bar" style={{ '--bar': 322.7 / 322.7 } as CSSProperties} aria-label="322,700 aged 60+, of whom about 61,000 estimated living alone">
+                  <i><span /></i>
+                </dd>
+                <dd className="final-viability-count"><strong>322,700</strong><span>≈61,000 alone</span></dd>
+                <dd className="final-viability-growth"><strong>+32%</strong><span>since 2020</span></dd>
+              </div>
+              <div className="final-viability-row">
+                <dt><b>Klang</b><span>Bandar Bukit Raja</span></dt>
+                <dd className="final-viability-bar" style={{ '--bar': 150.9 / 322.7 } as CSSProperties} aria-label="150,900 aged 60+, of whom about 28,000 estimated living alone">
+                  <i><span /></i>
+                </dd>
+                <dd className="final-viability-count"><strong>150,900</strong><span>≈28,000 alone</span></dd>
+                <dd className="final-viability-growth"><strong>+32%</strong><span>since 2020</span></dd>
+              </div>
+            </dl>
+            <p className="final-viability-national">Nationally, <strong>18.8%</strong> of people aged 60+ now live alone, up from 6.3% in 2018. <em>Nearly 3× in seven years.</em></p>
           </section>
         </div>
         <div className="final-viability-bridge">
@@ -575,8 +587,8 @@ export function FinalSlides() {
             <h3>Multigenerational demand</h3><p>Attract families considering a home for their parents nearby, with potential second-unit interest.</p>
           </li>
         </ol>
-        <p className="final-market-note">Market context, not proven demand. Pricing, take-up and sales impact require pilot validation.</p>
-        <p className="final-market-sources">Sources: <a href="https://www.simedarbyproperty.com/commercial/city-of-elmina" target="_blank" rel="noopener noreferrer">SDP · City of Elmina</a> · <a href="https://www.dosm.gov.my/portal-main/release-content/current-population-estimates-2026" target="_blank" rel="noopener noreferrer">DOSM · Population 2026</a> · <a href="https://iku.nih.gov.my/images/nhms-2025/infographic-eng.pdf" target="_blank" rel="noopener noreferrer">MOH · NHMS 2025, infographics 1 &amp; 3</a></p>
+        <p className="final-market-note">Market context, not proven demand. District living-alone figures apply the national NHMS rate to DOSM district populations; no district-level survey exists yet. Pricing, take-up and sales impact require pilot validation.</p>
+        <p className="final-market-sources">Sources: <a href="https://open.dosm.gov.my/data-catalogue/population_district?state=selangor&amp;district=petaling&amp;visual=table" target="_blank" rel="noopener noreferrer">DOSM · Population by district, 2020 &amp; 2026</a> · <a href="https://iku.nih.gov.my/images/nhms-2025/infographic-eng.pdf" target="_blank" rel="noopener noreferrer">MOH · NHMS 2025, infographics 1 &amp; 3</a></p>
       </PageFrame>
       <PageFrame number={10} className="final-closing">
         <div className="slides-section-top"><TemanMuWordmark /><span>10 · Our promise</span></div>
