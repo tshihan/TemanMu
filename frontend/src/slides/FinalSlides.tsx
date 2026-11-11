@@ -634,6 +634,28 @@ export function FinalSlides() {
           </figure>
         </div>
       </PageFrame>
+      <section className="slides-page final-appendix-cover" aria-label="Appendix">
+        <img className="slides-sdp-logo" src="/images/sdp-logo.png" alt="Sime Darby Property" />
+        <div className="slides-section-top"><TemanMuWordmark /><span>Appendix</span></div>
+        <div className="final-appendix-cover-main">
+          <div className="final-appendix-cover-copy">
+            <p className="slides-eyebrow">Supporting detail</p>
+            <h2>Appendix</h2>
+            <p>Further detail behind the pitch, prepared for questions.</p>
+          </div>
+          <ol className="final-appendix-cover-list" aria-label="Appendix contents">
+            {SHOW_APPENDIX_A1 && <li><span>A1</span>Business model</li>}
+            <li><span>A2</span>Pilot plan</li>
+            <li><span>A3</span>Machine learning</li>
+            <li><span>A4</span>Elderly usability</li>
+            <li><span>A5</span>Privacy</li>
+            <li><span>A10</span>Research evidence</li>
+            <li><span>A9</span>Our advantage</li>
+            <li><span>A11</span>Home-entry safeguards</li>
+          </ol>
+        </div>
+        <div className="slides-page-bottom"><span>TemanMu · Township care</span><span>Appendix</span></div>
+      </section>
       {SHOW_APPENDIX_A1 && <section className="slides-page final-business-model" aria-label="Appendix A1: Proposed business model">
         <img className="slides-sdp-logo" src="/images/sdp-logo.png" alt="Sime Darby Property" />
         <div className="slides-section-top">

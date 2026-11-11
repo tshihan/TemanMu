@@ -6,7 +6,7 @@
 
 <p align="center"><strong>Reassurance at home. Connection in the community.</strong></p>
 
-TemanMu looks after older people who live alone, using only the water, electricity and front-door activity in their home. No cameras, no wristbands, no app for the older person to learn.
+TemanMu looks after older people who live alone, using only their home's water and electricity use and the township access card they already carry. No cameras, no wristbands, no app for the older person to learn.
 
 If their usual routine suddenly stops, TemanMu gets a real person to check on them quickly. On ordinary days, it lets the family know their parent's day has started, based on the first water or electricity use of the morning, and helps the resident meet people nearby.
 
@@ -14,8 +14,8 @@ If their usual routine suddenly stops, TemanMu gets a real person to check on th
 >
 > **Challenge Track:** People
 
-🌐 **[Live site](https://temanmu-nine.vercel.app/)**\
-📊 [Pitch slides](https://temanmu-nine.vercel.app/slides)\
+🌐 **[Live site](https://temanmu-ae.vercel.app/)**\
+📊 [Pitch slides](https://temanmu-ae.vercel.app/final-slides)\
 🎬 Pitch video: [YouTube](https://youtu.be/EnIQGYx4cZQ) / [Google Drive](https://drive.google.com/file/d/1-JXwXZXBH4tyZYcfinDL7gwo8wbGocoB/view?usp=share_link)
 
 ---
@@ -34,16 +34,18 @@ TemanMu has two parts: **Safety** for the rare bad day, and **Companion** for ev
 
 **Sensors notice. TemanMu checks. People respond.**
 
-1. **Learns each resident's own routine** from water (main sign of life), electricity (confirms someone is active) and the front door (explains outings).
+1. **Learns each resident's own routine** from water (main sign of life), electricity (confirms someone is active) and access-card taps at the lobby, lift or gate (explain outings).
 2. **Notices when today looks very different**, for example no water used for far longer than *her* usual quiet gap.
-3. **Calls the resident first.** Any tap, kettle or door activity cancels the alert.
+3. **Calls the resident first.** Any water or electricity use at home cancels the alert.
 4. **Alerts family and township guard together** if there is still no sign of activity, with reminders until someone taps **"I'll Check Now"**.
 5. **Every alert ends with a recorded outcome.** A human always decides; TemanMu never calls 999 by itself.
 
 | Status | Meaning |
 | --- | --- |
 | **Routine** | Normal activity. Family gets a morning reassurance message |
-| **Possible Away** | Door opened, then the home went quiet. No alert while within her usual outing time |
+| **Possible Away** | She tapped her card out and the home went quiet. No alert while within her usual outing time |
+| **Not Back Yet** | She tapped out and has been out much longer than usual. The guard looks for her outside |
+| **Tapped In, No Activity** | She tapped back in, but no water or electricity was used soon after |
 | **Unusual Inactivity** | Quiet for much longer than usual. Grace period starts and she is called |
 | **Unresolved Concern** | No answer, no activity. Family and guard alerted |
 
@@ -52,7 +54,7 @@ TemanMu has two parts: **Safety** for the rare bad day, and **Companion** for ev
 Most days nothing goes wrong, and TemanMu still helps the family stay close and the resident stay connected:
 
 - **Morning reassurance.** The family gets "Mum's day has started" when the first water or electricity use of the day is seen.
-- **Mum's day at a glance.** A simple 24-hour timeline of water, power and door activity.
+- **Mum's day at a glance.** A simple 24-hour timeline of water, power and card taps.
 - **Community activities.** The family can see what's happening nearby (gardening, tai chi, cooking classes) and invite Mum or join her.
 - **Community Buddy.** Request a local volunteer who shares Mum's interests, such as a gardening buddy.
 - **Same-hour neighbours.** With consent from both sides, TemanMu suggests a neighbour whose day naturally overlaps with Mum's. A community coordinator makes the introduction in person, and exact times are never shared.
@@ -61,7 +63,71 @@ The resident stays tech-free: the family acts on their behalf, and anything that
 
 ### Privacy
 
-TemanMu only sees *how much* water and electricity is used and *whether* the front door opened. Nothing is tracked room by room.
+TemanMu only sees *how much* water and electricity is used and *when* her access card was tapped. There are no new devices in the home. Nothing is tracked room by room.
+
+---
+
+## What's new since the first round
+
+After the first round we added seven features, mostly in answer to mentor and judge feedback.
+
+### 1. Two models that learn her routine, adjusted to the time of day
+
+A single fixed limit like "alert after 3 quiet hours" is too strict at night and too slow in the morning. We now train two models on Madam Lee's own history. Each one learns a separate limit **for every 15 minutes of the week**, so how long TemanMu waits depends on when the home went quiet.
+
+| Model | What it learns | Example |
+| --- | --- | --- |
+| **Quiet Gap Model** | How long she normally goes without using water, based on when she last used it | Short limit after her 08:00 breakfast, longer during her usual afternoon nap, longest overnight |
+| **Outing Model** | How long she is normally out, based on the time and day she taps out | 2h 20m for a 07:00 tap-out on a weekday; longer on her Tuesday/Saturday market mornings |
+
+- Both are gradient boosting models, trained on 6 weeks and tested on the 2 weeks after. The Outing Model also adds a 55-minute safety margin, chosen using the 2 test weeks.
+- The caregiver app shows the family her **usual quiet gaps** and **usual outings**, so they can see what TemanMu considers normal for her.
+- The history is simulated for the demo: 8 weeks with walks, market days, a Thursday centre visit, an away weekend and two meter outages. Code and instructions are in [backend/ml/](backend/ml/README.md).
+
+### 2. Access card replaces the door sensor
+
+In the first round, TemanMu used a front-door sensor to explain outings. We have dropped it. Sime Darby Property townships already give residents access cards for the lobby, lift and gate, so TemanMu now uses **card taps** instead.
+
+Why a card tap is better than a door sensor:
+
+- **Cost.** It uses the cards and readers the township already has. There's no sensor to buy or install, and no battery to replace.
+- **Identity.** A tap says *who* went through (her card), while a door sensor only says the door moved.
+- **Time.** Every tap is time-stamped, and the Outing Model uses those times to learn how long she is usually out.
+- **Place.** Each reader is marked as "going out" or "coming home", so a tap also shows *which way* she went and *where*. A door opening can't tell whether she left or stayed in.
+
+New alerts that this makes possible:
+
+- **Not back yet.** She tapped out and has been out much longer than usual. The guard looks for her *outside* instead of knocking on her door.
+- **Tapped in, no activity at home.** She tapped back in, but no water or electricity was used soon after. She may have had a problem in the lift or corridor.
+
+A tap never proves she is safe (cards get lent and taps get missed), so it never closes an alert, and any water or power use at home outweighs a tap out. The 3D simulator has a lift-lobby card reader and two new scenarios: **Not Back Yet** and **Tapped In, Home Quiet**.
+
+### 3. Stop tracking temporarily
+
+The family can pause monitoring from the caregiver app when Mum is away, for example staying with relatives or in hospital. They set an expected return time, and tracking resumes by itself after that (or earlier, when they tap **Resume tracking** or **Return home**). This stops a holiday from being reported as "unusual inactivity". Tracking can't be paused while an alert is still open, so an alert can't be silenced this way.
+
+### 4. Past activity history
+
+The caregiver app used to show only today. Now **Past 7 days** / **30 days** shows one row per day with water, power and card-tap lanes, plus bands for paused time, missing data and alerts. Tapping a day shows its details. Families can spot slow changes, such as her first water use getting later, and look back at what happened with an earlier alert.
+
+### 5. Guard emergency access consent
+
+Judges asked what a guard may do if no one answers the door. During onboarding the resident and caregiver sign an **Emergency Access Authorization Agreement**, which the family can view in the caregiver app under **Settings → Emergency access**. It sets clear limits:
+
+- First try to reach the resident and caregiver, then do an outside check (doorbell, look in, call through the grille). An alert or a missed call alone is never enough to go in.
+- Enter only with an agreed way in that needs no force, and only with **two guards together**, or one guard wearing a body camera that is recording.
+- Guards never break doors or force locks. If something is wrong, they call **999** and Bomba or medical responders handle any forced entry.
+- Every check records who went, why, how they entered, which safeguard was used and what they found.
+
+The agreement in the demo is a sample only. It is not a signed contract.
+
+### 6. Township dashboard in English and Bahasa Melayu
+
+Many township guards are more comfortable in Malay. A globe 🌐 menu in the dashboard header switches all text, dates and the page language between **English** and **Bahasa Melayu**, and each browser remembers the choice. Reports always reach the family and backend in English, whichever language the guard uses.
+
+### 7. Guard Guide
+
+A simple printable guide for guards, [TemanMu-Guard-Guide.pdf](TemanMu-Guard-Guide.pdf) (editable version: [docs/TemanMu-Guard-Guide.docx](docs/TemanMu-Guard-Guide.docx)). It explains the dashboard with labelled screenshots and short steps: what the colours mean, how to respond to an alert (**I'll Check Now** → check the unit → **Record and close**), when to press **Call 999**, and how to switch to Malay. It's written so a new guard can learn it in one shift briefing.
 
 ---
 
@@ -77,7 +143,7 @@ TemanMu only sees *how much* water and electricity is used and *whether* the fro
 ### Innovation & Differentiation
 
 - **Personal, not one-size-fits-all.** Alerts compare against each resident's own usual quiet gap, not a fixed number of hours.
-- **Three signals cross-check.** Water, electricity and the door together tell an outing apart from a worrying silence, unlike single-meter alerts.
+- **Three signals cross-check.** Water, electricity and access-card taps together tell an outing apart from a worrying silence, unlike single-meter alerts. A card tap also shows who went out, when, and through which reader.
 - **Asks the resident first.** A check-in call and any sign of activity cancel the alert before anyone is bothered.
 - **A clear human response.** Family and township guard are alerted together, and the case stays open until someone takes it and records the outcome.
 - **Safety and companionship in one service,** not just an alarm.
@@ -85,7 +151,7 @@ TemanMu only sees *how much* water and electricity is used and *whether* the fro
 ### Feasibility & Deliverability
 
 - **Working prototype** today: rules engine, timers, township dashboard and family app all run live. Only the sensors are simulated.
-- **Off-the-shelf hardware.** Door sensor, electricity monitor, water monitor and gateway, about RM 840 – 1,640 per home. TNB smart meters could cut this further.
+- **Reuses what is already there.** Existing TNB electricity smart meters and Air Selangor water meters, plus the township's own access-card system. No new device goes into the home. This depends on proposed data partnerships with TNB, Air Selangor and the SDP access-card system, which a pilot needs to confirm.
 - **Uses existing staff.** Township security and management handle responses, so no new team is needed.
 - **Phased plan:** a 10–20 home pilot in Q1 2027, expanding to 50–100 homes only if safety and reliability targets are met.
 
@@ -107,7 +173,7 @@ TemanMu only sees *how much* water and electricity is used and *whether* the fro
 
 ## The prototype
 
-Real meters are not installed yet, so a **3D simulated home** stands in for one. Clicking the tap, kettle or door sends the same data a real meter would; everything after that (rules, timers, alerts, dashboard, family app) runs live.
+Real meters are not installed yet, so a **3D simulated home** stands in for one. Clicking the tap or kettle sends the same data a real meter would, and in the outing scenarios she walks to the lift lobby and taps her card; everything after that (rules, timers, alerts, dashboard, family app) runs live.
 
 | Page | Address | Who it represents |
 | --- | --- | --- |
@@ -117,7 +183,7 @@ Real meters are not installed yet, so a **3D simulated home** stands in for one.
 | Caregiver app | `/caregiver` | Her daughter Sarah's phone (installable PWA) |
 | Pitch slides | `/slides` | Our presentation |
 
-Try it at **https://temanmu-nine.vercel.app/**. All pages share one live state, so open them side by side. The 3D view has four one-click scenarios: **Normal Morning**, **Going Out**, **Unusual Inactivity** and **False Alarm Recovery** (timings shortened from hours to seconds).
+Try it at **https://temanmu-ae.vercel.app/**. All pages share one live state, so open them side by side. The 3D view has one-click scenarios: **Normal Morning**, **Going Out**, **Not Back Yet**, **Tapped In, Home Quiet**, **Unusual Inactivity** and **False Alarm Recovery** (timings shortened from hours to seconds).
 
 ---
 
@@ -203,6 +269,7 @@ More detail and troubleshooting: [backend/README.md](backend/README.md).
 | Backend | Python 3.11+, FastAPI, `uvicorn` (single worker) |
 | Real-time updates | FastAPI WebSocket |
 | Timers | Server-side `asyncio` tasks, so alerts keep running even with every browser closed |
+| Routine models | scikit-learn gradient boosting, trained offline in `backend/ml` and exported to `shared/ml/*.json` |
 | Database | Supabase (Postgres), accessed only by the backend |
 | Hosting | Vercel (frontend) |
 

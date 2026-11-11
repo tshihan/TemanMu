@@ -583,3 +583,17 @@
   :where(.slides-root:not(.slides-fixed)) .final-entry-captions p { font-size: 14px; }
   :where(.slides-root:not(.slides-fixed)) .final-entry-trigger { font-size: 17px; }
 }
+
+/* Appendix cover — divides the pitch from the Q&A appendix pages. */
+.final-appendix-cover { min-height: 100cqh; padding-top: 40px; padding-bottom: 28px; background: #fef9ef; }
+.final-appendix-cover-main { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 80px; }
+.final-appendix-cover-copy .slides-eyebrow { margin: 0 0 18px; }
+.final-appendix-cover-copy h2 { margin: 0; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: 112px; font-weight: 400; line-height: 1; letter-spacing: -.04em; color: #a95130; }
+.final-appendix-cover-copy p:last-child { max-width: 460px; margin: 28px 0 0; color: #58534d; font-size: 22px; line-height: 1.45; }
+.final-appendix-cover-list { margin: 0; padding: 0; list-style: none; border-top: 1px solid #dcd2c3; }
+.final-appendix-cover-list li { display: flex; align-items: baseline; gap: 24px; padding: 14px 0; border-bottom: 1px solid #dcd2c3; color: #38352f; font-size: 22px; }
+.final-appendix-cover-list span { min-width: 48px; color: #a95130; font-size: 15px; font-weight: 750; letter-spacing: .06em; }
+@media screen and (max-width: 700px) {:where(.slides-root:not(.slides-fixed)) .final-appendix-cover-main { grid-template-columns: 1fr; gap: 32px; margin-top: 32px; }
+  :where(.slides-root:not(.slides-fixed)) .final-appendix-cover-copy h2 { font-size: 72px; }
+}
+@media print {:where(.slides-root:not(.slides-fixed)) .final-appendix-cover { min-height: 0; } }
