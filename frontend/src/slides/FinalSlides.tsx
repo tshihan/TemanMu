@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useRef, useState, type CSSProperties, type R
 import { BellRing, Camera, CreditCard, Droplets, Faucet, HeartHandshake, Home, Lightbulb, Lock, PhoneCall, ShieldCheck, Smartphone, Users, Watch, Zap } from 'lucide-react'
 import { startScene } from '../landing/scene'
 import { HardwareAppendix } from './HardwareAppendix'
-import { MonitoringEvidence, MonitoringResearchAppendix, TemanMuAdvantages } from './MonitoringEvidence'
+import { MonitoringResearchAppendix, TemanMuAdvantages } from './MonitoringEvidence'
 import './slides.css'
 import './present.css'
 import './final-slides.css'
@@ -12,6 +12,7 @@ const PresentHome = lazy(() => import('./PresentHome').then(module => ({ default
 
 const PAGE_COUNT = 10
 const SHOW_APPENDIX_A1 = false
+const SHOW_HARDWARE_APPENDICES = false
 // Hourly allowance, 6 AM to 11 PM. 'o' marks the outing allowance (card taps); the rest are quiet-gap allowances.
 const LEARNS_HOURS: Array<[number, string?]> = [[22],[20],[22],[52,'o'],[52,'o'],[18],[20],[44],[50],[44],[20],[18],[22],[20],[24],[28],[88],[100]]
 const names = ['TAN SHI HAN', 'LIM JING JET', 'KHOR HONG JUN', 'LEE YANG', 'CHO JING LING']
@@ -450,6 +451,7 @@ export function FinalSlides() {
               <li><span>3</span><div><h4>When · Every tap is time-stamped</h4><p>Tapped out with no activity at home: probably out. Tapped in but no water or electricity use soon after: someone checks.</p></div></li>
             </ol>
             <p className="final-utility-path">Card tap <span>→</span> SDP access system <span>→</span> TemanMu</p>
+            <p className="final-access-note"><strong>Landed homes:</strong> use a door sensor.</p>
           </section>
         </div>
         <div className="final-installation-evidence">
@@ -479,7 +481,7 @@ export function FinalSlides() {
           </figure>
           <div className="final-landed-answers">
             <div className="final-landed-officers">
-              <img src="/images/final-slides/auxiliary-police.png" alt="Two neighbourhood guards" width="1024" height="1536" />
+              <img src="/images/final-slides/neighbourhood-guards.png" alt="Two neighbourhood security guards" width="1024" height="1536" />
               <p>Guards appointed by the residents’ association</p>
             </div>
             <ol>
@@ -816,13 +818,15 @@ export function FinalSlides() {
         <p className="final-privacy-note">Intended access policy. The prototype still needs API and dashboard permissions aligned to this boundary. Sensor processing requires consent; closed incidents retain only an agreed minimum record.</p>
         <div className="slides-page-bottom"><span>TemanMu · Township care</span><span>Appendix A5</span></div>
       </section>
-      <HardwareAppendix kind="ct" />
-      <HardwareAppendix kind="water" />
-      <section className="slides-page monitoring-evidence" aria-label="Appendix A8: Camera and wearable limitations">
+      {SHOW_HARDWARE_APPENDICES && <>
+        <HardwareAppendix kind="ct" />
+        <HardwareAppendix kind="water" />
+      </>}
+      <section className="slides-page monitoring-research" aria-label="Appendix A10: Camera and wearable research">
         <img className="slides-sdp-logo" src="/images/sdp-logo.png" alt="Sime Darby Property" />
-        <div className="slides-section-top"><TemanMuWordmark /><span>Appendix A8 · Existing solutions</span></div>
-        <MonitoringEvidence />
-        <div className="slides-page-bottom"><span>TemanMu · Township care</span><span>Appendix A8</span></div>
+        <div className="slides-section-top"><TemanMuWordmark /><span>Appendix A10 · Research evidence</span></div>
+        <MonitoringResearchAppendix />
+        <div className="slides-page-bottom"><span>TemanMu · Township care</span><span>Appendix A10</span></div>
       </section>
       <section className="slides-page monitoring-benefits" aria-label="Appendix A9: TemanMu advantages">
         <img className="slides-sdp-logo" src="/images/sdp-logo.png" alt="Sime Darby Property" />
@@ -830,11 +834,29 @@ export function FinalSlides() {
         <TemanMuAdvantages />
         <div className="slides-page-bottom"><span>TemanMu · Township care</span><span>Appendix A9</span></div>
       </section>
-      <section className="slides-page monitoring-research" aria-label="Appendix A10: Camera and wearable research">
+      <section className="slides-page final-entry" aria-label="Appendix A11: Consent and safeguards for home entry">
         <img className="slides-sdp-logo" src="/images/sdp-logo.png" alt="Sime Darby Property" />
-        <div className="slides-section-top"><TemanMuWordmark /><span>Appendix A10 · Research evidence</span></div>
-        <MonitoringResearchAppendix />
-        <div className="slides-page-bottom"><span>TemanMu · Township care</span><span>Appendix A10</span></div>
+        <div className="slides-section-top"><TemanMuWordmark /><span>Appendix A11 · Home-entry safeguards</span></div>
+        <div className="final-model-heading">
+          <p className="slides-eyebrow">Privacy during a welfare check</p>
+          <h2>Her home. <em>Her permission.</em></h2>
+        </div>
+        <p className="final-entry-trigger"><BellRing aria-hidden="true" /><span>Unusual inactivity <b>→</b> Unanswered calls <b>→</b> Welfare check</span></p>
+        <div className="final-entry-story">
+          <div className="final-entry-scene"><img src="/images/final-slides/home-entry-flow-caregiver.png" alt="Madam Lee and her caregiver Sarah review the consent agreement with a guard." /></div>
+          <div className="final-entry-scene"><img src="/images/final-slides/home-entry-flow-caregiver.png" alt="A guard rings the bell and knocks at a closed door." /></div>
+          <div className="final-entry-scene"><img src="/images/final-slides/home-entry-flow-caregiver.png" alt="Two guards together at the doorway, one wearing a body camera." /></div>
+          <span className="final-entry-arrow final-entry-arrow-one" aria-hidden="true">→</span>
+          <span className="final-entry-arrow final-entry-arrow-two" aria-hidden="true">→</span>
+        </div>
+        <ol className="final-entry-captions">
+          <li><span>01 · Agree beforehand</span><h3>Resident + caregiver agree.</h3><p>No consent → no routine guard entry.</p></li>
+          <li><span>02 · Check at the door</span><h3>Ring. Knock. Call out.</h3><p>Allow time to respond before entry.</p></li>
+          <li><span>03 · Enter only as agreed</span><h3>2 guards <em>or</em> 1 + body camera</h3><p>No response + prior consent.<br />Camera records throughout the check.</p></li>
+        </ol>
+        <div className="final-entry-emergency"><PhoneCall aria-hidden="true" /><div><strong>Emergency? Call 999.</strong><p>Guards do not force entry. Public emergency responders handle forced access.</p></div></div>
+        <p className="final-entry-note">Proposed procedure · Resident consent, caregiver involvement and operator approval; agree footage access and retention before the pilot.</p>
+        <div className="slides-page-bottom"><span>TemanMu · Township care</span><span>Appendix A11</span></div>
       </section>
     </div>
   </main>
