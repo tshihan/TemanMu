@@ -1,0 +1,67 @@
+.hardware-appendix { padding-top: 40px; padding-bottom: 32px; background: #fef9ef; }
+.hardware-heading { margin-top: 24px; }
+.hardware-heading h2 { margin: 0; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: 46px; line-height: 1.06; letter-spacing: -.03em; font-weight: 400; }
+.hardware-heading h2 em { color: #a95130; }
+.hardware-heading > p { margin: 12px 0 0; color: #58534d; font-size: 18px; line-height: 1.4; }
+.hardware-playback { display: flex; align-items: center; gap: 10px; margin-top: 15px; min-height: 34px; }
+.hardware-playback button { border: 1px solid #b8a18d; background: #f5eee1; color: #8b4429; padding: 6px 12px; border-radius: 5px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.hardware-playback button:hover { background: #efddcb; }
+.hardware-playback button:active { background: #e4c7ae; }
+.hardware-playback > span { color: #58534d; font-size: 12px; }
+.hardware-figure { margin: 8px 0 14px; }
+.hardware-diagram { display: block; width: 100%; height: 290px; overflow: visible; }
+.hardware-diagram text { fill: #4e4a45; font-family: inherit; }
+.hardware-svg-label { font-size: 18px; font-weight: 700; }
+.hardware-svg-small { font-size: 16px; }
+.hardware-diagram .hardware-svg-brand { fill: #8b4429; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: 28px; }
+.hardware-figure figcaption { color: #756d64; font-size: 11px; text-align: right; }
+.hardware-scene { opacity: 1; }
+.hardware-appendix[data-stage="0"] .hardware-scene-0,
+.hardware-appendix[data-stage="1"] .hardware-scene-1,
+.hardware-appendix[data-stage="2"] .hardware-scene-2,
+.hardware-appendix[data-stage="3"] .hardware-scene-3 { opacity: 1; }
+.hardware-data-line { fill: none; stroke: #c6b6a5; stroke-width: 2; }
+.hardware-packet { fill: none; stroke: #a95130; stroke-width: 5; stroke-dasharray: 9 45; }
+.hardware-current { animation: hardware-ac 1.1s ease-in-out infinite alternate paused; }
+.hardware-field, .hardware-radio, .hardware-wave { animation: hardware-sense 1.4s ease-in-out infinite alternate paused; }
+.hardware-packet { animation: hardware-transmit 1.8s linear infinite paused; }
+.hardware-water-flow { animation: hardware-transmit 2.6s linear infinite paused; }
+.hardware-sound-down { animation: hardware-ultrasound 1.4s linear infinite paused; }
+.hardware-sound-up { animation: hardware-ultrasound 1.9s linear infinite paused; }
+.hardware-playing[data-stage="0"] .hardware-scene-0 *,
+.hardware-playing[data-stage="1"] .hardware-scene-1 *,
+.hardware-playing[data-stage="2"] .hardware-scene-2 *,
+.hardware-playing[data-stage="3"] .hardware-scene-3 * { animation-play-state: running; }
+.hardware-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 28px; padding: 0; margin: 0; list-style: none; }
+.hardware-steps li { border-top: 2px solid #d1c9bf; padding-top: 12px; }
+.hardware-steps .hardware-step-active { border-color: #a95130; }
+.hardware-steps button { display: flex; align-items: baseline; gap: 10px; width: 100%; padding: 0; border: 0; background: transparent; color: #4e4a45; text-align: left; font: inherit; cursor: pointer; }
+.hardware-steps button > span { color: #8b4429; font-family: Georgia, serif; font-size: 22px; }
+.hardware-steps strong { font-size: 17px; line-height: 1.25; }
+.hardware-step-active strong, .hardware-steps button:hover strong { color: #8b4429; }
+.hardware-steps button:active { opacity: .7; }
+.hardware-playback button:focus-visible, .hardware-steps button:focus-visible, .hardware-sources a:focus-visible { outline: 3px solid #8b4429; outline-offset: 4px; }
+.hardware-steps p { margin: 8px 0 0; font-size: 15px; line-height: 1.45; color: #4e4a45; }
+.hardware-boundary { display: grid; grid-template-columns: 230px 1fr; gap: 20px; margin-top: auto; padding: 13px 0 0; border-top: 1px solid #d1c9bf; }
+.hardware-boundary strong { color: #8b4429; font-size: 14px; }
+.hardware-boundary p { margin: 0; font-size: 13px; line-height: 1.45; color: #4e4a45; }
+.hardware-sources { margin: 10px 0 22px; font-size: 11px; color: #756d64; line-height: 1.4; }
+.hardware-sources a { color: #8b4429; text-underline-offset: 3px; }
+@keyframes hardware-ac { from { stroke-dashoffset: 0; } to { stroke-dashoffset: 18; } }
+@keyframes hardware-sense { from { opacity: .45; } to { opacity: 1; } }
+@keyframes hardware-transmit { to { stroke-dashoffset: -108; } }
+@keyframes hardware-ultrasound { from { stroke-dashoffset: 8; } to { stroke-dashoffset: -200; } }
+@media (prefers-reduced-motion: reduce) {
+  .hardware-appendix *, .hardware-appendix *::before { animation: none !important; transition: none !important; }
+  .hardware-scene { opacity: 1; }
+}
+.slides-exporting .hardware-playback { visibility: hidden; }
+.slides-exporting .hardware-appendix * { animation: none !important; transition: none !important; }
+.slides-exporting .hardware-scene { opacity: 1; }
+.slides-exporting .hardware-steps li { border-color: #a95130; }
+@media print {
+  .hardware-playback { visibility: hidden; }
+  .hardware-appendix * { animation: none !important; transition: none !important; }
+  .hardware-scene { opacity: 1; }
+  .hardware-steps li { border-color: #a95130; }
+}

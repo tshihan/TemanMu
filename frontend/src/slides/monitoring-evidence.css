@@ -1,0 +1,39 @@
+.monitoring-heading { margin-top: 32px; }
+.monitoring-heading h2 { margin: 8px 0 0; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: 58px; font-weight: 400; line-height: 1.08; letter-spacing: -.025em; }
+.monitoring-heading h2 em { color: #a95130; }
+.monitoring-label { display: block; color: #8b4429; font-size: 15px; font-weight: 750; letter-spacing: .07em; text-transform: uppercase; }
+.monitoring-evidence-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 64px; margin-top: 40px; }
+.monitoring-evidence-columns > section + section { border-left: 1px solid #d1c9bf; padding-left: 64px; }
+.monitoring-evidence-columns h3 { margin: 12px 0 24px; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: 34px; font-weight: 400; }
+.monitoring-evidence-columns p { margin: 20px 0 12px; color: #4e4a45; font-size: 21px; line-height: 1.45; }
+.monitoring-evidence-columns small { display: block; color: #625b53; font-size: 15px; line-height: 1.45; }
+.monitoring-source { display: inline-block; margin-top: 18px; color: #8b4429; font-size: 15px; text-underline-offset: 4px; }
+.monitoring-bars { display: grid; gap: 22px; padding: 12px 0; }
+.monitoring-bars > div { display: grid; grid-template-columns: 160px minmax(0, 1fr) 100px; gap: 18px; align-items: center; }
+.monitoring-bars > div > span { font-size: 18px; }
+.monitoring-bars > div > div { height: 26px; background: #e9ddcd; }
+.monitoring-bars i { display: block; height: 100%; background: #a95130; }
+.monitoring-bars strong { color: #8b4429; font-size: 30px; font-weight: 500; text-align: right; }
+.monitoring-wear-stat { display: flex; align-items: center; gap: 28px; min-height: 118px; }
+.monitoring-wear-stat > strong { color: #a95130; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: 112px; font-weight: 400; line-height: 1; letter-spacing: -.05em; }
+.monitoring-wear-stat > strong > span { font-size: .6em; }
+.monitoring-wear-stat > p { margin: 0; color: #2a2b2f; font-size: 24px; line-height: 1.4; }
+.monitoring-scope { margin: auto 0 18px; padding-top: 24px; color: #625b53; font-size: 15px; line-height: 1.45; }
+.monitoring-advantages { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 48px; margin: 48px 0 0; padding: 0; list-style: none; }
+.monitoring-advantages > li { border-top: 2px solid #a95130; padding-top: 24px; }
+.monitoring-advantages h3 { margin: 24px 0 20px; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: 38px; font-weight: 400; line-height: 1.15; letter-spacing: -.02em; }
+.monitoring-advantages p { min-height: 100px; margin: 0 0 24px; color: #4e4a45; font-size: 22px; line-height: 1.5; }
+.monitoring-advantages strong { display: block; max-width: 370px; color: #8b4429; font-size: 21px; line-height: 1.4; }
+.monitoring-research .monitoring-heading { margin-top: 20px; }
+.monitoring-research .monitoring-heading h2 { font-size: 48px; }
+.monitoring-research-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 24px; margin-top: 24px; }
+.monitoring-research-cards article { display: flex; flex-direction: column; padding: 12px 24px; border: 1px solid #d1c9bf; border-radius: 16px; background: #f5eee1; }
+.monitoring-card-stat { display: flex; align-items: center; gap: 24px; margin: 10px 0; }
+.monitoring-card-stat > strong { flex: none; color: #a95130; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: 68px; font-weight: 400; line-height: 1; letter-spacing: -.04em; }
+.monitoring-card-stat > strong > span { font-size: .64em; }
+.monitoring-card-stat h3 { max-width: 330px; margin: 0; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: 27px; font-weight: 400; line-height: 1.15; }
+.monitoring-research-cards p { margin: 0 0 10px; color: #4e4a45; font-size: 18px; line-height: 1.4; }
+.monitoring-research-cards small { display: block; margin-bottom: 12px; color: #625b53; font-size: 14px; line-height: 1.35; }
+.monitoring-research-cards a { margin-top: auto; color: #8b4429; font-size: 14px; line-height: 1.4; text-underline-offset: 4px; }
+.monitoring-research .monitoring-scope { padding-top: 16px; font-size: 14px; }
+.monitoring-evidence a:focus-visible, .monitoring-research a:focus-visible { outline: 3px solid #8b4429; outline-offset: 5px; }

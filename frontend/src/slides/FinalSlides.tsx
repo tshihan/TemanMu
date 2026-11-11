@@ -1,6 +1,8 @@
 import { lazy, Suspense, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { BellRing, Camera, CreditCard, Droplets, Faucet, HeartHandshake, Home, Lightbulb, Lock, PhoneCall, ShieldCheck, Smartphone, Users, Watch, Zap } from 'lucide-react'
 import { startScene } from '../landing/scene'
+import { HardwareAppendix } from './HardwareAppendix'
+import { MonitoringEvidence, MonitoringResearchAppendix, TemanMuAdvantages } from './MonitoringEvidence'
 import './slides.css'
 import './present.css'
 import './final-slides.css'
@@ -246,8 +248,8 @@ export function FinalSlides() {
                 </g>)}
               </svg>
               <div className="present-problem-figure">
-                <strong>14.1<small>%</small></strong>
-                <p><mark>About 1 in 7</mark> adults aged 60+ had a fall in the previous 12 months · NHMS 2018</p>
+                <strong>14.3<small>%</small></strong>
+                <p><mark>About 1 in 7</mark> Malaysians aged 60+ reported a fall in the previous 12 months · NHMS 2025</p>
               </div>
             </div>
           </div>
@@ -255,11 +257,11 @@ export function FinalSlides() {
         <div className="slides-problem-gap">
           <span className="slides-problem-gap-label">Current solution gap</span>
           <div className="slides-problem-gap-items">
-            <article className="slides-problem-gap-card"><span className="slides-problem-gap-icon" aria-hidden="true"><Camera size={42} strokeWidth={1.6} /></span><div><b>Cameras</b><p>Raise privacy concerns and only see covered spaces.</p></div></article>
-            <article className="slides-problem-gap-card"><span className="slides-problem-gap-icon" aria-hidden="true"><Watch size={42} strokeWidth={1.6} /></span><div><b>Wearables</b><p>Depend on being worn and charged; false alarms can occur.</p></div></article>
+            <article className="slides-problem-gap-card"><span className="slides-problem-gap-icon" aria-hidden="true"><Camera size={42} strokeWidth={1.6} /></span><div><b>Cameras</b><p>Can feel like being supervised at home, raising privacy concerns.</p><p className="final-gap-evidence"><strong>36.7%</strong> accepted home cameras for detecting falls or pain.<small>Swiss adult survey · n = 1,211 · <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC12948381/" target="_blank" rel="noopener noreferrer">Wangmo et al., 2026</a></small></p></div></article>
+            <article className="slides-problem-gap-card"><span className="slides-problem-gap-icon" aria-hidden="true"><Watch size={42} strokeWidth={1.6} /></span><div><b>Wearables</b><p>Must remember to wear and charge it—may not suit older adults who struggle with this routine.</p><p className="final-gap-evidence"><strong>32%</strong> wore it on fewer than 4 of 14 days.<small>Small activity-monitoring pilot · 7 of 22 participants · <a href="https://aging.jmir.org/2024/1/e60209/" target="_blank" rel="noopener noreferrer">Ding et al., 2024</a></small></p></div></article>
           </div>
         </div>
-        <p className="present-problem-sources">Sources: <a href="https://iku.nih.gov.my/images/IKU/Document/REPORT/NHMS2018/FactsheetElderlyAged60yearsorMorefinal.pdf" target="_blank" rel="noreferrer">NHMS 2018 Elderly Health</a> · <a href="https://iku.nih.gov.my/images/nhms-2025/infographic-eng.pdf" target="_blank" rel="noreferrer">NHMS 2025 Key Findings</a> · <a href="https://iku.nih.gov.my/images/nhms-2025/nhms-2025-volume-2.pdf" target="_blank" rel="noreferrer">NHMS 2025 Vol. II</a></p>
+        <p className="present-problem-sources">Sources: <a href="https://iku.nih.gov.my/images/IKU/Document/REPORT/NHMS2018/FactsheetElderlyAged60yearsorMorefinal.pdf" target="_blank" rel="noreferrer">NHMS 2018 Elderly Health</a> · <a href="https://iku.nih.gov.my/images/nhms-2025/infographic-eng.pdf" target="_blank" rel="noreferrer">NHMS 2025 Key Findings</a> · <a href="https://iku.nih.gov.my/images/nhms-2025/nhms-2025-volume-2.pdf#page=51" target="_blank" rel="noreferrer">NHMS 2025 Vol. II · Falls, p. 39</a></p>
       </PageFrame>
 
       <PageFrame number={3} className="slides-cover present-cover">
@@ -306,12 +308,11 @@ export function FinalSlides() {
           </section>
           <section className="slides-solution-companion final-learns" aria-labelledby="present-learns-title" data-slide-reveal>
             <h3 id="present-learns-title">Learns <em>her</em> day</h3>
-            <p className="final-learns-lead">No fixed timer. Limits come from her own routine and keep updating.</p>
+            <p className="final-learns-lead">Start with agreed limits, then adapt them to her own routine.</p>
 
             <article className="fl-card">
               <span className="final-learns-label">Two ML models · one daily routine</span>
               <p className="final-learns-question">How long can it stay quiet before TemanMu checks?</p>
-              <p className="final-learns-example">Illustrative · her limit changes through the day</p>
               <div className="fl-chart" role="img" aria-label="Illustrative bar chart: allowed quiet time is shortest in the morning and afternoon, longer during her usual nap and outings, and longest overnight">
                 {LEARNS_HOURS.map(([h, k], i) => <div key={i}><span style={{ height: `${h}%`, background: k ? '#f5eee1' : h > 40 ? '#a95130' : '#c98d67', border: k ? '2px dashed #a95130' : 0, animationDelay: `${0.2 + i * 0.05}s` }} /></div>)}
                 <span className="fl-tag" style={{ top: 56, left: '16.6%', width: '11.1%' }}>Out walking</span>
@@ -325,7 +326,11 @@ export function FinalSlides() {
               </div>
             </article>
 
-            <p className="final-learns-note"><strong>Retrained on her latest weeks,</strong> so these limits shift as her routine changes. About 1 false alarm a week, against 6.5 for a fixed 4-hour rule.</p>
+            <div className="final-learns-note">
+              <p><strong>At first: 4 daytime hours without activity → a check-in.</strong> A caregiver-agreed pilot setting; sleep, outings and missing data handled separately.</p>
+              <p><strong>Then: retrained weekly using her latest 6 weeks of valid routine,</strong> so quiet-time and outing limits follow her changing habits.</p>
+              <small>Proposed pilot settings, not a clinical rule. <a href="https://tunstallemergencyresponse.ie/wp-content/uploads/2025/08/communicall_digital_user_guide.pdf#page=24" target="_blank" rel="noopener noreferrer">Tunstall guide: custom inactivity schedules, p. 21</a>.<br />Demo simulation: ~1 false alarm/week vs 6.5 with a fixed 4-hour rule; real-home rates unvalidated.</small>
+            </div>
           </section>
         </div>
       </PageFrame>
@@ -385,7 +390,11 @@ export function FinalSlides() {
               <span className="slides-how-stub" aria-hidden="true" />
               <div ref={howFlow.rowRefs[2]} className="slides-how-outcome slides-how-outcome-concern">
                 <div><span>Unusual Inactivity</span><h3>Quiet for longer than usual</h3></div>
-                <div className="slides-how-chain"><b>TemanMu calls her</b><i>→</i><b>No answer: family + township alerted</b><i>→</i><b>Someone checks, records outcome</b></div>
+                <div className="slides-how-chain final-how-response">
+                  <div><b>TemanMu calls her</b><i>→</i><b>No answer: family + township alerted</b></div>
+                  <div><i>→</i><b>Guard / Auxiliary Police checks</b><i>→</i><b>Records outcome</b></div>
+                  <div><i>→</i><b>If emergency: call 999 immediately</b><i>→</i><b>Update incident log</b></div>
+                </div>
               </div>
             </div>
           </div>
@@ -402,33 +411,33 @@ export function FinalSlides() {
           <span>06 · Feasibility</span>
         </div>
         <div className="final-installation-heading">
-          <h2>Implementing TemanMu <em>in existing homes</em></h2>
-          <p>Retrofit household monitoring, installed by qualified professionals.</p>
+          <h2>Reuse existing meters. <em>Connect through utilities.</em></h2>
+          <p>Proposed TNB + Air Selangor collaboration · Minimal installation in eligible pilot homes.</p>
         </div>
         <div className="final-installation-columns">
           <section className="final-installation-column" aria-labelledby="final-electricity-title">
             <header className="final-utility-header">
-              <div><span className="final-utility-label">01 · Electricity</span><h3 id="final-electricity-title">CT electricity monitor</h3></div>
+              <div><span className="final-utility-label">01 · Electricity</span><h3 id="final-electricity-title">Existing smart meters</h3></div>
               <img src="/images/partners/tnb.svg" alt="Tenaga Nasional Berhad (TNB)" width="170" height="70" />
             </header>
             <ol className="final-installation-steps">
-              <li><span>1</span><div><h4>Survey the distribution board</h4><p>Check the home’s phase arrangement, load and suitable measurement point.</p></div></li>
-              <li><span>2</span><div><h4>Install the CT monitor</h4><p>A registered electrical contractor fits matched current sensors and the monitor. The TNB billing meter stays in place.</p></div></li>
-              <li><span>3</span><div><h4>Connect and commission</h4><p>Send readings over LAN/Wi-Fi or a managed gateway. Verify appliance changes and the household standby baseline.</p></div></li>
+              <li><span>1</span><div><h4>Engage TNB’s innovation teams</h4><p>Approach TNB Research / TNB LABS Digital Solutions for a consent-based pilot.</p></div></li>
+              <li><span>2</span><div><h4>Caregiver Data Consent framework</h4><p>Propose a resident-authorised application programming interface (API), aligned with the Personal Data Protection Act (PDPA).</p></div></li>
+              <li><span>3</span><div><h4>Request more frequent readings</h4><p>Seek 1–5-minute measurement records and lower delivery delay, subject to meter and network capability.</p></div></li>
             </ol>
-            <p className="final-utility-path">CT monitor <span>→</span> Home network / gateway <span>→</span> TemanMu</p>
+            <p className="final-utility-path">Existing meter <span>→</span> TNB data platform <span>→</span> TemanMu</p>
           </section>
           <section className="final-installation-column" aria-labelledby="final-water-title">
             <header className="final-utility-header">
-              <div><span className="final-utility-label">02 · Water</span><h3 id="final-water-title">NB-IoT water meter</h3></div>
+              <div><span className="final-utility-label">02 · Water</span><h3 id="final-water-title">Existing unit meters</h3></div>
               <img src="/images/partners/air-selangor.svg" alt="Air Selangor" width="150" height="85" />
             </header>
             <ol className="final-installation-steps">
-              <li><span>1</span><div><h4>Survey the household supply</h4><p>Check pipe branches and storage tanks so the meter captures the intended indoor water use.</p></div></li>
-              <li><span>2</span><div><h4>Install at the selected pipe</h4><p>A plumber fits the activity meter at the surveyed point. Preserve the utility billing meter and its seals.</p></div></li>
-              <li><span>3</span><div><h4>Connect and test water use</h4><p>Provision NB-IoT connectivity and agreed data access. Test small tap uses, reporting delay and signal coverage.</p></div></li>
+              <li><span>1</span><div><h4>Build on leak-detection infrastructure</h4><p>Engage Innovation &amp; Technology / Non-Revenue Water (NRW) teams on existing smart-meter data.</p></div></li>
+              <li><span>2</span><div><h4>Propose automated welfare checks</h4><p>Add an “Abnormal Low Flow / Zero Flow Welfare Check” feature that prompts human contact.</p></div></li>
+              <li><span>3</span><div><h4>Expand the NB-IoT pilot to SDP</h4><p>Invite expansion to equipped SDP townships; prefer individual-unit smart meters downstream of shared storage tanks.</p></div></li>
             </ol>
-            <p className="final-utility-path">Water meter <span>→</span> NB-IoT network / platform <span>→</span> TemanMu</p>
+            <p className="final-utility-path">Existing meter <span>→</span> Air Selangor platform <span>→</span> TemanMu</p>
           </section>
           <section className="final-installation-column" aria-labelledby="final-access-title">
             <header className="final-utility-header">
@@ -442,6 +451,10 @@ export function FinalSlides() {
             </ol>
             <p className="final-utility-path">Card tap <span>→</span> SDP access system <span>→</span> TemanMu</p>
           </section>
+        </div>
+        <div className="final-installation-evidence">
+          <p>Proposed partnerships · Data access, reporting intervals and welfare-check accuracy require pilot validation. NB-IoT: Narrowband Internet of Things.</p>
+          <p>Sources: <a href="https://www.tnb.com.my/doing-business-with-tnb/education-research-consultancy/tnb-research" target="_blank" rel="noopener noreferrer">TNB Research</a> · <a href="https://www.tnblabs.com.my/digital-solutions" target="_blank" rel="noopener noreferrer">TNB LABS</a> · <a href="https://www.airselangor.com/about-us/innovation-and-technology" target="_blank" rel="noopener noreferrer">Air Selangor innovation</a> · <a href="https://hydrohub.airselangor.com/content/uploads/2023/01/PerformanceReport2019-2.pdf" target="_blank" rel="noopener noreferrer">NB-IoT pilot</a></p>
         </div>
       </PageFrame>
       <PageFrame number={7} className="final-landed">
@@ -802,6 +815,26 @@ export function FinalSlides() {
         <div className="final-privacy-principles"><span><b>Voluntary participation</b> with clear permissions</span><span><b>Withdrawal</b> and defined retention</span><span><b>Minimal incident records</b> with logged access</span></div>
         <p className="final-privacy-note">Intended access policy. The prototype still needs API and dashboard permissions aligned to this boundary. Sensor processing requires consent; closed incidents retain only an agreed minimum record.</p>
         <div className="slides-page-bottom"><span>TemanMu · Township care</span><span>Appendix A5</span></div>
+      </section>
+      <HardwareAppendix kind="ct" />
+      <HardwareAppendix kind="water" />
+      <section className="slides-page monitoring-evidence" aria-label="Appendix A8: Camera and wearable limitations">
+        <img className="slides-sdp-logo" src="/images/sdp-logo.png" alt="Sime Darby Property" />
+        <div className="slides-section-top"><TemanMuWordmark /><span>Appendix A8 · Existing solutions</span></div>
+        <MonitoringEvidence />
+        <div className="slides-page-bottom"><span>TemanMu · Township care</span><span>Appendix A8</span></div>
+      </section>
+      <section className="slides-page monitoring-benefits" aria-label="Appendix A9: TemanMu advantages">
+        <img className="slides-sdp-logo" src="/images/sdp-logo.png" alt="Sime Darby Property" />
+        <div className="slides-section-top"><TemanMuWordmark /><span>Appendix A9 · Our advantage</span></div>
+        <TemanMuAdvantages />
+        <div className="slides-page-bottom"><span>TemanMu · Township care</span><span>Appendix A9</span></div>
+      </section>
+      <section className="slides-page monitoring-research" aria-label="Appendix A10: Camera and wearable research">
+        <img className="slides-sdp-logo" src="/images/sdp-logo.png" alt="Sime Darby Property" />
+        <div className="slides-section-top"><TemanMuWordmark /><span>Appendix A10 · Research evidence</span></div>
+        <MonitoringResearchAppendix />
+        <div className="slides-page-bottom"><span>TemanMu · Township care</span><span>Appendix A10</span></div>
       </section>
     </div>
   </main>
