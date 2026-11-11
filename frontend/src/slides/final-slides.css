@@ -307,17 +307,53 @@
 }
 
 .final-market { min-height: 100cqh; padding-top: 40px; padding-bottom: 24px; background: #fef9ef; }
-.final-market-heading { margin-top: 24px; }
-.final-market-heading .slides-eyebrow { margin: 0 0 8px; }
-.final-market-heading h2 { margin: 0; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: clamp(36px, 3.6cqw, 52px); font-weight: 400; line-height: 1.08; letter-spacing: -.035em; }
-.final-market-heading h2 em { color: #a95130; font-weight: 400; }
-.final-market-heading > p:last-child { margin: 10px 0 0; color: #58534d; font-size: 18px; }
-.final-market-numbers { display: grid; grid-template-columns: 1.3fr .85fr .9fr 1.15fr; gap: 22px; margin-top: 22px; padding: 14px 0; border-top: 1px solid #d1c9bf; border-bottom: 1px solid #d1c9bf; }
-.final-market-numbers > div + div { padding-left: 30px; border-left: 1px solid #d1c9bf; }
-.final-market-numbers > div > span { color: #58534d; font-size: 11px; font-weight: 650; letter-spacing: .035em; text-transform: uppercase; }
-.final-market-numbers strong { display: block; margin-top: 8px; color: #a95130; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: 34px; font-weight: 400; line-height: 1; letter-spacing: -.045em; white-space: nowrap; }
-.final-market-numbers strong small { font-size: .4em; letter-spacing: -.02em; }
-.final-market-numbers p { margin: 8px 0 0; color: #58534d; font-size: 12px; line-height: 1.4; }
+/* Slide 9 · numbers lead, then what they mean for SDP */
+.final-viability-numbers { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 56px; margin-top: 40px; }
+.final-viability-label { margin: 0; color: #2a2b2f; font-size: 17px; font-weight: 650; line-height: 1.3; text-wrap: balance; }
+.final-viability-national { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto 1fr auto; column-gap: 56px; }
+.final-viability-national > .final-viability-label { grid-column: 1 / -1; margin-bottom: 14px; }
+.final-viability-hero { grid-row: 2 / 4; display: flex; flex-direction: column; }
+.final-viability-hero strong { color: #a95130; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: 176px; font-weight: 400; line-height: .86; letter-spacing: -.04em; font-variant-numeric: lining-nums; }
+.final-viability-hero strong small { margin-left: 4px; font-size: .36em; letter-spacing: 0; }
+.final-viability-hero p { max-width: 330px; margin: 18px 0 0; color: #2a2b2f; font-size: 21px; line-height: 1.3; }
+.final-viability-hero p span { display: block; margin-top: 8px; color: #58534d; font-size: 13px; }
+.final-viability-bars { align-self: end; display: grid; gap: 14px; padding-bottom: 4px; }
+.final-viability-bar { display: flex; align-items: center; gap: 14px; color: #58534d; font-size: 15px; font-variant-numeric: tabular-nums; }
+.final-viability-bar > span { flex: none; width: 48px; }
+.final-viability-bar > i { flex: none; display: block; height: 26px; width: calc(var(--bar) * 72%); border-radius: 0 3px 3px 0; background: #d8cdbd; transform-origin: left center; }
+.final-viability-bar > b { color: #58534d; font-size: 17px; font-weight: 650; }
+.final-viability-bar.is-now > i { background: #a95130; }
+.final-viability-bar.is-now > b { color: #a95130; }
+.final-viability-multiple { margin: 6px 0 0 62px; color: #2a2b2f; font-size: 18px; }
+.final-viability-multiple strong { color: #a95130; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: 34px; font-weight: 400; letter-spacing: -.03em; }
+.final-viability-aside { grid-column: 2; display: flex; align-items: baseline; gap: 16px; margin-top: 22px; padding-top: 16px; border-top: 1px solid #d1c9bf; }
+.final-viability-aside strong, .final-viability-local strong { color: #2a2b2f; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-weight: 400; line-height: 1; letter-spacing: -.035em; white-space: nowrap; font-variant-numeric: lining-nums; }
+.final-viability-aside strong { font-size: 48px; }
+.final-viability-aside strong small, .final-viability-local strong small { font-size: .42em; letter-spacing: 0; }
+.final-viability-local strong small:first-child { margin-right: 6px; }
+.final-viability-aside p { margin: 0; color: #58534d; font-size: 15px; line-height: 1.4; }
+.final-viability-local { display: grid; align-content: start; gap: 26px; padding-left: 48px; border-left: 1px solid #d1c9bf; }
+.final-viability-local strong { display: block; font-size: 76px; }
+.final-viability-local p { margin: 8px 0 0; color: #58534d; font-size: 15px; line-height: 1.4; }
+.final-viability-bridge { display: flex; align-items: baseline; justify-content: space-between; gap: 40px; margin-top: 48px; padding-top: 32px; border-top: 1px solid #d1c9bf; }
+.final-viability-bridge h2 { flex: none; margin: 0; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: 42px; font-weight: 400; line-height: 1.1; letter-spacing: -.03em; }
+.final-viability-bridge h2 em { color: #a95130; font-weight: 400; }
+.final-viability-bridge p { max-width: 380px; margin: 0; color: #58534d; font-size: 17px; line-height: 1.4; text-align: right; text-wrap: balance; }
+.final-viability-moves { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 48px; margin: 34px 0 0; padding: 0; list-style: none; }
+.final-viability-moves li { display: grid; grid-template-columns: 84px minmax(0, 1fr); grid-template-rows: min-content 1fr; column-gap: 20px; align-items: start; }
+.final-viability-moves .final-opportunity-art { position: static; grid-row: span 2; width: 84px; height: 64px; }
+.final-viability-moves h3 { margin: 2px 0 6px; color: #2a2b2f; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: 30px; font-weight: 400; line-height: 1.1; letter-spacing: -.02em; }
+.final-viability-moves p { margin: 0; color: #58534d; font-size: 17px; line-height: 1.45; text-wrap: pretty; }
+.final-viability-moves.is-visible .final-opportunity-check { animation: final-check-draw 1.4s ease-in-out 3; }
+.final-viability-moves.is-visible .final-opportunity-key { transform-box: fill-box; transform-origin: center; animation: final-key-turn 1.4s ease-in-out 3; }
+.final-viability-moves.is-visible .final-opportunity-link { animation: final-link-travel 1.4s linear 3; }
+.final-viability-moves.is-visible .final-opportunity-heart { transform-box: fill-box; transform-origin: center; animation: final-heart-beat 1.4s ease-in-out 3; }
+.final-viability-numbers.is-visible .final-viability-bar.is-now > i { animation: final-bar-grow 1.5s cubic-bezier(.16, 1, .3, 1) .35s both; }
+/* Caveat and sources sit just above the page footer */
+.final-market .final-market-note { margin-top: auto; }
+@keyframes final-bar-grow { from { transform: scaleX(.335); } to { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .final-viability-bar > i { animation: none !important; } }
+.slides-exporting .final-viability-bar > i { animation: none !important; }
 .final-market-opportunities { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; flex: 1; margin: 28px 0 0; padding: 0; list-style: none; }
 .final-market-opportunities li { position: relative; min-width: 0; padding: 28px; border: 1px solid #d1c9bf; border-radius: 16px; background: #f5eee1; }
 .final-opportunity-art { position: absolute; top: 18px; right: 24px; width: 96px; height: 73px; color: #a95130; }
@@ -343,12 +379,6 @@
 .final-market-sources { margin: 6px 0 18px; }
 .final-market-sources a { color: #58534d; text-underline-offset: 3px; }
 @media screen and (min-width: 701px) and (max-height: 820px) {:where(.slides-root:not(.slides-fixed)) .final-market { padding-top: 28px; padding-bottom: 24px; }
-  :where(.slides-root:not(.slides-fixed)) .final-market-heading { margin-top: 20px; }
-  :where(.slides-root:not(.slides-fixed)) .final-market-heading h2 { font-size: 40px; }
-  :where(.slides-root:not(.slides-fixed)) .final-market-heading > p:last-child { font-size: 16px; margin-top: 8px; }
-  :where(.slides-root:not(.slides-fixed)) .final-market-numbers { margin-top: 18px; padding: 12px 0; }
-  :where(.slides-root:not(.slides-fixed)) .final-market-numbers strong { font-size: 34px; margin-top: 8px; }
-  :where(.slides-root:not(.slides-fixed)) .final-market-numbers p { font-size: 12px; margin-top: 8px; }
   :where(.slides-root:not(.slides-fixed)) .final-market-opportunities { margin-top: 22px; gap: 20px; }
   :where(.slides-root:not(.slides-fixed)) .final-market-opportunities li { padding: 22px; }
   :where(.slides-root:not(.slides-fixed)) .final-opportunity-art { top: 12px; right: 20px; width: 80px; height: 60px; }
@@ -360,21 +390,8 @@
 @media screen and (max-width: 700px) {:where(.slides-root:not(.slides-fixed)) .final-market-opportunities { grid-template-columns: 1fr; gap: 18px; }
   :where(.slides-root:not(.slides-fixed)) .final-opportunity-art { top: 14px; width: 80px; height: 60px; }
   :where(.slides-root:not(.slides-fixed)) .final-market-opportunities h3 { margin-top: 16px; }
-  :where(.slides-root:not(.slides-fixed)) .final-market-numbers { gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  :where(.slides-root:not(.slides-fixed)) .final-market-numbers > div:nth-child(3) { padding-left: 0; border-left: 0; }
-  :where(.slides-root:not(.slides-fixed)) .final-market-numbers > div + div { padding-left: 10px; }
-  :where(.slides-root:not(.slides-fixed)) .final-market-numbers > div > span { font-size: 9px; letter-spacing: 0; }
-  :where(.slides-root:not(.slides-fixed)) .final-market-numbers strong { font-size: 24px; white-space: normal; }
-  :where(.slides-root:not(.slides-fixed)) .final-market-numbers p { font-size: 10px; }
 }
 @media print {:where(.slides-root:not(.slides-fixed)) .final-market { min-height: 0; }
-  :where(.slides-root:not(.slides-fixed)) .final-market-heading { margin-top: 18px; }
-  :where(.slides-root:not(.slides-fixed)) .final-market-heading h2 { font-size: 36px; }
-  :where(.slides-root:not(.slides-fixed)) .final-market-heading > p:last-child { font-size: 14px; margin-top: 8px; }
-  :where(.slides-root:not(.slides-fixed)) .final-market-numbers { margin-top: 16px; padding: 12px 0; }
-  :where(.slides-root:not(.slides-fixed)) .final-market-numbers strong { font-size: 32px; margin-top: 8px; }
-  :where(.slides-root:not(.slides-fixed)) .final-market-numbers p { font-size: 12px; margin-top: 6px; }
-  :where(.slides-root:not(.slides-fixed)) .final-market-numbers > div > span { font-size: 10px; }
   :where(.slides-root:not(.slides-fixed)) .final-market-opportunities { margin-top: 20px; gap: 20px; }
   :where(.slides-root:not(.slides-fixed)) .final-market-opportunities li { padding: 22px; }
   :where(.slides-root:not(.slides-fixed)) .final-market-opportunities li > span { font-size: 32px; }
@@ -450,8 +467,6 @@
 
 
 /* Slide 9 · business viability */
-.final-biz .final-market-heading { margin-top: 20px; }
-.final-biz .final-market-heading h2 { font-size: clamp(38px, 3.8cqw, 56px); }
 .final-biz-steps { display: grid; grid-template-columns: minmax(0, 1fr) 44px minmax(0, 1fr) 44px minmax(0, 1fr); align-items: stretch; margin: 30px 0 0; padding: 0; list-style: none; }
 .final-biz-step { position: relative; padding: 26px 28px; border: 1px solid #d1c9bf; border-radius: 16px; background: #f5eee1; }
 .final-biz-num { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: #a95130; color: #fef9ef; font-family: Georgia, serif; font-size: 20px; font-weight: 400; }

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { BellRing, Camera, CreditCard, Droplets, Faucet, HeartHandshake, Home, Lightbulb, Lock, PhoneCall, ShieldCheck, Smartphone, Users, Watch, Zap } from 'lucide-react'
 import { startScene } from '../landing/scene'
 import './slides.css'
@@ -526,13 +526,32 @@ export function FinalSlides() {
           <p className="final-mentor-note">Mentor feedback: How does TemanMu support Sime Darby Property’s business?</p>
           <span>09 · Business viability</span>
         </div>
-        <div className="final-market-heading">
-          <p className="slides-eyebrow">The family need</p>
-          <h2>Parents want independence.<br /><em>Families need peace of mind.</em></h2>
+        <div className="final-viability-numbers" aria-label="Market context from NHMS, DOSM and SDP" data-slide-reveal>
+          <section className="final-viability-national" aria-labelledby="final-viability-alone">
+            <h3 className="final-viability-label">Malaysia is ageing, and more people are ageing alone</h3>
+            <div className="final-viability-hero">
+              <strong id="final-viability-alone">18.8<small>%</small></strong>
+              <p>of Malaysians aged 60+ live alone<span>NHMS 2025 · ≈770,000 people (rough estimate)</span></p>
+            </div>
+            <div className="final-viability-bars" aria-label="Share of people aged 60+ living alone: 6.3% in 2018, 18.8% in 2025">
+              <div className="final-viability-bar"><span>2018</span><i style={{ '--bar': 6.3 / 18.8 } as CSSProperties} /><b>6.3%</b></div>
+              <div className="final-viability-bar is-now"><span>2025</span><i style={{ '--bar': 1 } as CSSProperties} /><b>18.8%</b></div>
+              <p className="final-viability-multiple">Nearly <strong>3×</strong> in seven years</p>
+            </div>
+            <div className="final-viability-aside"><strong>8.4<small>%</small></strong><p>of Malaysians are aged 65+ in 2026 · DOSM</p></div>
+          </section>
+          <section className="final-viability-local" aria-labelledby="final-viability-local-title">
+            <h3 className="final-viability-label" id="final-viability-local-title">Elmina already has the families</h3>
+            <div><strong>11,000<small>+</small></strong><p>completed homes reported by SDP</p></div>
+            <div><strong><small>RM</small>16,667</strong><p>estimated average monthly household income · SDP</p></div>
+          </section>
+        </div>
+        <div className="final-viability-bridge">
+          <h2>Parents want independence. <em>Families need peace of mind.</em></h2>
           <p>A Care-Ready Home could give families another reason to choose SDP.</p>
         </div>
-        <ol className="final-market-opportunities" aria-label="Three commercial opportunities for SDP" data-slide-reveal>
-          <li><span>01</span>
+        <ol className="final-viability-moves" aria-label="Three commercial opportunities for SDP" data-slide-reveal>
+          <li>
             <svg className="final-opportunity-art" viewBox="0 0 100 76" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M10 35 36 13l26 22M17 30v34h38V30M29 64V46h14v18" />
               <circle cx="73" cy="45" r="18" fill="#f5eee1" />
@@ -540,14 +559,14 @@ export function FinalSlides() {
             </svg>
             <h3>Differentiation</h3><p>Give families another reason to choose SDP through support for parents living independently.</p>
           </li>
-          <li><span>02</span>
+          <li>
             <svg className="final-opportunity-art" viewBox="0 0 100 76" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M9 35 34 14l25 21M16 30v34h36V30M28 64V47h12v17" />
               <g className="final-opportunity-key"><circle cx="70" cy="30" r="10" fill="#f5eee1" /><path d="m70 40 0 24m0-7h9m-9-8h6" /><circle cx="70" cy="28" r="2" /></g>
             </svg>
             <h3>Premium positioning</h3><p>Create an optional Care-Ready home package for families seeking added reassurance.</p>
           </li>
-          <li><span>03</span>
+          <li>
             <svg className="final-opportunity-art" viewBox="0 0 100 76" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M5 29 22 15l17 14M10 25v26h24V25M18 51V38h8v13M61 29l17-14 17 14M66 25v26h24V25M74 51V38h8v13" />
               <path className="final-opportunity-link" d="M22 59v6h56v-6" strokeDasharray="4 5" />
@@ -556,12 +575,6 @@ export function FinalSlides() {
             <h3>Multigenerational demand</h3><p>Attract families considering a home for their parents nearby, with potential second-unit interest.</p>
           </li>
         </ol>
-        <div className="final-market-numbers" aria-label="Supporting market context from SDP, DOSM and NHMS">
-          <div><span>Elmina · Household context</span><strong><small>RM</small>16,667<small> / month</small></strong><p>Estimated average household income · SDP</p></div>
-          <div><span>Elmina · Existing scale</span><strong>11,000<small>+</small></strong><p>Completed homes reported by SDP</p></div>
-          <div><span>Malaysia · Ageing population</span><strong>8.4<small>%</small></strong><p>Aged 65+ in 2026 · DOSM</p></div>
-          <div><span>Malaysia · Living alone</span><strong>18.8<small>%</small></strong><p>Aged 60+ in 2025 · NHMS<br />6.3% in 2018 · nearly 3×<br />≈770,000 people (rough estimate)</p></div>
-        </div>
         <p className="final-market-note">Market context, not proven demand. Pricing, take-up and sales impact require pilot validation.</p>
         <p className="final-market-sources">Sources: <a href="https://www.simedarbyproperty.com/commercial/city-of-elmina" target="_blank" rel="noopener noreferrer">SDP · City of Elmina</a> · <a href="https://www.dosm.gov.my/portal-main/release-content/current-population-estimates-2026" target="_blank" rel="noopener noreferrer">DOSM · Population 2026</a> · <a href="https://iku.nih.gov.my/images/nhms-2025/infographic-eng.pdf" target="_blank" rel="noopener noreferrer">MOH · NHMS 2025, infographics 1 &amp; 3</a></p>
       </PageFrame>
