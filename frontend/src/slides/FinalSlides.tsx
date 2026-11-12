@@ -488,7 +488,7 @@ export function FinalSlides() {
             <span className="slides-impact-who">Who benefits · 01</span>
             <h3>Older residents</h3>
             <ul className="slides-impact-benefits">
-              <li><strong>Greater independence</strong> in familiar surroundings</li>
+              <li><strong>Faster help</strong> when something goes wrong</li>
               <li><strong>Stronger privacy</strong> without cameras or wearables</li>
               <li><strong>Closer connection</strong> through buddies and local activities</li>
             </ul>
