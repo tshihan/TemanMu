@@ -22,8 +22,37 @@
 .monitoring-advantages { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 40px; margin: 48px 0 0; padding: 0; list-style: none; }
 .monitoring-advantages > li { border-top: 2px solid #a95130; padding-top: 24px; }
 .monitoring-advantages h3 { margin: 24px 0 20px; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: 32px; font-weight: 400; line-height: 1.15; letter-spacing: -.02em; }
-.monitoring-advantages p { min-height: 132px; margin: 0 0 24px; color: #4e4a45; font-size: 20px; line-height: 1.5; }
 .monitoring-advantages strong { display: block; max-width: 370px; color: #8b4429; font-size: 19px; line-height: 1.4; }
+.monitoring-benefits .monitoring-advantages { margin-top: 24px; gap: 32px; }
+.monitoring-benefits .monitoring-advantages > li { padding-top: 18px; }
+.monitoring-benefits .monitoring-advantages h3 { margin: 12px 0 14px; font-size: 30px; }
+.monitoring-benefits .monitoring-scope { padding-top: 16px; }
+.innovation-visual { display: block; width: 100%; height: 120px; margin-top: 12px; color: #514b44; }
+.innovation-visual text { fill: #514b44; stroke: none; font: 12px system-ui, sans-serif; }
+.innovation-muted { stroke: #c6b9a9; }
+.innovation-accent { stroke: #a95130; }
+.innovation-routine-area { fill: #a9513014; }
+.innovation-signal { fill: #a95130; stroke: none; }
+.innovation-response-node { fill: #fef9ef; stroke: #a95130; }
+.innovation-visual .innovation-condition { fill: #8b4429; }
+.monitoring-advantages.is-visible .innovation-signal { animation: innovation-signal-travel 1.3s ease-out 3; }
+.monitoring-advantages.is-visible .innovation-signal-1 { animation-delay: .15s; }
+.monitoring-advantages.is-visible .innovation-signal-2 { animation-delay: .3s; }
+.monitoring-advantages.is-visible .innovation-draw { stroke-dasharray: 400; animation: innovation-line-draw 2s ease-out 2; }
+.monitoring-advantages.is-visible .innovation-response-node { animation: innovation-response-step 1s ease-out both; }
+.monitoring-advantages.is-visible .innovation-response-1 { animation-delay: .8s; }
+.monitoring-advantages.is-visible .innovation-response-2 { animation-delay: 1.6s; }
+.monitoring-advantages.is-visible .innovation-response-3 { animation-delay: 2.4s; }
+@keyframes innovation-signal-travel { from { transform: translateX(-45px); opacity: 0; } 25% { opacity: 1; } to { transform: translateX(0); opacity: 1; } }
+@keyframes innovation-line-draw { from { stroke-dashoffset: 400; } 80%, to { stroke-dashoffset: 0; } }
+@keyframes innovation-response-step { from { fill: #fef9ef; stroke: #c6b9a9; } to { fill: #eddbca; stroke: #a95130; } }
+@media (prefers-reduced-motion: reduce) {
+  .monitoring-advantages.is-visible .innovation-visual * { animation: none !important; }
+}
+@media print {
+  .monitoring-advantages .innovation-visual * { animation: none !important; }
+}
+.slides-exporting .monitoring-advantages .innovation-visual * { animation: none !important; }
 .monitoring-research .monitoring-heading { margin-top: 20px; }
 .monitoring-research .monitoring-heading h2 { font-size: 48px; }
 .monitoring-research-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 24px; margin-top: 24px; }

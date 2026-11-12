@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from 'react'
-import { BellRing, Camera, CreditCard, Droplets, Faucet, HeartHandshake, Home, Lightbulb, Lock, PhoneCall, ShieldCheck, Smartphone, Users, Watch, Zap } from 'lucide-react'
+import { BellRing, Cctv, CreditCard, Droplets, Faucet, HeartHandshake, Home, Lightbulb, Lock, PhoneCall, ShieldCheck, Smartphone, Users, Watch, Zap } from 'lucide-react'
 import { useSaveAsPdf } from './useSaveAsPdf'
 import { HardwareAppendix } from './HardwareAppendix'
 import { MonitoringResearchAppendix, TemanMuAdvantages } from './MonitoringEvidence'
@@ -257,7 +257,7 @@ export function FinalSlides() {
         <div className="slides-problem-gap">
           <span className="slides-problem-gap-label">Current solution gap</span>
           <div className="slides-problem-gap-items">
-            <article className="slides-problem-gap-card"><span className="slides-problem-gap-icon" aria-hidden="true"><Camera size={42} strokeWidth={1.6} /></span><div><b>Cameras</b><p>Can feel like being supervised at home, raising privacy concerns.</p><p className="final-gap-evidence"><strong>36.7%</strong> accepted home cameras for detecting falls or pain.<small>Swiss adult survey · n = 1,211 · <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC12948381/" target="_blank" rel="noopener noreferrer">Wangmo et al., 2026</a></small></p></div></article>
+            <article className="slides-problem-gap-card"><span className="slides-problem-gap-icon" aria-hidden="true"><Cctv size={42} strokeWidth={1.6} /></span><div><b>Cameras</b><p>Can feel like being supervised at home, raising privacy concerns.</p><p className="final-gap-evidence"><strong>36.7%</strong> accepted home cameras for detecting falls or pain.<small>Swiss adult survey · n = 1,211 · <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC12948381/" target="_blank" rel="noopener noreferrer">Wangmo et al., 2026</a></small></p></div></article>
             <article className="slides-problem-gap-card"><span className="slides-problem-gap-icon" aria-hidden="true"><Watch size={42} strokeWidth={1.6} /></span><div><b>Wearables</b><p>Must remember to wear and charge it—may not suit older adults who struggle with this routine.</p><p className="final-gap-evidence"><strong>32%</strong> wore it on fewer than 4 of 14 days.<small>Small activity-monitoring pilot · 7 of 22 participants · <a href="https://aging.jmir.org/2024/1/e60209/" target="_blank" rel="noopener noreferrer">Ding et al., 2024</a></small></p></div></article>
           </div>
         </div>
@@ -400,50 +400,46 @@ export function FinalSlides() {
           <span>06 · Feasibility</span>
         </div>
         <div className="final-installation-heading">
-          <h2>Reuse existing meters. <em>Connect through utilities.</em></h2>
-          <p>Proposed TNB + Air Selangor collaboration · Minimal installation in eligible pilot homes.</p>
+          <h2>Use existing electricity &amp; water meters.<br /><em>Connect through utilities.</em></h2>
+          <p>Proposed TNB + Air Selangor collaboration to reuse meters already installed in eligible pilot homes.</p>
         </div>
         <div className="final-installation-columns">
-          <section className="final-installation-column" aria-labelledby="final-electricity-title">
+          <section className="final-installation-column" aria-labelledby="final-utilities-title">
             <header className="final-utility-header">
-              <div><span className="final-utility-label">01 · Electricity</span><h3 id="final-electricity-title">Existing smart meters</h3></div>
-              <img src="/images/partners/tnb.svg" alt="Tenaga Nasional Berhad (TNB)" width="170" height="70" />
+              <div><span className="final-utility-label">01 · Electricity &amp; water</span><h3 id="final-utilities-title">TNB + Air Selangor</h3></div>
+              <div className="final-utility-logos">
+                <img src="/images/partners/tnb.svg" alt="Tenaga Nasional Berhad (TNB)" width="170" height="70" />
+                <img src="/images/partners/air-selangor.svg" alt="Air Selangor" width="150" height="85" />
+              </div>
             </header>
             <ol className="final-installation-steps">
-              <li><span>1</span><div><h4>Engage TNB’s innovation teams</h4><p>Approach TNB Research / TNB LABS Digital Solutions for a consent-based pilot.</p></div></li>
-              <li><span>2</span><div><h4>Caregiver Data Consent framework</h4><p>Propose a resident-authorised application programming interface (API), aligned with the Personal Data Protection Act (PDPA).</p></div></li>
-              <li><span>3</span><div><h4>Request more frequent readings</h4><p>Seek 1–5-minute measurement records and lower delivery delay, subject to meter and network capability.</p></div></li>
+              <li><span>1</span><div><h4>Propose a collaboration</h4><p>Engage both utilities’ innovation teams to explore a pilot using existing electricity and water meters.</p></div></li>
+              <li><span>2</span><div><h4>Request resident-authorised data access</h4><p>Propose data sharing with residents’ consent, designed around the Personal Data Protection Act (PDPA) framework.</p></div></li>
+              <li><span>3</span><div><h4>Seek more frequent readings</h4><p>Explore shorter measurement intervals and timely data delivery, subject to meter and network capability.</p></div></li>
             </ol>
-            <p className="final-utility-path">Existing meter <span>→</span> TNB data platform <span>→</span> TemanMu</p>
-          </section>
-          <section className="final-installation-column" aria-labelledby="final-water-title">
-            <header className="final-utility-header">
-              <div><span className="final-utility-label">02 · Water</span><h3 id="final-water-title">Existing unit meters</h3></div>
-              <img src="/images/partners/air-selangor.svg" alt="Air Selangor" width="150" height="85" />
-            </header>
-            <ol className="final-installation-steps">
-              <li><span>1</span><div><h4>Build on leak-detection infrastructure</h4><p>Engage Innovation &amp; Technology / Non-Revenue Water (NRW) teams on existing smart-meter data.</p></div></li>
-              <li><span>2</span><div><h4>Propose automated welfare checks</h4><p>Add an “Abnormal Low Flow / Zero Flow Welfare Check” feature that prompts human contact.</p></div></li>
-              <li><span>3</span><div><h4>Expand the NB-IoT pilot to SDP</h4><p>Invite expansion to equipped SDP townships; prefer individual-unit smart meters downstream of shared storage tanks.</p></div></li>
-            </ol>
-            <p className="final-utility-path">Existing meter <span>→</span> Air Selangor platform <span>→</span> TemanMu</p>
+            <p className="final-utility-path">Existing electricity &amp; water meters <span>→</span> Utility platforms <span>→</span> TemanMu</p>
           </section>
           <section className="final-installation-column" aria-labelledby="final-access-title">
             <header className="final-utility-header">
-              <div><span className="final-utility-label">03 · Access Card</span><h3 id="final-access-title">SDP access-card system</h3></div>
+              <div><span className="final-utility-label">02 · Access Card</span><h3 id="final-access-title">Existing access-card system</h3></div>
               <img className="final-access-card" src="/images/partners/sdp-access-card.png" alt="Sime Darby Property resident access card" width="640" height="363" />
             </header>
             <ol className="final-installation-steps">
-              <li><span>1</span><div><h4>Who · Link her card to her unit</h4><p>Building management tags her existing card as a TemanMu resident. No new card or device.</p></div></li>
-              <li><span>2</span><div><h4>Where · Choose which readers count</h4><p>Mark lobby, lift and gate readers as “going out” or “coming home”. Existing readers stay in place.</p></div></li>
-              <li><span>3</span><div><h4>When · Every tap is time-stamped</h4><p>Tapped out with no activity at home: probably out. Tapped in but no water or electricity use soon after: someone checks.</p></div></li>
+              <li><span>1</span><div><h4>Keep the existing card and readers</h4><p>Connect TemanMu to existing tap records. Residents keep the same card.</p></div></li>
+              <li><span>2</span><div><h4>Read the taps as a journey</h4><p>Interpret the location, direction and order of taps to recognise leaving or returning.</p></div></li>
+              <li><span>3</span><div><h4>Recognise an outing or a return</h4>
+                <div className="final-access-journeys" aria-label="Example access-card journeys">
+                  <p><span>Home-area tap</span><i aria-hidden="true">→</i><span>Lobby exit</span><i aria-hidden="true">→</i><b>Likely out</b></p>
+                  <p><span>Lobby entry</span><i aria-hidden="true">→</i><span>Home-area tap</span><i aria-hidden="true">→</i><b>Likely home</b></p>
+                </div>
+                <p className="final-access-example-note">Example sequences, configured to each building’s available readers.</p>
+              </div></li>
             </ol>
-            <p className="final-utility-path">Card tap <span>→</span> SDP access system <span>→</span> TemanMu</p>
             <p className="final-access-note"><strong>Landed homes:</strong> use a door sensor.</p>
           </section>
         </div>
         <div className="final-installation-evidence">
-          <p>Proposed partnerships · Data access, reporting intervals and welfare-check accuracy require pilot validation. NB-IoT: Narrowband Internet of Things.</p>
+          <p>Proposed partnerships · Data access, reporting intervals and welfare-check accuracy require pilot validation.</p>
           <p>Sources: <a href="https://www.tnb.com.my/doing-business-with-tnb/education-research-consultancy/tnb-research" target="_blank" rel="noopener noreferrer">TNB Research</a> · <a href="https://www.tnblabs.com.my/digital-solutions" target="_blank" rel="noopener noreferrer">TNB LABS</a> · <a href="https://www.airselangor.com/about-us/innovation-and-technology" target="_blank" rel="noopener noreferrer">Air Selangor innovation</a> · <a href="https://hydrohub.airselangor.com/content/uploads/2023/01/PerformanceReport2019-2.pdf" target="_blank" rel="noopener noreferrer">NB-IoT pilot</a></p>
         </div>
       </PageFrame>
@@ -522,7 +518,7 @@ export function FinalSlides() {
             <div className="slides-impact-target"><strong>70%</strong><span>of surveyed prospective buyers expected to view the township more positively after learning about TemanMu</span></div>
           </article>
         </div>
-        <p className="slides-impact-caveat">Proposed pilot targets, not achieved results · Measure resident confidence, caregiver reassurance, and prospective buyer perceptions through surveys.</p>
+        <p className="slides-impact-caveat">These numbers are proposed pilot targets and reflect expected outcomes.</p>
       </PageFrame>
       <PageFrame number={9} className="final-market">
         <div className="slides-section-top">
