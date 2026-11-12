@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from 'react'
 import { BellRing, Camera, CreditCard, Droplets, Faucet, HeartHandshake, Home, Lightbulb, Lock, PhoneCall, ShieldCheck, Smartphone, Users, Watch, Zap } from 'lucide-react'
 import { startScene } from '../landing/scene'
 import { HardwareAppendix } from './HardwareAppendix'
@@ -11,8 +11,27 @@ import './final-slides.css'
 const PresentHome = lazy(() => import('./PresentHome').then(module => ({ default: module.PresentHome })))
 
 const PAGE_COUNT = 10
-const SHOW_APPENDIX_A1 = false
+const SHOW_APPENDIX_BUSINESS_MODEL = false
 const SHOW_HARDWARE_APPENDICES = false
+const APPENDIX_CONTENTS = [
+  { id: 'A1', title: 'Pilot plan' },
+  { id: 'A2', title: 'Machine learning' },
+  { id: 'A3', title: 'Elderly usability' },
+  { id: 'A4', title: 'Privacy' },
+  { id: 'A5', title: 'Research evidence' },
+  { id: 'A6', title: 'Our advantage' },
+  { id: 'A7', title: 'Home-entry safeguards' },
+  { id: 'A8', title: 'Business model', show: SHOW_APPENDIX_BUSINESS_MODEL },
+]
+
+// Contents links scroll to their appendix page smoothly instead of jumping.
+function jumpToAppendix(event: MouseEvent<HTMLAnchorElement>) {
+  const target = document.querySelector(event.currentTarget.getAttribute('href') ?? '')
+  if (!target) return
+  event.preventDefault()
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  target.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' })
+}
 // Hourly allowance, 6 AM to 11 PM. 'o' marks the outing allowance (card taps); the rest are quiet-gap allowances.
 const LEARNS_HOURS: Array<[number, string?]> = [[22],[20],[22],[52,'o'],[52,'o'],[18],[20],[44],[50],[44],[20],[18],[22],[20],[24],[28],[88],[100]]
 const names = ['TAN SHI HAN', 'LIM JING JET', 'KHOR HONG JUN', 'LEE YANG', 'CHO JING LING']
@@ -61,8 +80,8 @@ function useHowFlowDot() {
       const rowEls = rowRefs.map(r => r.current)
       if (!wrap || !box2 || !feed || !dot || rowEls.some(r => !r)) return
       const wr = wrap.getBoundingClientRect()
-      // The slide is scaled with CSS zoom; screen measurements are divided by it so the line and dot land in slide pixels.
-      const z = parseFloat(getComputedStyle(wrap.closest('.slides-page') ?? wrap).zoom) || 1
+      // The slide is scaled to the window; screen measurements are divided by that scale so the line and dot land in slide pixels.
+      const z = wr.width / wrap.offsetWidth || 1
       const rel = (el: Element) => { const r = el.getBoundingClientRect(); return { x: (r.left - wr.left) / z, y: (r.top - wr.top) / z, w: r.width / z, h: r.height / z } }
       const b = rel(box2)
       const rows = rowEls.map(r => rel(r!))
@@ -197,7 +216,7 @@ export function FinalSlides() {
     }
   }, [])
 
-  return <main ref={rootRef} className="slides-root slides-fixed">
+  return <main ref={rootRef} className="slides-root slides-fixed slides-scaled">
     {/* Kept small and out of the way so it doesn't distract while presenting; hidden in the PDF and PPTX. */}
     <div className="final-export">
       <span className="slides-export-status" role="status">{pptxStatus}</span>
@@ -644,53 +663,14 @@ export function FinalSlides() {
             <p>Further detail behind the pitch, prepared for questions.</p>
           </div>
           <ol className="final-appendix-cover-list" aria-label="Appendix contents">
-            {SHOW_APPENDIX_A1 && <li><span>A1</span>Business model</li>}
-            <li><span>A2</span>Pilot plan</li>
-            <li><span>A3</span>Machine learning</li>
-            <li><span>A4</span>Elderly usability</li>
-            <li><span>A5</span>Privacy</li>
-            <li><span>A10</span>Research evidence</li>
-            <li><span>A9</span>Our advantage</li>
-            <li><span>A11</span>Home-entry safeguards</li>
+            {APPENDIX_CONTENTS.filter(item => item.show !== false).map(item => <li key={item.id}><a href={`#appendix-${item.id.toLowerCase()}`} onClick={jumpToAppendix}><span>{item.id}</span>{item.title}</a></li>)}
           </ol>
         </div>
         <div className="slides-page-bottom"><span>TemanMu · Township care</span><span>Appendix</span></div>
       </section>
-      {SHOW_APPENDIX_A1 && <section className="slides-page final-business-model" aria-label="Appendix A1: Proposed business model">
+      <section id="appendix-a1" className="slides-page final-pilot" aria-label="Appendix A1: Pilot plan">
         <img className="slides-sdp-logo" src="/images/sdp-logo.png" alt="Sime Darby Property" />
-        <div className="slides-section-top">
-          <p className="final-mentor-note">Mentor feedback: Who pays for installation and the ongoing service?</p>
-          <span>Appendix A1 · Business model</span>
-        </div>
-        <div className="final-model-heading">
-          <p className="slides-eyebrow">Proposed funding model</p>
-          <h2>Install once.<br /><em>Support through the township.</em></h2>
-          <p>For participating managed developments: a buyer-funded installation, with ongoing service budgeted within agreed maintenance fees.</p>
-        </div>
-        <div className="final-model-columns">
-          <section aria-labelledby="final-model-buyer">
-            <span className="final-model-number">01 · One-off</span>
-            <h3 id="final-model-buyer">Buyer pays for installation</h3>
-            <ul><li>Household monitoring equipment</li><li>Professional installation and commissioning</li><li>Setup, connectivity checks and onboarding</li></ul>
-            <p className="final-model-summary">A clear setup cost when the household joins.</p>
-          </section>
-          <section aria-labelledby="final-model-operator">
-            <span className="final-model-number">02 · Ongoing</span>
-            <h3 id="final-model-operator">Included in the agreed maintenance package</h3>
-            <ul><li>Platform, data connectivity and voice check-ins</li><li>Device upkeep, support and a replacement allowance</li><li>Agreed local response provision</li></ul>
-            <p className="final-model-summary">Management pays TemanMu under a service contract.</p>
-          </section>
-        </div>
-        <div className="final-model-conditions">
-          <div><strong>Budget it explicitly</strong><p>Confirm the eligible funding route, approvals and service cost with management. Inclusion may require a fee adjustment or subsidy.</p></div>
-          <div><strong>Individual-title homes</strong><p>Where no shared maintenance arrangement exists, use an agreed estate-service package or an opt-in household plan.</p></div>
-        </div>
-        <p className="final-model-note">Proposed model, not a confirmed fee arrangement. Ongoing service is funded through the package; it is not cost-free. Validate cost per enrolled home and response capacity.</p>
-        <div className="slides-page-bottom"><span>TemanMu · Township care</span><span>Appendix A1</span></div>
-      </section>}
-      <section className="slides-page final-pilot" aria-label="Appendix A2: Pilot plan">
-        <img className="slides-sdp-logo" src="/images/sdp-logo.png" alt="Sime Darby Property" />
-        <div className="slides-section-top"><TemanMuWordmark /><span>Appendix A2 · Pilot plan</span></div>
+        <div className="slides-section-top"><TemanMuWordmark /><span>Appendix A1 · Pilot plan</span></div>
         <div className="final-model-heading">
           <p className="slides-eyebrow">Proposed first pilot</p>
           <h2>Start small.<br /><em>Learn from real homes.</em></h2>
@@ -702,13 +682,13 @@ export function FinalSlides() {
           <li><span>03</span><h3>Measure what matters</h3><p>Evaluate reliability, nuisance alerts, resident acceptance and responder workload.</p></li>
         </ol>
         <p className="final-model-note">Proposed pilot scope. Confirm installation, household consent and responder arrangements before deployment.</p>
-        <div className="slides-page-bottom"><span>TemanMu · Township care</span><span>Appendix A2</span></div>
+        <div className="slides-page-bottom"><span>TemanMu · Township care</span><span>Appendix A1</span></div>
       </section>
-      <section className="slides-page final-ml" aria-label="Appendix A3: Machine learning models">
+      <section id="appendix-a2" className="slides-page final-ml" aria-label="Appendix A2: Machine learning models">
         <img className="slides-sdp-logo" src="/images/sdp-logo.png" alt="Sime Darby Property" />
         <div className="slides-section-top">
           <p className="final-mentor-note">Mentor feedback: How does the system learn a resident’s routine?</p>
-          <span>Appendix A3 · Machine learning</span>
+          <span>Appendix A2 · Machine learning</span>
         </div>
         <div className="final-model-heading">
           <p className="slides-eyebrow">Personalised routine limits</p>
@@ -743,13 +723,13 @@ export function FinalSlides() {
         </div>
         <p className="final-ml-response"><b>Learned limit exceeded</b><span aria-hidden="true"> → </span>Resident check-in<span aria-hidden="true"> → </span>Family / responder follow-up if unresolved</p>
         <p className="final-ml-note">Prototype: simulated history, compressed demo timing, no real-home accuracy claim. Electricity adds rule-based context; it is not an input to these two models. Unusual inactivity prompts a human check, not a diagnosis.</p>
-        <div className="slides-page-bottom"><span>TemanMu · Township care</span><span>Appendix A3</span></div>
+        <div className="slides-page-bottom"><span>TemanMu · Township care</span><span>Appendix A2</span></div>
       </section>
-      <section className="slides-page final-no-app" aria-label="Appendix A4: No app for Madam Lee">
+      <section id="appendix-a3" className="slides-page final-no-app" aria-label="Appendix A3: No app for Madam Lee">
         <img className="slides-sdp-logo" src="/images/sdp-logo.png" alt="Sime Darby Property" />
         <div className="slides-section-top">
           <p className="final-mentor-note">Mentor feedback: What if the elderly resident is not tech-savvy?</p>
-          <span>Appendix A4 · Elderly usability</span>
+          <span>Appendix A3 · Elderly usability</span>
         </div>
         <div className="final-model-heading">
           <p className="slides-eyebrow">No app for Madam Lee</p>
@@ -779,13 +759,13 @@ export function FinalSlides() {
         </div>
         </div>
         <p className="final-no-app-note">*A working phone with supported network coverage is needed. Proposed voice check-ins require integration and pilot testing. The app and dashboard are for caregivers and operators.</p>
-        <div className="slides-page-bottom"><span>TemanMu · Township care</span><span>Appendix A4</span></div>
+        <div className="slides-page-bottom"><span>TemanMu · Township care</span><span>Appendix A3</span></div>
       </section>
-      <section className="slides-page final-privacy" aria-label="Appendix A5: Privacy and access">
+      <section id="appendix-a4" className="slides-page final-privacy" aria-label="Appendix A4: Privacy and access">
         <img className="slides-sdp-logo" src="/images/sdp-logo.png" alt="Sime Darby Property" />
         <div className="slides-section-top">
           <p className="final-mentor-note">Mentor question: Who can see Madam Lee’s household activity?</p>
-          <span>Appendix A5 · Privacy</span>
+          <span>Appendix A4 · Privacy</span>
         </div>
         <div className="final-model-heading">
           <p className="slides-eyebrow">Privacy without an indoor camera</p>
@@ -838,27 +818,27 @@ export function FinalSlides() {
         </div>
         <div className="final-privacy-principles"><span><b>Voluntary participation</b> with clear permissions</span><span><b>Withdrawal</b> and defined retention</span><span><b>Minimal incident records</b> with logged access</span></div>
         <p className="final-privacy-note">Intended access policy. The prototype still needs API and dashboard permissions aligned to this boundary. Sensor processing requires consent; closed incidents retain only an agreed minimum record.</p>
-        <div className="slides-page-bottom"><span>TemanMu · Township care</span><span>Appendix A5</span></div>
+        <div className="slides-page-bottom"><span>TemanMu · Township care</span><span>Appendix A4</span></div>
       </section>
       {SHOW_HARDWARE_APPENDICES && <>
         <HardwareAppendix kind="ct" />
         <HardwareAppendix kind="water" />
       </>}
-      <section className="slides-page monitoring-research" aria-label="Appendix A10: Camera and wearable research">
+      <section id="appendix-a5" className="slides-page monitoring-research" aria-label="Appendix A5: Camera and wearable research">
         <img className="slides-sdp-logo" src="/images/sdp-logo.png" alt="Sime Darby Property" />
-        <div className="slides-section-top"><TemanMuWordmark /><span>Appendix A10 · Research evidence</span></div>
+        <div className="slides-section-top"><TemanMuWordmark /><span>Appendix A5 · Research evidence</span></div>
         <MonitoringResearchAppendix />
-        <div className="slides-page-bottom"><span>TemanMu · Township care</span><span>Appendix A10</span></div>
+        <div className="slides-page-bottom"><span>TemanMu · Township care</span><span>Appendix A5</span></div>
       </section>
-      <section className="slides-page monitoring-benefits" aria-label="Appendix A9: TemanMu advantages">
+      <section id="appendix-a6" className="slides-page monitoring-benefits" aria-label="Appendix A6: TemanMu advantages">
         <img className="slides-sdp-logo" src="/images/sdp-logo.png" alt="Sime Darby Property" />
-        <div className="slides-section-top"><TemanMuWordmark /><span>Appendix A9 · Our advantage</span></div>
+        <div className="slides-section-top"><TemanMuWordmark /><span>Appendix A6 · Our advantage</span></div>
         <TemanMuAdvantages />
-        <div className="slides-page-bottom"><span>TemanMu · Township care</span><span>Appendix A9</span></div>
+        <div className="slides-page-bottom"><span>TemanMu · Township care</span><span>Appendix A6</span></div>
       </section>
-      <section className="slides-page final-entry" aria-label="Appendix A11: Consent and safeguards for home entry">
+      <section id="appendix-a7" className="slides-page final-entry" aria-label="Appendix A7: Consent and safeguards for home entry">
         <img className="slides-sdp-logo" src="/images/sdp-logo.png" alt="Sime Darby Property" />
-        <div className="slides-section-top"><TemanMuWordmark /><span>Appendix A11 · Home-entry safeguards</span></div>
+        <div className="slides-section-top"><TemanMuWordmark /><span>Appendix A7 · Home-entry safeguards</span></div>
         <div className="final-model-heading">
           <p className="slides-eyebrow">Privacy during a welfare check</p>
           <h2>Her home. <em>Her permission.</em></h2>
@@ -878,8 +858,40 @@ export function FinalSlides() {
         </ol>
         <div className="final-entry-emergency"><PhoneCall aria-hidden="true" /><div><strong>Emergency? Call 999.</strong><p>Guards do not force entry. Public emergency responders handle forced access.</p></div></div>
         <p className="final-entry-note">Proposed procedure · Resident consent, caregiver involvement and operator approval; agree footage access and retention before the pilot.</p>
-        <div className="slides-page-bottom"><span>TemanMu · Township care</span><span>Appendix A11</span></div>
+        <div className="slides-page-bottom"><span>TemanMu · Township care</span><span>Appendix A7</span></div>
       </section>
+      {SHOW_APPENDIX_BUSINESS_MODEL && <section id="appendix-a8" className="slides-page final-business-model" aria-label="Appendix A8: Proposed business model">
+        <img className="slides-sdp-logo" src="/images/sdp-logo.png" alt="Sime Darby Property" />
+        <div className="slides-section-top">
+          <p className="final-mentor-note">Mentor feedback: Who pays for installation and the ongoing service?</p>
+          <span>Appendix A8 · Business model</span>
+        </div>
+        <div className="final-model-heading">
+          <p className="slides-eyebrow">Proposed funding model</p>
+          <h2>Install once.<br /><em>Support through the township.</em></h2>
+          <p>For participating managed developments: a buyer-funded installation, with ongoing service budgeted within agreed maintenance fees.</p>
+        </div>
+        <div className="final-model-columns">
+          <section aria-labelledby="final-model-buyer">
+            <span className="final-model-number">01 · One-off</span>
+            <h3 id="final-model-buyer">Buyer pays for installation</h3>
+            <ul><li>Household monitoring equipment</li><li>Professional installation and commissioning</li><li>Setup, connectivity checks and onboarding</li></ul>
+            <p className="final-model-summary">A clear setup cost when the household joins.</p>
+          </section>
+          <section aria-labelledby="final-model-operator">
+            <span className="final-model-number">02 · Ongoing</span>
+            <h3 id="final-model-operator">Included in the agreed maintenance package</h3>
+            <ul><li>Platform, data connectivity and voice check-ins</li><li>Device upkeep, support and a replacement allowance</li><li>Agreed local response provision</li></ul>
+            <p className="final-model-summary">Management pays TemanMu under a service contract.</p>
+          </section>
+        </div>
+        <div className="final-model-conditions">
+          <div><strong>Budget it explicitly</strong><p>Confirm the eligible funding route, approvals and service cost with management. Inclusion may require a fee adjustment or subsidy.</p></div>
+          <div><strong>Individual-title homes</strong><p>Where no shared maintenance arrangement exists, use an agreed estate-service package or an opt-in household plan.</p></div>
+        </div>
+        <p className="final-model-note">Proposed model, not a confirmed fee arrangement. Ongoing service is funded through the package; it is not cost-free. Validate cost per enrolled home and response capacity.</p>
+        <div className="slides-page-bottom"><span>TemanMu · Township care</span><span>Appendix A8</span></div>
+      </section>}
     </div>
   </main>
 }

@@ -113,7 +113,7 @@ export function HardwareAppendix({ kind }: { kind: 'ct' | 'water' }) {
   const [reduced, setReduced] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches)
   const started = useRef(false)
   const isCt = kind === 'ct'
-  const appendix = isCt ? 'A6' : 'A7'
+  const appendix = isCt ? 'A9' : 'A10'
   const steps = isCt ? ctSteps : waterSteps
 
   useEffect(() => {

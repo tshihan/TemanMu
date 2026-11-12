@@ -494,7 +494,7 @@
 .slides-solution:has(.final-learns) .slides-sensor-visual { height: 180px; }
 .slides-solution:has(.final-learns) .slides-sensor-main-icon { width: 80px; height: 80px; stroke-width: 1.5; }
 .slides-solution:has(.final-learns) .slides-sensor-demo p { min-height: 148px; font-size: 15px; line-height: 1.4; }
-@media screen and (max-width: 850px) { .slides-solution:has(.final-learns) .slides-solution-columns { grid-template-columns: 1fr; } }
+@media screen and (max-width: 850px) { :where(.slides-root:not(.slides-fixed)) .slides-solution:has(.final-learns) .slides-solution-columns { grid-template-columns: 1fr; } }
 .slides-solution:has(.final-learns) .slides-sensor-water .slides-sensor-main-icon { transform: translateY(-18px); }
 .slides-solution:has(.final-learns) .slides-water-stream { top: calc(50% + 18px); width: 6px; height: 34px; margin-left: -3px; }
 
@@ -591,9 +591,20 @@
 .final-appendix-cover-copy h2 { margin: 0; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: 112px; font-weight: 400; line-height: 1; letter-spacing: -.04em; color: #a95130; }
 .final-appendix-cover-copy p:last-child { max-width: 460px; margin: 28px 0 0; color: #58534d; font-size: 22px; line-height: 1.45; }
 .final-appendix-cover-list { margin: 0; padding: 0; list-style: none; border-top: 1px solid #dcd2c3; }
-.final-appendix-cover-list li { display: flex; align-items: baseline; gap: 24px; padding: 14px 0; border-bottom: 1px solid #dcd2c3; color: #38352f; font-size: 22px; }
+.final-appendix-cover-list li { border-bottom: 1px solid #dcd2c3; font-size: 22px; }
+.final-appendix-cover-list a { display: flex; align-items: baseline; gap: 24px; padding: 14px 0; color: #38352f; text-decoration: none; transition: color .15s ease, padding-left .15s ease; }
+.final-appendix-cover-list a:hover, .final-appendix-cover-list a:focus-visible { color: #a95130; padding-left: 8px; }
+.final-appendix-cover-list a:focus-visible { outline: 2px solid #a95130; outline-offset: 2px; }
 .final-appendix-cover-list span { min-width: 48px; color: #a95130; font-size: 15px; font-weight: 750; letter-spacing: .06em; }
 @media screen and (max-width: 700px) {:where(.slides-root:not(.slides-fixed)) .final-appendix-cover-main { grid-template-columns: 1fr; gap: 32px; margin-top: 32px; }
   :where(.slides-root:not(.slides-fixed)) .final-appendix-cover-copy h2 { font-size: 72px; }
 }
 @media print {:where(.slides-root:not(.slides-fixed)) .final-appendix-cover { min-height: 0; } }
+
+/* Each slide is laid out once at 1600×900, then shrunk as a picture to fit the window.
+   CSS zoom re-lays out the text at every size, so line breaks shifted when the window was narrow (e.g. split screen).
+   The negative margins take back the space the unscaled canvas would leave behind. */
+@media screen {
+  .slides-scaled .slides-page { zoom: 1; transform: scale(var(--slides-zoom, 1)); transform-origin: 0 0; margin-right: calc(1600px * (var(--slides-zoom, 1) - 1)); margin-bottom: calc(900px * (var(--slides-zoom, 1) - 1)); }
+  .slides-scaled.slides-exporting .slides-page { transform: none; margin: 0; }
+}

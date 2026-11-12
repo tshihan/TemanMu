@@ -24,7 +24,7 @@ export function MonitoringEvidence() {
         <a className="monitoring-source" href="https://aging.jmir.org/2024/1/e60209/">Ding et al., JMIR Aging, 2024 ↗</a>
       </section>
     </div>
-    <p className="monitoring-scope">These studies motivate TemanMu’s design. They do not establish that TemanMu detects emergencies better. Full evidence: Appendix A10.</p>
+    <p className="monitoring-scope">These studies motivate TemanMu’s design. They do not establish that TemanMu detects emergencies better. Full evidence: Appendix A5.</p>
   </>
 }
 
