@@ -110,3 +110,12 @@
 .present-how .slides-how-companion2 { margin-bottom: clamp(8px, 1.2cqh, 18px); padding: clamp(5px, .9cqh, 9px) 0; }
 @media (max-width: 850px) {:where(.slides-root:not(.slides-fixed)) .present-how { height: auto; min-height: 100cqh; } :where(.slides-root:not(.slides-fixed)) .present-how .slides-how-outcome, :where(.slides-root:not(.slides-fixed)) .present-how .slides-how-outcomes-head { grid-template-columns: 1fr; } }
 @media print { :where(.slides-root:not(.slides-fixed)) .present-home-canvas { inset: 4% 0 2% 34%; } :where(.slides-root:not(.slides-fixed)) .present-problem, :where(.slides-root:not(.slides-fixed)) .present-how { height: 7.5in; } }
+/* Slide 1, after the presenter presses F: the room darkens as she hits the floor; W brings the light back as she gets up. */
+.present-home::after { content: ''; position: absolute; inset: 0; z-index: 4; pointer-events: none; opacity: 0; background: radial-gradient(ellipse 75% 80% at 62% 55%, #1a0f0b8c 0%, #120a07d9 100%); transition: opacity .9s ease; }
+.present-home.is-fallen::after { opacity: 1; transition: opacity 1.4s ease 1.7s; }
+.present-home-pin { z-index: 5; }
+.present-home.is-fallen .present-home-pin { background: #c0392b; animation: present-home-alarm 1.1s ease-in-out .5s infinite; }
+@keyframes present-home-alarm { 50% { box-shadow: 0 0 0 10px #c0392b00, 0 0 26px #e74c3c; } }
+@media (prefers-reduced-motion: reduce) { .present-home.is-fallen .present-home-pin { animation: none; } }
+@media print { .present-home::after { display: none; } }
+.slides-exporting .present-home::after { display: none; }
