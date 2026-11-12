@@ -1,6 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from 'react'
 import { BellRing, Camera, CreditCard, Droplets, Faucet, HeartHandshake, Home, Lightbulb, Lock, PhoneCall, ShieldCheck, Smartphone, Users, Watch, Zap } from 'lucide-react'
-import { startScene } from '../landing/scene'
 import { HardwareAppendix } from './HardwareAppendix'
 import { MonitoringResearchAppendix, TemanMuAdvantages } from './MonitoringEvidence'
 import './slides.css'
@@ -10,7 +9,7 @@ import './final-slides.css'
 // The 3D home pulls in three.js and the house models, so it loads on its own after the deck appears.
 const PresentHome = lazy(() => import('./PresentHome').then(module => ({ default: module.PresentHome })))
 
-const PAGE_COUNT = 11
+const PAGE_COUNT = 10
 const SHOW_APPENDIX_BUSINESS_MODEL = false
 const SHOW_HARDWARE_APPENDICES = false
 const APPENDIX_CONTENTS = [
@@ -33,7 +32,6 @@ function jumpToAppendix(event: MouseEvent<HTMLAnchorElement>) {
 }
 // Hourly allowance, 6 AM to 11 PM. 'o' marks the outing allowance (card taps); the rest are quiet-gap allowances.
 const LEARNS_HOURS: Array<[number, string?]> = [[22],[20],[22],[52,'o'],[52,'o'],[18],[20],[44],[50],[44],[20],[18],[22],[20],[24],[28],[88],[100]]
-const names = ['TAN SHI HAN', 'LIM JING JET', 'KHOR HONG JUN', 'LEE YANG', 'CHO JING LING']
 
 function TemanMuWordmark() {
   return <span className="slides-wordmark">
@@ -116,7 +114,6 @@ const SLIDE_CANVAS_WIDTH = 1600 // matches .slides-fixed .slides-page in slides.
 
 export function FinalSlides() {
   const howFlow = useHowFlowDot()
-  const sceneRef = useRef<HTMLDivElement>(null)
   const rootRef = useRef<HTMLElement>(null)
   const [pptxStatus, setPptxStatus] = useState('')
   const [pptxExporting, setPptxExporting] = useState(false)
@@ -170,7 +167,6 @@ export function FinalSlides() {
       window.removeEventListener('afterprint', unfreeze)
     }
   }, [])
-  useEffect(() => startScene(sceneRef.current!, 'presentation'), [])
   useEffect(() => {
     const root = rootRef.current
     if (!root || !('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
@@ -283,23 +279,8 @@ export function FinalSlides() {
         <p className="present-problem-sources">Sources: <a href="https://iku.nih.gov.my/images/IKU/Document/REPORT/NHMS2018/FactsheetElderlyAged60yearsorMorefinal.pdf" target="_blank" rel="noreferrer">NHMS 2018 Elderly Health</a> · <a href="https://iku.nih.gov.my/images/nhms-2025/infographic-eng.pdf" target="_blank" rel="noreferrer">NHMS 2025 Key Findings</a> · <a href="https://iku.nih.gov.my/images/nhms-2025/nhms-2025-volume-2.pdf#page=51" target="_blank" rel="noreferrer">NHMS 2025 Vol. II · Falls, p. 39</a></p>
       </PageFrame>
 
-      <PageFrame number={3} className="slides-cover present-cover">
-        <div ref={sceneRef} className="slides-live-scene" aria-hidden="true"><canvas data-lp="canvas" /></div>
-        <div className="slides-cover-top">
-          <TemanMuWordmark />
-          <span className="present-team-name">Team Albert and Einstein</span>
-        </div>
-        <div className="slides-cover-main">
-          <div className="slides-cover-copy">
-            <h1>TemanMu</h1>
-            <p className="slides-cover-tagline">Reassurance at home.<br /><em>Connection in the community.</em></p>
-            <ul className="present-names">{names.map(name => <li key={name}>{name}</li>)}</ul>
-          </div>
-        </div>
-      </PageFrame>
-
-      <PageFrame number={4} className="slides-solution">
-        <div className="slides-section-top"><TemanMuWordmark /><span>04 · The solution</span></div>
+      <PageFrame number={3} className="slides-solution">
+        <div className="slides-section-top"><TemanMuWordmark /><span>03 · The solution</span></div>
         <div className="slides-solution-heading" data-slide-reveal>
           <p className="slides-eyebrow">The solution</p>
         </div>
@@ -354,8 +335,8 @@ export function FinalSlides() {
         </div>
       </PageFrame>
 
-      <PageFrame number={5} className="slides-how present-how">
-        <div className="slides-section-top"><TemanMuWordmark /><span>05 · How it works</span></div>
+      <PageFrame number={4} className="slides-how present-how">
+        <div className="slides-section-top"><TemanMuWordmark /><span>04 · How it works</span></div>
         <div className="slides-how-heading" data-slide-reveal>
           <p className="slides-eyebrow">How it works</p>
           <h2>Sensors notice. TemanMu checks. <em>People respond.</em></h2>
@@ -424,14 +405,14 @@ export function FinalSlides() {
           <p><strong>Companion on ordinary days</strong> · Family can invite her to nearby activities, match her with a volunteer buddy, or introduce her to a neighbour on the same routine.</p>
         </div>
       </PageFrame>
-      <PageFrame number={6} className="monitoring-benefits">
-        <div className="slides-section-top"><TemanMuWordmark /><span>06 · Innovative advantages</span></div>
+      <PageFrame number={5} className="monitoring-benefits">
+        <div className="slides-section-top"><TemanMuWordmark /><span>05 · Innovative advantages</span></div>
         <TemanMuAdvantages eyebrow="Innovative advantages" />
       </PageFrame>
-      <PageFrame number={7} className="final-installation">
+      <PageFrame number={6} className="final-installation">
         <div className="slides-section-top">
           <p className="final-mentor-note">Mentor feedback: How can TemanMu be implemented in existing homes?</p>
-          <span>07 · Feasibility</span>
+          <span>06 · Feasibility</span>
         </div>
         <div className="final-installation-heading">
           <h2>Reuse existing meters. <em>Connect through utilities.</em></h2>
@@ -481,10 +462,10 @@ export function FinalSlides() {
           <p>Sources: <a href="https://www.tnb.com.my/doing-business-with-tnb/education-research-consultancy/tnb-research" target="_blank" rel="noopener noreferrer">TNB Research</a> · <a href="https://www.tnblabs.com.my/digital-solutions" target="_blank" rel="noopener noreferrer">TNB LABS</a> · <a href="https://www.airselangor.com/about-us/innovation-and-technology" target="_blank" rel="noopener noreferrer">Air Selangor innovation</a> · <a href="https://hydrohub.airselangor.com/content/uploads/2023/01/PerformanceReport2019-2.pdf" target="_blank" rel="noopener noreferrer">NB-IoT pilot</a></p>
         </div>
       </PageFrame>
-      <PageFrame number={8} className="final-landed">
+      <PageFrame number={7} className="final-landed">
         <div className="slides-section-top">
           <p className="final-mentor-note">Mentor feedback: How does this work for landed homes without a dedicated guardhouse?</p>
-          <span>08 · Landed homes</span>
+          <span>07 · Landed homes</span>
         </div>
         <div className="final-landed-heading">
           <h2>Extending TemanMu <em>to landed homes</em></h2>
@@ -514,8 +495,8 @@ export function FinalSlides() {
         </div>
         <p className="final-landed-scope">Subject to agreement with the residents’ association and household consent. Dashboard: UI demo with simulated households and cases.</p>
       </PageFrame>
-      <PageFrame number={9} className="slides-impact final-impact">
-        <div className="slides-section-top"><TemanMuWordmark /><span>09 · Impact</span></div>
+      <PageFrame number={8} className="slides-impact final-impact">
+        <div className="slides-section-top"><TemanMuWordmark /><span>08 · Impact</span></div>
         <div className="slides-impact-heading" data-slide-reveal>
           <p className="slides-eyebrow">Impact · Three wins</p>
           <h2>More independence. <em>More peace of mind.</em><br />A stronger community.</h2>
@@ -558,10 +539,10 @@ export function FinalSlides() {
         </div>
         <p className="slides-impact-caveat">Proposed pilot targets, not achieved results · Measure resident confidence, caregiver reassurance, and prospective buyer perceptions through surveys.</p>
       </PageFrame>
-      <PageFrame number={10} className="final-market">
+      <PageFrame number={9} className="final-market">
         <div className="slides-section-top">
           <p className="final-mentor-note">Mentor feedback: How does TemanMu support Sime Darby Property’s business?</p>
-          <span>10 · Business viability</span>
+          <span>09 · Business viability</span>
         </div>
         <div className="final-viability-numbers" aria-label="Older residents in Sime Darby Property's home districts, from DOSM and NHMS" data-slide-reveal>
           <section className="final-viability-hero" aria-labelledby="final-viability-alone-title">
@@ -627,13 +608,18 @@ export function FinalSlides() {
         <p className="final-market-note">Market context, not proven demand. District living-alone figures apply the national NHMS rate to DOSM district populations; no district-level survey exists yet. Pricing, take-up and sales impact require pilot validation.</p>
         <p className="final-market-sources">Sources: <a href="https://open.dosm.gov.my/data-catalogue/population_district?state=selangor&amp;district=petaling&amp;visual=table" target="_blank" rel="noopener noreferrer">DOSM · Population by district, 2020 &amp; 2026</a> · <a href="https://iku.nih.gov.my/images/nhms-2025/infographic-eng.pdf" target="_blank" rel="noopener noreferrer">MOH · NHMS 2025, infographics 1 &amp; 3</a></p>
       </PageFrame>
-      <PageFrame number={11} className="final-closing">
-        <div className="slides-section-top"><TemanMuWordmark /><span>11 · Our promise</span></div>
+      <PageFrame number={10} className="final-closing">
+        <div className="slides-section-top"><TemanMuWordmark /><span>10 · Closing value proposition</span></div>
         <div className="final-closing-main">
           <div className="final-closing-copy">
-            <p className="slides-eyebrow">TemanMu · Independent living, connected care</p>
+            <p className="slides-eyebrow">Closing value proposition</p>
             <h2>Mum keeps her independence.<br /><em>Sarah stays connected.</em></h2>
             <p className="final-closing-value">A quiet change at home becomes a check-in. An unresolved concern reaches family and nearby support.</p>
+            <ul className="final-closing-pills" aria-label="How TemanMu respects her privacy">
+              <li>No cameras</li>
+              <li>Nothing to wear</li>
+              <li>Learns her routine</li>
+            </ul>
             <p className="final-closing-township">Connecting the home, the family and the township.</p>
           </div>
           <figure ref={closingArtRef} className={`final-closing-art${closingVisible ? ' is-visible' : ''}`}>
@@ -655,6 +641,7 @@ export function FinalSlides() {
             <figcaption><span className="final-close-caption-scene">{closingScene === 0 ? 'At work. Still connected.' : 'Together, when she can be.'}</span><span>Sarah &amp; Madam Lee · connected through TemanMu</span></figcaption>
           </figure>
         </div>
+        <p className="final-closing-tagline">When she lives alone, silence is the only alarm. <em>TemanMu hears it.</em></p>
       </PageFrame>
       <section className="slides-page final-appendix-cover" aria-label="Appendix">
         <img className="slides-sdp-logo" src="/images/sdp-logo.png" alt="Sime Darby Property" />
