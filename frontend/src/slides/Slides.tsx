@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { Brain, Camera, DoorOpen, Droplets, Faucet, HeartHandshake, Home, Layers, Lightbulb, MousePointer2, PhoneCall, ShieldCheck, Users, Watch, Zap } from 'lucide-react'
 import { startScene } from '../landing/scene'
+import { useSaveAsPdf } from './useSaveAsPdf'
 import './slides.css'
 
 const PAGE_COUNT = 13
@@ -97,7 +98,7 @@ function useHowFlowDot() {
   return { wrapRef, box2Ref, feedRef, dotRef, rowRefs }
 }
 
-// Set to false to hide the PDF/PPTX export buttons (e.g. while the repo is public).
+// Set to false to hide the PDF export button (e.g. while the repo is public).
 const EXPORT_ENABLED = true
 
 export function Slides() {
@@ -105,23 +106,8 @@ export function Slides() {
   const sceneRef = useRef<HTMLDivElement>(null)
   const thanksSceneRef = useRef<HTMLDivElement>(null)
   const rootRef = useRef<HTMLElement>(null)
-  const [pptxStatus, setPptxStatus] = useState('')
-  const [pptxExporting, setPptxExporting] = useState(false)
-  const onExportPptx = async () => {
-    if (!rootRef.current || pptxExporting) return
-    setPptxExporting(true)
-    setPptxStatus('Preparing slides…')
-    try {
-      const { exportSlidesToPptx } = await import('./exportPptx')
-      await exportSlidesToPptx(rootRef.current, (current, total) => setPptxStatus(`Preparing slide ${current} of ${total}…`))
-      setPptxStatus('PowerPoint downloaded.')
-    } catch (error) {
-      console.error('PowerPoint export failed', error)
-      setPptxStatus('PowerPoint export failed. Please try again.')
-    } finally {
-      setPptxExporting(false)
-    }
-  }
+  const { saveAsPdf, preparingPdf, pdfStatus } = useSaveAsPdf(rootRef)
+
   useEffect(() => {
     const root = rootRef.current
     if (!root) return
@@ -162,9 +148,8 @@ export function Slides() {
       <a href="/">← TemanMu</a>
       <span>Albert & Einstein · {PAGE_COUNT} of {PAGE_COUNT} sections drafted</span>
       {EXPORT_ENABLED && <div className="slides-toolbar-actions">
-        <span className="slides-export-status" role="status">{pptxStatus}</span>
-        <button type="button" onClick={() => window.print()}>Save as PDF</button>
-        <button type="button" onClick={onExportPptx} disabled={pptxExporting}>{pptxExporting ? 'Exporting…' : 'Export PPTX'}</button>
+        <span className="slides-export-status" role="status">{pdfStatus}</span>
+        <button type="button" onClick={saveAsPdf} disabled={preparingPdf}>{preparingPdf ? 'Preparing PDF…' : 'Save as PDF'}</button>
       </div>}
     </div>
     <div className="slides-deck" aria-label="TemanMu presentation">

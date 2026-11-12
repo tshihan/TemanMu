@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from 'react'
 import { BellRing, Camera, CreditCard, Droplets, Faucet, HeartHandshake, Home, Lightbulb, Lock, PhoneCall, ShieldCheck, Smartphone, Users, Watch, Zap } from 'lucide-react'
+import { useSaveAsPdf } from './useSaveAsPdf'
 import { HardwareAppendix } from './HardwareAppendix'
 import { MonitoringResearchAppendix, TemanMuAdvantages } from './MonitoringEvidence'
 import './slides.css'
@@ -115,8 +116,7 @@ const SLIDE_CANVAS_WIDTH = 1600 // matches .slides-fixed .slides-page in slides.
 export function FinalSlides() {
   const howFlow = useHowFlowDot()
   const rootRef = useRef<HTMLElement>(null)
-  const [pptxStatus, setPptxStatus] = useState('')
-  const [pptxExporting, setPptxExporting] = useState(false)
+  const { saveAsPdf, preparingPdf, pdfStatus } = useSaveAsPdf(rootRef)
   const [closingScene, setClosingScene] = useState<0 | 1>(0)
   const [closingVisible, setClosingVisible] = useState(false)
   const [closingReducedMotion, setClosingReducedMotion] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches)
@@ -134,22 +134,8 @@ export function FinalSlides() {
     const timer = window.setTimeout(() => setClosingScene(scene => scene === 0 ? 1 : 0), 6500)
     return () => window.clearTimeout(timer)
   }, [closingVisible, closingReducedMotion, closingScene])
-  const onExportPptx = async () => {
-    if (!rootRef.current || pptxExporting) return
-    setPptxExporting(true)
-    setPptxStatus('Preparing slides…')
-    try {
-      const { exportSlidesToPptx } = await import('./exportPptx')
-      await exportSlidesToPptx(rootRef.current, (current, total) => setPptxStatus(`Preparing slide ${current} of ${total}…`), 'TemanMu-final-deck.pptx')
-      setPptxStatus('PowerPoint downloaded.')
-    } catch (error) {
-      console.error('PowerPoint export failed', error)
-      setPptxStatus('PowerPoint export failed. Please try again.')
-    } finally {
-      setPptxExporting(false)
-    }
-  }
-  // Every slide is a fixed 1600×900 (16:9) canvas, scaled to the window; printing uses the same still frames as the PowerPoint export.
+
+  // Every slide is a fixed 1600×900 (16:9) canvas, scaled to the window; printing captures still frames on one page per slide.
   useEffect(() => {
     const root = rootRef.current
     if (!root) return
@@ -212,11 +198,10 @@ export function FinalSlides() {
   }, [])
 
   return <main ref={rootRef} className="slides-root slides-fixed slides-scaled">
-    {/* Kept small and out of the way so it doesn't distract while presenting; hidden in the PDF and PPTX. */}
+    {/* Kept small and out of the way so it doesn't distract while presenting; hidden in the PDF. */}
     <div className="final-export">
-      <span className="slides-export-status" role="status">{pptxStatus}</span>
-      <button type="button" onClick={() => window.print()}>Save as PDF</button>
-      <button type="button" onClick={onExportPptx} disabled={pptxExporting}>{pptxExporting ? 'Exporting…' : 'Export PPTX'}</button>
+      <span className="slides-export-status" role="status">{pdfStatus}</span>
+      <button type="button" onClick={saveAsPdf} disabled={preparingPdf}>{preparingPdf ? 'Preparing PDF…' : 'Save as PDF'}</button>
     </div>
     <div className="slides-deck" aria-label="TemanMu presentation">
       <PageFrame number={1} className="present-home">
