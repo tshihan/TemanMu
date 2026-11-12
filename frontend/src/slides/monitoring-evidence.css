@@ -19,11 +19,11 @@
 .monitoring-wear-stat > strong > span { font-size: .6em; }
 .monitoring-wear-stat > p { margin: 0; color: #2a2b2f; font-size: 24px; line-height: 1.4; }
 .monitoring-scope { margin: auto 0 18px; padding-top: 24px; color: #625b53; font-size: 15px; line-height: 1.45; }
-.monitoring-advantages { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 48px; margin: 48px 0 0; padding: 0; list-style: none; }
+.monitoring-advantages { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 40px; margin: 48px 0 0; padding: 0; list-style: none; }
 .monitoring-advantages > li { border-top: 2px solid #a95130; padding-top: 24px; }
-.monitoring-advantages h3 { margin: 24px 0 20px; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: 38px; font-weight: 400; line-height: 1.15; letter-spacing: -.02em; }
-.monitoring-advantages p { min-height: 100px; margin: 0 0 24px; color: #4e4a45; font-size: 22px; line-height: 1.5; }
-.monitoring-advantages strong { display: block; max-width: 370px; color: #8b4429; font-size: 21px; line-height: 1.4; }
+.monitoring-advantages h3 { margin: 24px 0 20px; font-family: 'Iowan Old Style', Baskerville, Georgia, serif; font-size: 32px; font-weight: 400; line-height: 1.15; letter-spacing: -.02em; }
+.monitoring-advantages p { min-height: 132px; margin: 0 0 24px; color: #4e4a45; font-size: 20px; line-height: 1.5; }
+.monitoring-advantages strong { display: block; max-width: 370px; color: #8b4429; font-size: 19px; line-height: 1.4; }
 .monitoring-research .monitoring-heading { margin-top: 20px; }
 .monitoring-research .monitoring-heading h2 { font-size: 48px; }
 .monitoring-research-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 24px; margin-top: 24px; }

@@ -28,10 +28,10 @@ export function MonitoringEvidence() {
   </>
 }
 
-export function TemanMuAdvantages() {
+export function TemanMuAdvantages({ eyebrow = 'The TemanMu advantage' }: { eyebrow?: string }) {
   return <>
     <div className="monitoring-heading">
-      <p className="slides-eyebrow">The TemanMu advantage</p>
+      <p className="slides-eyebrow">{eyebrow}</p>
       <h2>Fits her life.<br /><em>Connects her to help.</em></h2>
     </div>
     <ol className="monitoring-advantages">
@@ -42,19 +42,25 @@ export function TemanMuAdvantages() {
         <strong>Nothing new to wear, charge or log each day.</strong>
       </li>
       <li>
-        <span className="monitoring-label">02 · Privacy</span>
+        <span className="monitoring-label">02 · Learns her routine</span>
+        <h3>Knows her normal,<br />not a fixed timer</h3>
+        <p>Check-in timing adapts to her own naps, outings and nights, so a long nap is not mistaken for a concern.</p>
+        <strong>Built to keep false alarms rare.</strong>
+      </li>
+      <li>
+        <span className="monitoring-label">03 · Privacy</span>
         <h3>Reassurance without<br />indoor video</h3>
         <p>Looks for changes in household activity without recording her image or private conversations.</p>
         <strong>Consent and limited data sharing guide the design.</strong>
       </li>
       <li>
-        <span className="monitoring-label">03 · Human help</span>
-        <h3>A clear path<br />to a person</h3>
-        <p>An unusual quiet period prompts a check-in, then caregiver or designated responder escalation if unanswered.</p>
-        <strong>Notice → check in → connect to help.</strong>
+        <span className="monitoring-label">04 · Human help</span>
+        <h3>A set response,<br />step by step</h3>
+        <p>TemanMu calls her first. No answer: family and the township guard are alerted together, a guard checks in person, and the outcome is recorded.</p>
+        <strong>Call → alert → check → record.</strong>
       </li>
     </ol>
-    <p className="monitoring-scope">Designed advantages. Alert reliability, privacy controls and responder arrangements require pilot validation. Utility activity is an indirect clue, not confirmation of safety.</p>
+    <p className="monitoring-scope">Designed advantages. Routine learning, alert reliability, privacy controls and responder arrangements require pilot validation. Utility activity is an indirect clue, not confirmation of safety.</p>
   </>
 }
 

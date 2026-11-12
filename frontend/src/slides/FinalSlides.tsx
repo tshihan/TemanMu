@@ -10,7 +10,7 @@ import './final-slides.css'
 // The 3D home pulls in three.js and the house models, so it loads on its own after the deck appears.
 const PresentHome = lazy(() => import('./PresentHome').then(module => ({ default: module.PresentHome })))
 
-const PAGE_COUNT = 10
+const PAGE_COUNT = 11
 const SHOW_APPENDIX_BUSINESS_MODEL = false
 const SHOW_HARDWARE_APPENDICES = false
 const APPENDIX_CONTENTS = [
@@ -19,9 +19,8 @@ const APPENDIX_CONTENTS = [
   { id: 'A3', title: 'Elderly usability' },
   { id: 'A4', title: 'Privacy' },
   { id: 'A5', title: 'Research evidence' },
-  { id: 'A6', title: 'Our advantage' },
-  { id: 'A7', title: 'Home-entry safeguards' },
-  { id: 'A8', title: 'Business model', show: SHOW_APPENDIX_BUSINESS_MODEL },
+  { id: 'A6', title: 'Home-entry safeguards' },
+  { id: 'A7', title: 'Business model', show: SHOW_APPENDIX_BUSINESS_MODEL },
 ]
 
 // Contents links scroll to their appendix page smoothly instead of jumping.
@@ -425,10 +424,14 @@ export function FinalSlides() {
           <p><strong>Companion on ordinary days</strong> · Family can invite her to nearby activities, match her with a volunteer buddy, or introduce her to a neighbour on the same routine.</p>
         </div>
       </PageFrame>
-      <PageFrame number={6} className="final-installation">
+      <PageFrame number={6} className="monitoring-benefits">
+        <div className="slides-section-top"><TemanMuWordmark /><span>06 · Innovative advantages</span></div>
+        <TemanMuAdvantages eyebrow="Innovative advantages" />
+      </PageFrame>
+      <PageFrame number={7} className="final-installation">
         <div className="slides-section-top">
           <p className="final-mentor-note">Mentor feedback: How can TemanMu be implemented in existing homes?</p>
-          <span>06 · Feasibility</span>
+          <span>07 · Feasibility</span>
         </div>
         <div className="final-installation-heading">
           <h2>Reuse existing meters. <em>Connect through utilities.</em></h2>
@@ -478,10 +481,10 @@ export function FinalSlides() {
           <p>Sources: <a href="https://www.tnb.com.my/doing-business-with-tnb/education-research-consultancy/tnb-research" target="_blank" rel="noopener noreferrer">TNB Research</a> · <a href="https://www.tnblabs.com.my/digital-solutions" target="_blank" rel="noopener noreferrer">TNB LABS</a> · <a href="https://www.airselangor.com/about-us/innovation-and-technology" target="_blank" rel="noopener noreferrer">Air Selangor innovation</a> · <a href="https://hydrohub.airselangor.com/content/uploads/2023/01/PerformanceReport2019-2.pdf" target="_blank" rel="noopener noreferrer">NB-IoT pilot</a></p>
         </div>
       </PageFrame>
-      <PageFrame number={7} className="final-landed">
+      <PageFrame number={8} className="final-landed">
         <div className="slides-section-top">
           <p className="final-mentor-note">Mentor feedback: How does this work for landed homes without a dedicated guardhouse?</p>
-          <span>07 · Landed homes</span>
+          <span>08 · Landed homes</span>
         </div>
         <div className="final-landed-heading">
           <h2>Extending TemanMu <em>to landed homes</em></h2>
@@ -511,8 +514,8 @@ export function FinalSlides() {
         </div>
         <p className="final-landed-scope">Subject to agreement with the residents’ association and household consent. Dashboard: UI demo with simulated households and cases.</p>
       </PageFrame>
-      <PageFrame number={8} className="slides-impact final-impact">
-        <div className="slides-section-top"><TemanMuWordmark /><span>08 · Impact</span></div>
+      <PageFrame number={9} className="slides-impact final-impact">
+        <div className="slides-section-top"><TemanMuWordmark /><span>09 · Impact</span></div>
         <div className="slides-impact-heading" data-slide-reveal>
           <p className="slides-eyebrow">Impact · Three wins</p>
           <h2>More independence. <em>More peace of mind.</em><br />A stronger community.</h2>
@@ -555,10 +558,10 @@ export function FinalSlides() {
         </div>
         <p className="slides-impact-caveat">Proposed pilot targets, not achieved results · Measure resident confidence, caregiver reassurance, and prospective buyer perceptions through surveys.</p>
       </PageFrame>
-      <PageFrame number={9} className="final-market">
+      <PageFrame number={10} className="final-market">
         <div className="slides-section-top">
           <p className="final-mentor-note">Mentor feedback: How does TemanMu support Sime Darby Property’s business?</p>
-          <span>09 · Business viability</span>
+          <span>10 · Business viability</span>
         </div>
         <div className="final-viability-numbers" aria-label="Older residents in Sime Darby Property's home districts, from DOSM and NHMS" data-slide-reveal>
           <section className="final-viability-hero" aria-labelledby="final-viability-alone-title">
@@ -624,8 +627,8 @@ export function FinalSlides() {
         <p className="final-market-note">Market context, not proven demand. District living-alone figures apply the national NHMS rate to DOSM district populations; no district-level survey exists yet. Pricing, take-up and sales impact require pilot validation.</p>
         <p className="final-market-sources">Sources: <a href="https://open.dosm.gov.my/data-catalogue/population_district?state=selangor&amp;district=petaling&amp;visual=table" target="_blank" rel="noopener noreferrer">DOSM · Population by district, 2020 &amp; 2026</a> · <a href="https://iku.nih.gov.my/images/nhms-2025/infographic-eng.pdf" target="_blank" rel="noopener noreferrer">MOH · NHMS 2025, infographics 1 &amp; 3</a></p>
       </PageFrame>
-      <PageFrame number={10} className="final-closing">
-        <div className="slides-section-top"><TemanMuWordmark /><span>10 · Our promise</span></div>
+      <PageFrame number={11} className="final-closing">
+        <div className="slides-section-top"><TemanMuWordmark /><span>11 · Our promise</span></div>
         <div className="final-closing-main">
           <div className="final-closing-copy">
             <p className="slides-eyebrow">TemanMu · Independent living, connected care</p>
@@ -830,15 +833,9 @@ export function FinalSlides() {
         <MonitoringResearchAppendix />
         <div className="slides-page-bottom"><span>TemanMu · Township care</span><span>Appendix A5</span></div>
       </section>
-      <section id="appendix-a6" className="slides-page monitoring-benefits" aria-label="Appendix A6: TemanMu advantages">
+      <section id="appendix-a6" className="slides-page final-entry" aria-label="Appendix A6: Consent and safeguards for home entry">
         <img className="slides-sdp-logo" src="/images/sdp-logo.png" alt="Sime Darby Property" />
-        <div className="slides-section-top"><TemanMuWordmark /><span>Appendix A6 · Our advantage</span></div>
-        <TemanMuAdvantages />
-        <div className="slides-page-bottom"><span>TemanMu · Township care</span><span>Appendix A6</span></div>
-      </section>
-      <section id="appendix-a7" className="slides-page final-entry" aria-label="Appendix A7: Consent and safeguards for home entry">
-        <img className="slides-sdp-logo" src="/images/sdp-logo.png" alt="Sime Darby Property" />
-        <div className="slides-section-top"><TemanMuWordmark /><span>Appendix A7 · Home-entry safeguards</span></div>
+        <div className="slides-section-top"><TemanMuWordmark /><span>Appendix A6 · Home-entry safeguards</span></div>
         <div className="final-model-heading">
           <p className="slides-eyebrow">Privacy during a welfare check</p>
           <h2>Her home. <em>Her permission.</em></h2>
@@ -858,13 +855,13 @@ export function FinalSlides() {
         </ol>
         <div className="final-entry-emergency"><PhoneCall aria-hidden="true" /><div><strong>Emergency? Call 999.</strong><p>Guards do not force entry. Public emergency responders handle forced access.</p></div></div>
         <p className="final-entry-note">Proposed procedure · Resident consent, caregiver involvement and operator approval; agree footage access and retention before the pilot.</p>
-        <div className="slides-page-bottom"><span>TemanMu · Township care</span><span>Appendix A7</span></div>
+        <div className="slides-page-bottom"><span>TemanMu · Township care</span><span>Appendix A6</span></div>
       </section>
-      {SHOW_APPENDIX_BUSINESS_MODEL && <section id="appendix-a8" className="slides-page final-business-model" aria-label="Appendix A8: Proposed business model">
+      {SHOW_APPENDIX_BUSINESS_MODEL && <section id="appendix-a7" className="slides-page final-business-model" aria-label="Appendix A7: Proposed business model">
         <img className="slides-sdp-logo" src="/images/sdp-logo.png" alt="Sime Darby Property" />
         <div className="slides-section-top">
           <p className="final-mentor-note">Mentor feedback: Who pays for installation and the ongoing service?</p>
-          <span>Appendix A8 · Business model</span>
+          <span>Appendix A7 · Business model</span>
         </div>
         <div className="final-model-heading">
           <p className="slides-eyebrow">Proposed funding model</p>
@@ -890,7 +887,7 @@ export function FinalSlides() {
           <div><strong>Individual-title homes</strong><p>Where no shared maintenance arrangement exists, use an agreed estate-service package or an opt-in household plan.</p></div>
         </div>
         <p className="final-model-note">Proposed model, not a confirmed fee arrangement. Ongoing service is funded through the package; it is not cost-free. Validate cost per enrolled home and response capacity.</p>
-        <div className="slides-page-bottom"><span>TemanMu · Township care</span><span>Appendix A8</span></div>
+        <div className="slides-page-bottom"><span>TemanMu · Township care</span><span>Appendix A7</span></div>
       </section>}
     </div>
   </main>
