@@ -392,7 +392,7 @@ export function FinalSlides() {
                 <div><span>Unusual Inactivity</span><h3>Quiet for longer than usual</h3></div>
                 <div className="slides-how-chain final-how-response">
                   <div><b>TemanMu calls her</b><i>→</i><b>No answer: family + township alerted</b></div>
-                  <div><i>→</i><b>Guard / Auxiliary Police checks</b><i>→</i><b>Records outcome</b></div>
+                  <div><i>→</i><b>Guard checks</b><i>→</i><b>Records outcome</b></div>
                   <div><i>→</i><b>If emergency: call 999 immediately</b><i>→</i><b>Update incident log</b></div>
                 </div>
               </div>
