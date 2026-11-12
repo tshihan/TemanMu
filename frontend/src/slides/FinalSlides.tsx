@@ -211,7 +211,7 @@ export function FinalSlides() {
           <p className="slides-eyebrow">Meet Madam Lee</p>
           <h2>Madam Lee, <em>78</em></h2>
           <ul className="present-home-facts">
-            <li>Lives on her own in a township flat</li>
+            <li>Lives on her own in Putra Heights</li>
             <li>Her children work in the city and visit when they can</li>
             <li>Cooks, tidies and gets through most days by herself</li>
           </ul>
