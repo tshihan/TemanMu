@@ -21,12 +21,15 @@ export const SCENARIO_DESCRIPTIONS: Record<ScenarioId, string> = {
   falseAlarmRecovery: 'She is napping, wakes to the call and confirms she is okay. The concern resolves.',
 }
 
+/** Demo seconds for the unanswered call and grace period, played as a fast-forward of CALL_STORY_MINUTES. */
+export const CALL_FAST_FORWARD_SECONDS = 6
+export const CALL_STORY_MINUTES = 5
 /** Simulated call pacing per quiet-gap scenario. A quick unanswered call for inactivity;
  * for the nap, the ring outlasts her waking and answering the bedside phone (about 12s). */
 export const SCENARIO_CALL_TIMING: Partial<Record<ScenarioId, CallTiming>> = {
-  unusualInactivity: { grace_period_seconds: 15, voice_call_ring_seconds: 2 },
-  notBackYet: { grace_period_seconds: 15, voice_call_ring_seconds: 2 },
-  tappedInNoActivity: { grace_period_seconds: 15, voice_call_ring_seconds: 2 },
+  unusualInactivity: { grace_period_seconds: CALL_FAST_FORWARD_SECONDS, voice_call_ring_seconds: 2 },
+  notBackYet: { grace_period_seconds: CALL_FAST_FORWARD_SECONDS, voice_call_ring_seconds: 2 },
+  tappedInNoActivity: { grace_period_seconds: CALL_FAST_FORWARD_SECONDS, voice_call_ring_seconds: 2 },
   falseAlarmRecovery: { grace_period_seconds: 16, voice_call_ring_seconds: 14 },
 }
 
@@ -104,7 +107,7 @@ export function scenarioSteps(id: ScenarioId, timing: ScenarioTiming): ScenarioS
     case 'notBackYet': return [
       ...leaveViaLobby(timing),
       { kind: 'watchGap', gap: 'outing', label: 'Fast-forward: out longer than her usual outing, with no tap back in' },
-      { kind: 'noAnswer', label: 'Simulated call to Mum; waiting for an answer' },
+      { kind: 'noAnswer', label: 'Fast-forward: simulated call to Mum; waiting for an answer' },
       { kind: 'alert', label: 'No answer; caregiver and township alerted: not back yet' },
       { kind: 'hold', label: 'Township searches outside; outcome awaits a human report' },
     ]
@@ -114,7 +117,7 @@ export function scenarioSteps(id: ScenarioId, timing: ScenarioTiming): ScenarioS
       { kind: 'move', to: 'corridor', label: 'Walking back along the corridor' },
       { kind: 'animate', animation: 'collapse', label: 'Audience-only fall in the corridor; no sensor event' },
       { kind: 'watchGap', gap: 'arrival', label: 'Fast-forward: tapped in, but no water or power used at home' },
-      { kind: 'noAnswer', label: 'Simulated call to Mum; waiting for an answer' },
+      { kind: 'noAnswer', label: 'Fast-forward: simulated call to Mum; waiting for an answer' },
       { kind: 'alert', label: 'No answer; caregiver and township alerted: tapped in, no activity' },
       { kind: 'hold', label: 'Township checks the corridor and lift; outcome awaits a human report' },
     ]
@@ -123,7 +126,7 @@ export function scenarioSteps(id: ScenarioId, timing: ScenarioTiming): ScenarioS
       { kind: 'animate', animation: 'collapse', label: 'Audience-only fall; no sensor event' },
       { kind: 'wait', seconds: 2, label: 'No water use; the home remains quiet' },
       { kind: 'quietGap', label: quietGapLabel },
-      { kind: 'noAnswer', label: 'Simulated call to Mum; waiting for an answer' },
+      { kind: 'noAnswer', label: 'Fast-forward: simulated call to Mum; waiting for an answer' },
       { kind: 'alert', label: 'No answer; waiting for caregiver and township alert' },
       { kind: 'dispatchResponder', label: 'Waiting for Guard Ali to acknowledge on the township dashboard' },
       { kind: 'responderVisible', label: 'Guard Ali arrives outside A-105' },

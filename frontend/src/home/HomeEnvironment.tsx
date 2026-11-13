@@ -14,7 +14,7 @@ import { TownshipResponder, type ResponderCommand } from './character/TownshipRe
 import { ROOM_LABELS, type RoomId, type Waypoint } from './character/navigation'
 import { INITIAL_OBJECT_STATES, interactionPrompt, type InteractionBindings, type InteractionId, type ObjectStates, type TelephoneState } from './interactions/registry'
 import { ScenarioController, type ScenarioActions } from './scenarios/ScenarioController'
-import { DEFAULT_TIMING, RESPONDER_KNOCK_SECONDS, SCENARIO_CALL_TIMING, SCENARIO_DESCRIPTIONS, SCENARIO_LABELS, scenarioSteps, type ScenarioId, type ScenarioStep, type ScenarioTiming } from './scenarios/definitions'
+import { CALL_FAST_FORWARD_SECONDS, CALL_STORY_MINUTES, DEFAULT_TIMING, RESPONDER_KNOCK_SECONDS, SCENARIO_CALL_TIMING, SCENARIO_DESCRIPTIONS, SCENARIO_LABELS, scenarioSteps, type ScenarioId, type ScenarioStep, type ScenarioTiming } from './scenarios/definitions'
 import { api, usingMock } from '../api'
 import { isHomeCheck } from '../caregiver/copy'
 import { ApiError } from '../api/live'
@@ -135,7 +135,7 @@ const ARRIVAL_WINDOW_SECONDS = 20
 /** Mock mode only: seconds of playback to wait for a township click before Guard Ali acknowledges. */
 const MOCK_AUTO_ACK_SECONDS = 20
 
-type WatchGap = 'quiet' | 'outing' | 'arrival'
+type WatchGap = 'quiet' | 'outing' | 'arrival' | 'call'
 type GapStory = { minutes: number; note: string }
 /** Her learned quiet gap or outing in real-life time (e.g. 2h 00m at 08:00) and where it came from. */
 const gapStory = (unit: Unit | null, gap: 'quiet' | 'outing'): GapStory => {
@@ -149,6 +149,7 @@ const quietGapStory = (unit: Unit | null) => gapStory(unit, 'quiet')
 const GAP_COPY: Record<WatchGap, { minutes: number; active: string; done: string; unit: string; note: string }> = {
   quiet: { minutes: QUIET_GAP_STORY_MINUTES, active: 'Fast-forward · water quiet gap', done: 'Longer than her usual quiet gap', unit: 'without water use', note: 'Her usual quiet gap of 4 hours is learned from her past history' },
   outing: { minutes: 3 * 60, active: 'Fast-forward · out since tapping out', done: 'Longer than her usual outing', unit: 'with no tap back in', note: 'Her usual outing of 3 hours is learned from her past card taps' },
+  call: { minutes: CALL_STORY_MINUTES, active: 'Fast-forward · calling Mum', done: 'No answer · alerting family', unit: 'with no answer', note: 'TemanMu calls her and waits a few minutes for an answer or any activity before alerting anyone' },
   arrival: { minutes: 20, active: 'Fast-forward · since tapping in', done: 'Still no activity at home', unit: 'with no water or power used', note: 'She usually reaches the flat within a few minutes of tapping in' },
 }
 
@@ -163,10 +164,10 @@ function QuietGapOverlay({ endsAt, seconds, gap = 'quiet', story }: { endsAt: nu
   const progress = Math.min(1, Math.max(0, 1 - (endsAt - now) / 1000 / seconds))
   const done = progress >= 1
   const storyTime = storyDuration
-  return <div className={`live-fast-forward ${done ? 'is-done' : ''}`} role="status" aria-live="polite">
+  return <div className={`live-fast-forward ${gap === 'call' ? 'is-call' : ''} ${done ? 'is-done' : ''}`} role="status" aria-live="polite">
     <span className="live-fast-forward-icon" aria-hidden="true"><FastForward size={20} /></span>
     <div>
-      <small>{done ? copy.done : copy.active}</small>
+      <small>{done ? copy.done : copy.active}{!done && <b className="live-fast-forward-speed">{Math.round(copy.minutes * 60 / seconds)}× speed</b>}</small>
       <strong>{storyTime(Math.floor(progress * copy.minutes))} <em>/ {storyTime(copy.minutes)} {copy.unit}</em></strong>
       <span className="live-fast-forward-bar"><i style={{ width: `${progress * 100}%` }} /></span>
       <span className="live-fast-forward-note">{copy.note}</span>
@@ -711,13 +712,15 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
       // Tap out from the corridor (inside the block), tap in from the lift-lobby side (outside).
       tapCard: (direction, signal) => { cardDirection.current = direction; return interactWith('cardReader', false, direction === 'in' ? 'readerOutside' : undefined, signal) }, waitForQuietGap, waitForResolution, waitForOutcome,
       // The phone tag stays up from the first ring until the caregiver and township alert goes out.
+      // The call and grace period play as one fast-forward, from the first ring to the caregiver and township alert.
       waitForNoAnswer: async signal => {
         setCallCard('ringing')
-        try { await waitForNoAnswer(signal) } catch (error) { setCallCard(null); throw error }
+        setQuietGap({ endsAt: Date.now() + CALL_FAST_FORWARD_SECONDS * 1000, seconds: CALL_FAST_FORWARD_SECONDS, gap: 'call' })
+        try { await waitForNoAnswer(signal) } catch (error) { setCallCard(null); setQuietGap(null); throw error }
         setCallCard('noAnswer')
       },
       waitForCaregiverAlert: async signal => {
-        try { await waitForCaregiverAlert(signal) } finally { setCallCard(null) }
+        try { await waitForCaregiverAlert(signal) } finally { setCallCard(null); setQuietGap(null) }
       },
       dispatchResponder, setResponderVisible: () => setResponderVisible(true), setResponderDoor: open => {
         setResponderDoorOpen(open)
@@ -1112,7 +1115,7 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
         </button>
         <div className="live-player-body">
           <div className="live-player-caption" role="status" aria-live="polite">
-            <strong>{(scenarioProgress?.kind === 'quietGap' || scenarioProgress?.kind === 'watchGap') && scenarioActive && <FastForward size={14} className="live-caption-ff" aria-hidden="true" />}{caption}</strong>
+            <strong>{(scenarioProgress?.kind === 'quietGap' || scenarioProgress?.kind === 'watchGap' || scenarioProgress?.kind === 'noAnswer') && scenarioActive && <FastForward size={14} className="live-caption-ff" aria-hidden="true" />}{caption}</strong>
             <span>{SCENARIO_LABELS[shownScenario]} · {stepIndex ? `Step ${stepIndex} of ${timelineSteps.length}` : `${timelineSteps.length} steps`} · <em className={`live-playback-${scenarioState}`}>{playback}</em></span>
           </div>
           <div className="live-timeline-track">
@@ -1121,8 +1124,8 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
               {timelineSteps.map((step, index) => <i key={index} title={step.label} className={index < stepIndex ? 'is-done' : ''}
                 style={{ left: `${(index + 1) / timelineSteps.length * 100}%` }} />)}
             </div>
-            {timelineSteps.map((step, index) => (step.kind === 'quietGap' || step.kind === 'watchGap') && <span key={index} className={`live-timeline-ff ${index < stepIndex ? 'is-done' : ''} ${index === stepIndex - 1 && scenarioActive ? 'is-current' : ''}`}
-              title="Quiet gap (demo fast-forward)" style={{ left: `${(index + .5) / timelineSteps.length * 100}%` }}><FastForward size={10} aria-hidden="true" /></span>)}
+            {timelineSteps.map((step, index) => (step.kind === 'quietGap' || step.kind === 'watchGap' || step.kind === 'noAnswer') && <span key={index} className={`live-timeline-ff ${index < stepIndex ? 'is-done' : ''} ${index === stepIndex - 1 && scenarioActive ? 'is-current' : ''}`}
+              title={step.kind === 'noAnswer' ? 'Call to Mum (demo fast-forward)' : 'Quiet gap (demo fast-forward)'} style={{ left: `${(index + .5) / timelineSteps.length * 100}%` }}><FastForward size={10} aria-hidden="true" /></span>)}
           </div>
           <p className="live-player-note">{demoNote ?? SCENARIO_DESCRIPTIONS[shownScenario]}</p>
         </div>
