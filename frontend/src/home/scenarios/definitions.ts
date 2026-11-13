@@ -5,6 +5,8 @@ import type { CallTiming } from '../../api/types'
 export type ScenarioId = 'normalMorning' | 'goingOut' | 'notBackYet' | 'tappedInNoActivity' | 'unusualInactivity' | 'falseAlarmRecovery'
 export type ScenarioTiming = { outsideSeconds: number }
 export const DEFAULT_TIMING: ScenarioTiming = { outsideSeconds: 4 }
+/** Guard Ali knocks before entering; he walks in faster by the same amount, so the visit keeps its length. */
+export const RESPONDER_KNOCK_SECONDS = 1.1
 export const SCENARIO_LABELS: Record<ScenarioId, string> = {
   normalMorning: 'Normal Morning', goingOut: 'Going Out',
   notBackYet: 'Not Back Yet', tappedInNoActivity: 'Tapped In, Home Quiet',
@@ -44,7 +46,9 @@ export type ScenarioStep =
   | { kind: 'dispatchResponder'; label: string }
   | { kind: 'responderVisible'; label: string }
   | { kind: 'responderDoor'; open: boolean; label: string }
-  | { kind: 'responderMove'; to: Waypoint; label: string }
+  | { kind: 'responderKnock'; seconds: number; label: string }
+  // catchUp: seconds this walk makes up for an earlier pause, by walking faster.
+  | { kind: 'responderMove'; to: Waypoint; catchUp?: number; label: string }
   | { kind: 'responderCheck'; label: string }
   | { kind: 'resolution'; label: string }
   | { kind: 'confirmCall'; label: string }
@@ -124,8 +128,9 @@ export function scenarioSteps(id: ScenarioId, timing: ScenarioTiming): ScenarioS
       { kind: 'dispatchResponder', label: 'Waiting for Guard Ali to acknowledge on the township dashboard' },
       { kind: 'responderVisible', label: 'Guard Ali arrives outside A-105' },
       { kind: 'responderMove', to: 'porch', label: 'Guard Ali approaches the entrance' },
+      { kind: 'responderKnock', seconds: RESPONDER_KNOCK_SECONDS, label: 'Guard Ali knocks on the door' },
       { kind: 'responderDoor', open: true, label: 'Guard Ali opens the door (visual reenactment)' },
-      { kind: 'responderMove', to: 'responderCheck', label: 'Guard Ali enters and walks to Madam Lee' },
+      { kind: 'responderMove', to: 'responderCheck', catchUp: RESPONDER_KNOCK_SECONDS, label: 'Guard Ali enters and walks to Madam Lee' },
       { kind: 'responderDoor', open: false, label: 'Guard Ali closes the door' },
       { kind: 'responderCheck', label: 'Guard Ali checks Madam Lee’s condition' },
       { kind: 'hold', label: 'Guard Ali is checking; outcome awaits a human report' },

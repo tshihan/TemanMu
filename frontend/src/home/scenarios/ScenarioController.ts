@@ -14,7 +14,8 @@ export type ScenarioActions = {
   dispatchResponder: (signal: AbortSignal) => Promise<void>
   setResponderVisible: () => void
   setResponderDoor: (open: boolean) => void
-  moveResponder: (to: Extract<ScenarioStep, { kind: 'responderMove' }>['to'], signal: AbortSignal) => Promise<void>
+  moveResponder: (to: Extract<ScenarioStep, { kind: 'responderMove' }>['to'], signal: AbortSignal, catchUp?: number) => Promise<void>
+  knockResponder: (seconds: number, signal: AbortSignal) => Promise<void>
   checkResident: () => void
   waitForResolution: (signal: AbortSignal) => Promise<void>
   confirmCall: (signal: AbortSignal) => Promise<void>
@@ -88,7 +89,8 @@ export class ScenarioController {
         case 'dispatchResponder': await actions.dispatchResponder(this.signal); break
         case 'responderVisible': actions.setResponderVisible(); break
         case 'responderDoor': actions.setResponderDoor(step.open); break
-        case 'responderMove': await actions.moveResponder(step.to, this.signal); break
+        case 'responderKnock': await actions.knockResponder(step.seconds, this.signal); break
+        case 'responderMove': await actions.moveResponder(step.to, this.signal, step.catchUp); break
         case 'responderCheck': actions.checkResident(); break
         case 'resolution': await actions.waitForResolution(this.signal); break
         case 'confirmCall': await actions.confirmCall(this.signal); break

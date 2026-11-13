@@ -6,13 +6,14 @@ test('inactivity demo shows a quiet gap, call, no answer, then caregiver alert',
   const steps = scenarioSteps('unusualInactivity', DEFAULT_TIMING)
   assert.deepEqual(steps.map(step => step.kind), [
     'move', 'animate', 'wait', 'quietGap', 'noAnswer', 'alert',
-    'dispatchResponder', 'responderVisible', 'responderMove', 'responderDoor',
+    'dispatchResponder', 'responderVisible', 'responderMove', 'responderKnock', 'responderDoor',
     'responderMove', 'responderDoor', 'responderCheck', 'hold',
   ])
   assert.match(steps[1].label, /no sensor event/i)
   assert.match(steps[3].label, /fast-forward: no water use, longer than her learned usual quiet gap/i)
   assert.match(steps[6].label, /acknowledge on the township dashboard/i)
-  assert.equal(steps[10].to, 'responderCheck')
+  assert.equal(steps[11].to, 'responderCheck')
+  assert.equal(steps[11].catchUp, steps[9].seconds)
   assert.equal(steps.some(step => step.kind === 'object' && step.object === 'mainDoor'), false)
   assert.match(steps.at(-1).label, /outcome awaits a human report/i)
 })

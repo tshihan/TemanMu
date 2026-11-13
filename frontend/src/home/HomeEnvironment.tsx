@@ -14,7 +14,7 @@ import { TownshipResponder, type ResponderCommand } from './character/TownshipRe
 import { ROOM_LABELS, type RoomId, type Waypoint } from './character/navigation'
 import { INITIAL_OBJECT_STATES, interactionPrompt, type InteractionBindings, type InteractionId, type ObjectStates } from './interactions/registry'
 import { ScenarioController, type ScenarioActions } from './scenarios/ScenarioController'
-import { DEFAULT_TIMING, SCENARIO_CALL_TIMING, SCENARIO_DESCRIPTIONS, SCENARIO_LABELS, scenarioSteps, type ScenarioId, type ScenarioStep, type ScenarioTiming } from './scenarios/definitions'
+import { DEFAULT_TIMING, RESPONDER_KNOCK_SECONDS, SCENARIO_CALL_TIMING, SCENARIO_DESCRIPTIONS, SCENARIO_LABELS, scenarioSteps, type ScenarioId, type ScenarioStep, type ScenarioTiming } from './scenarios/definitions'
 import { api, usingMock } from '../api'
 import { isHomeCheck } from '../caregiver/copy'
 import { ApiError } from '../api/live'
@@ -39,9 +39,9 @@ export function HouseModel({ interaction }: { interaction?: InteractionBindings 
     <Architecture interaction={interaction} /><Bedroom interaction={interaction} /><Bathroom interaction={interaction} /><Kitchen interaction={interaction} /><LivingRoom interaction={interaction} /><DiningArea />
   </group>
 }
-function Scene({ command, characterCommand, responderCommand, responderVisible, responderChecking, responderNote, interaction, pose, speech, visible, paused, urgent, sensorView, unit, pulses, onCharacterStatus, onReached, onArrived, onResponderArrived, onAnimationComplete, onReady }: {
+function Scene({ command, characterCommand, responderCommand, responderVisible, responderChecking, responderKnocking, responderNote, interaction, pose, speech, visible, paused, urgent, sensorView, unit, pulses, onCharacterStatus, onReached, onArrived, onResponderArrived, onAnimationComplete, onReady }: {
   sensorView: boolean; unit: Unit | null; pulses: SensorPulses
-  command: Command; characterCommand: CharacterCommand; responderCommand: ResponderCommand; responderVisible: boolean; responderChecking: boolean; responderNote: string | null
+  command: Command; characterCommand: CharacterCommand; responderCommand: ResponderCommand; responderVisible: boolean; responderChecking: boolean; responderKnocking: boolean; responderNote: string | null
   interaction: InteractionBindings; pose: InteractionPose; speech: string | null; visible: boolean; paused: boolean; urgent: boolean
   onCharacterStatus: (status: CharacterStatus) => void; onReached: (id: number, target: InteractionId) => void
   onArrived: (id: number, target: Waypoint) => void; onResponderArrived: (id: number) => void
@@ -111,7 +111,7 @@ function Scene({ command, characterCommand, responderCommand, responderVisible, 
       onStatus={onCharacterStatus} onReached={onReached} onArrived={onArrived} onAnimationComplete={onAnimationComplete} />
     <SensorBeacons unit={unit} pulses={pulses} sensorView={sensorView} />
     {unit && !sensorView && <LobbySign />}
-    <TownshipResponder command={responderCommand} visible={responderVisible && !sensorView} checking={responderChecking} note={responderNote} paused={paused} onArrived={onResponderArrived} />
+    <TownshipResponder command={responderCommand} visible={responderVisible && !sensorView} checking={responderChecking} knocking={responderKnocking} note={responderNote} paused={paused} onArrived={onResponderArrived} />
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -.48, 0]} receiveShadow>
       <planeGeometry args={[200, 200]} /><meshStandardMaterial color="#eeeae1" roughness={1} />
     </mesh>
@@ -223,6 +223,7 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
   const [responderVisible, setResponderVisible] = useState(false)
   const [responderChecking, setResponderChecking] = useState(false)
   const [responderDoorOpen, setResponderDoorOpen] = useState(false)
+  const [responderKnocking, setResponderKnocking] = useState(false)
   const [characterStatus, setCharacterStatus] = useState<CharacterStatus>({ room: 'bedroom', destination: null, phase: 'loading' })
   const [states, setStates] = useState<ObjectStates>(INITIAL_OBJECT_STATES)
   const [selected, setSelected] = useState<InteractionId | null>(null)
@@ -335,15 +336,20 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
   const onArrived = useCallback((id: number) => finishCharacterCommand(id), [finishCharacterCommand])
   const onAnimationComplete = useCallback((id: number) => finishCharacterCommand(id), [finishCharacterCommand])
   const onResponderArrived = useCallback((id: number) => responderPending.current.get(id)?.resolve(), [])
-  const moveResponder = (to: Waypoint, signal: AbortSignal) => new Promise<void>((resolve, reject) => {
+  const moveResponder = (to: Waypoint, signal: AbortSignal, catchUp = 0) => new Promise<void>((resolve, reject) => {
     if (signal.aborted) { reject(new DOMException('Scenario stopped', 'AbortError')); return }
     const id = ++responderSequence.current
     const cleanup = () => { responderPending.current.delete(id); signal.removeEventListener('abort', abort) }
     const abort = () => { cleanup(); reject(new DOMException('Scenario stopped', 'AbortError')) }
     responderPending.current.set(id, { resolve: () => { cleanup(); resolve() }, reject: error => { cleanup(); reject(error) } })
     signal.addEventListener('abort', abort, { once: true })
-    setResponderCommand({ id, destination: to })
+    setResponderCommand({ id, destination: to, catchUp })
   })
+  const knockResponder = async (seconds: number, signal: AbortSignal) => {
+    setResponderKnocking(true)
+    sound.current.play('knock')
+    try { await clock.current.wait(seconds, signal) } finally { setResponderKnocking(false) }
+  }
   const resetResponder = () => {
     responderPending.current.forEach(item => item.reject(new DOMException('Responder reset', 'AbortError')))
     responderPending.current.clear()
@@ -351,6 +357,7 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
     setResponderVisible(false)
     setResponderChecking(false)
     setResponderDoorOpen(false)
+    setResponderKnocking(false)
   }
   const moveTo = (to: Waypoint, signal: AbortSignal) => {
     const id = nextCharacterCommand(to, undefined, 'move')
@@ -715,7 +722,7 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
         setResponderDoorOpen(open)
         sound.current.play(open ? 'doorOpen' : 'doorClose')
       },
-      moveResponder, checkResident: () => setResponderChecking(true),
+      moveResponder, knockResponder, checkResident: () => setResponderChecking(true),
     }
     // A stopped Going Out can leave the door open or the unit "possibly away", which blocks the quiet gap.
     const settle = usingMock && (id === 'unusualInactivity' || id === 'falseAlarmRecovery' || id === 'notBackYet' || id === 'tappedInNoActivity')
@@ -891,8 +898,9 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
     setResponderVisible(true)
     void (async () => {
       await moveResponder('porch', signal)
+      await knockResponder(RESPONDER_KNOCK_SECONDS, signal)
       door(true)
-      await moveResponder('dining', signal)
+      await moveResponder('dining', signal, RESPONDER_KNOCK_SECONDS)
       door(false)
       await moveResponder('living', signal)
     })().catch(() => { /* Stopped: the check closed or the demo was reset. */ })
@@ -999,7 +1007,7 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
       <SceneBoundary><Canvas shadows={{ type: PCFShadowMap }} frameloop="demand" dpr={[1, 1.7]} gl={{ antialias: true, toneMapping: ACESFilmicToneMapping, toneMappingExposure: 1 }}
         fallback={<div className="home-fallback">This home needs a browser with WebGL enabled.</div>}>
         <Suspense fallback={null}><Scene command={command} characterCommand={characterCommand} responderCommand={responderCommand}
-          responderVisible={showResponder} responderChecking={responderChecking} responderNote={homeCheckId ? 'checking the home' : null} interaction={interaction}
+          responderVisible={showResponder} responderChecking={responderChecking} responderKnocking={responderKnocking} responderNote={homeCheckId ? 'checking the home' : null} interaction={interaction}
           pose={pose} speech={speech} visible={visible && !absent} paused={paused}
           urgent={false}
           sensorView={sensorView} unit={homeUnit} pulses={pulses}

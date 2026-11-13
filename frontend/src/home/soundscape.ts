@@ -1,4 +1,4 @@
-export type HomeCue = 'wake' | 'return' | 'doorOpen' | 'doorClose' | 'cardTap'
+export type HomeCue = 'wake' | 'return' | 'doorOpen' | 'doorClose' | 'cardTap' | 'knock'
 export type HomeLoop = 'telephone' | 'water' | 'kettle' | 'footsteps'
 
 /** Small Web Audio soundscape; no network assets and no audio before a user gesture. */
@@ -182,6 +182,12 @@ export class HomeSoundscape {
     } else if (cue === 'cardTap') {
       this.tone(1320, .07, .03, 'sine')
       this.tone(1760, .09, .03, 'sine', .09)
+    } else if (cue === 'knock') {
+      // Three knuckle raps on a wooden door.
+      for (const at of [.3, .55, .8]) { // matches KNOCK_RAPS in TownshipResponder
+        this.tone(210, .06, .07, 'triangle', at, 120)
+        this.tone(75, .08, .06, 'sine', at, 50)
+      }
     } else if (cue === 'doorOpen') {
       this.tone(240, .18, .055, 'triangle', 0, 110)
       this.tone(95, .12, .035, 'sine', .12, 65)
