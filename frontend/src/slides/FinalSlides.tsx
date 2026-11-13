@@ -197,11 +197,23 @@ export function FinalSlides() {
     }
   }, [])
 
+  // Ctrl+S (or Cmd+S on Mac) saves the deck as a PDF instead of the browser's "Save page".
+  const saveAsPdfRef = useRef(saveAsPdf)
+  saveAsPdfRef.current = saveAsPdf
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key.toLowerCase() !== 's' || !(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey) return
+      event.preventDefault()
+      void saveAsPdfRef.current()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
+
   return <main ref={rootRef} className="slides-root slides-fixed slides-scaled">
-    {/* Kept small and out of the way so it doesn't distract while presenting; hidden in the PDF. */}
-    <div className="final-export">
-      <span className="slides-export-status" role="status">{pdfStatus}</span>
-      <button type="button" onClick={saveAsPdf} disabled={preparingPdf}>{preparingPdf ? 'Preparing PDF…' : 'Save as PDF'}</button>
+    {/* No button: Ctrl+S / Cmd+S exports. The pill only appears to show progress or an error; hidden in the PDF. */}
+    <div className="final-export" hidden={!pdfStatus && !preparingPdf}>
+      <span className="slides-export-status" role="status">{preparingPdf && !pdfStatus ? 'Preparing PDF…' : pdfStatus}</span>
     </div>
     <div className="slides-deck" aria-label="TemanMu presentation">
       <PageFrame number={1} className="present-home">
@@ -439,7 +451,6 @@ export function FinalSlides() {
           </section>
         </div>
         <div className="final-installation-evidence">
-          <p>Proposed partnerships · Data access, reporting intervals and welfare-check accuracy require pilot validation.</p>
           <p>Sources: <a href="https://www.tnb.com.my/doing-business-with-tnb/education-research-consultancy/tnb-research" target="_blank" rel="noopener noreferrer">TNB Research</a> · <a href="https://www.tnblabs.com.my/digital-solutions" target="_blank" rel="noopener noreferrer">TNB LABS</a> · <a href="https://www.airselangor.com/about-us/innovation-and-technology" target="_blank" rel="noopener noreferrer">Air Selangor innovation</a> · <a href="https://hydrohub.airselangor.com/content/uploads/2023/01/PerformanceReport2019-2.pdf" target="_blank" rel="noopener noreferrer">NB-IoT pilot</a></p>
         </div>
       </PageFrame>
@@ -474,7 +485,6 @@ export function FinalSlides() {
             </ol>
           </div>
         </div>
-        <p className="final-landed-scope">Subject to agreement with the residents’ association and household consent. Dashboard: UI demo with simulated households and cases.</p>
       </PageFrame>
       <PageFrame number={8} className="slides-impact final-impact">
         <div className="slides-section-top"><TemanMuWordmark /><span>08 · Impact</span></div>
@@ -518,41 +528,24 @@ export function FinalSlides() {
             <div className="slides-impact-target"><strong>70%</strong><span>of surveyed prospective buyers expected to view the township more positively after learning about TemanMu</span></div>
           </article>
         </div>
-        <p className="slides-impact-caveat">These numbers are proposed pilot targets and reflect expected outcomes.</p>
       </PageFrame>
       <PageFrame number={9} className="final-market">
         <div className="slides-section-top">
           <p className="final-mentor-note">Mentor feedback: How does TemanMu support Sime Darby Property’s business?</p>
           <span>09 · Business viability</span>
         </div>
-        <div className="final-viability-numbers" aria-label="Older residents in Sime Darby Property's home districts, from DOSM and NHMS" data-slide-reveal>
+        <div className="final-viability-numbers" aria-label="Older residents in the Klang Valley and Sime Darby Property's home districts, from DOSM and NHMS" data-slide-reveal>
           <section className="final-viability-hero" aria-labelledby="final-viability-alone-title">
-            <h3 className="final-viability-label" id="final-viability-alone-title">Seniors likely living alone around SDP’s townships</h3>
-            <strong>≈89,000</strong>
-            <p>older residents in Petaling and Klang districts<span>Estimate: 473,600 residents aged 60+ (DOSM 2026) × 18.8%, the national share of 60+ living alone (NHMS 2025)</span></p>
+            <h3 className="final-viability-label" id="final-viability-alone-title">Seniors estimated to live alone in the Klang Valley</h3>
+            <strong>≈206,000</strong>
+            <p>of 1.1 million residents aged 60+ across the Klang Valley<span>1.1M × 18.8% national living-alone rate (DOSM 2026, NHMS 2025)</span></p>
           </section>
           <section className="final-viability-districts" aria-labelledby="final-viability-districts-title">
-            <div className="final-viability-districts-head">
-              <h3 className="final-viability-label" id="final-viability-districts-title">Residents aged 60+ in SDP’s home districts</h3>
-              <p className="final-viability-key" aria-hidden="true"><i className="is-alone" />Est. living alone<i />Others aged 60+</p>
-            </div>
-            <dl className="final-viability-rows">
-              <div className="final-viability-row">
-                <dt><b>Petaling</b><span>City of Elmina · Ara Damansara</span></dt>
-                <dd className="final-viability-bar" style={{ '--bar': 322.7 / 322.7 } as CSSProperties} aria-label="322,700 aged 60+, of whom about 61,000 estimated living alone">
-                  <i><span /></i>
-                </dd>
-                <dd className="final-viability-count"><strong>322,700</strong><span>≈61,000 alone</span></dd>
-                <dd className="final-viability-growth"><strong>+32%</strong><span>since 2020</span></dd>
-              </div>
-              <div className="final-viability-row">
-                <dt><b>Klang</b><span>Bandar Bukit Raja</span></dt>
-                <dd className="final-viability-bar" style={{ '--bar': 150.9 / 322.7 } as CSSProperties} aria-label="150,900 aged 60+, of whom about 28,000 estimated living alone">
-                  <i><span /></i>
-                </dd>
-                <dd className="final-viability-count"><strong>150,900</strong><span>≈28,000 alone</span></dd>
-                <dd className="final-viability-growth"><strong>+32%</strong><span>since 2020</span></dd>
-              </div>
+            <h3 className="final-viability-label" id="final-viability-districts-title">Klang Valley residents aged 60+</h3>
+            <p className="final-viability-share"><strong>+31%</strong><span>in six years, a growing market</span></p>
+            <dl className="final-viability-trend" aria-label="Klang Valley residents aged 60+ grew from 838,900 in 2020 to 1,097,900 in 2026">
+              <div><dt>2020</dt><dd><i style={{ '--bar': 838.9 / 1097.9 } as CSSProperties} /></dd><dd>839K</dd></div>
+              <div className="is-now"><dt>2026</dt><dd><i style={{ '--bar': 1 } as CSSProperties} /></dd><dd>1.1M</dd></div>
             </dl>
             <p className="final-viability-national">Nationally, <strong>18.8%</strong> of people aged 60+ now live alone, up from 6.3% in 2018. <em>Nearly 3× in seven years.</em></p>
           </section>
@@ -586,7 +579,6 @@ export function FinalSlides() {
             <h3>Multigenerational demand</h3><p>Attract families considering a home for their parents nearby, with potential second-unit interest.</p>
           </li>
         </ol>
-        <p className="final-market-note">Market context, not proven demand. District living-alone figures apply the national NHMS rate to DOSM district populations; no district-level survey exists yet. Pricing, take-up and sales impact require pilot validation.</p>
         <p className="final-market-sources">Sources: <a href="https://open.dosm.gov.my/data-catalogue/population_district?state=selangor&amp;district=petaling&amp;visual=table" target="_blank" rel="noopener noreferrer">DOSM · Population by district, 2020 &amp; 2026</a> · <a href="https://iku.nih.gov.my/images/nhms-2025/infographic-eng.pdf" target="_blank" rel="noopener noreferrer">MOH · NHMS 2025, infographics 1 &amp; 3</a></p>
       </PageFrame>
       <PageFrame number={10} className="final-closing">
