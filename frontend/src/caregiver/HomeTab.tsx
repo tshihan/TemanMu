@@ -5,12 +5,12 @@ import type { AccessEvent, AwayActivityResponse, AwayPeriod, Incident, Notificat
 import { AwayActivityChoices } from './AwayActivityChoices'
 import { ResidentAvatar } from './Avatar'
 import { actorName, cardConcern, currentAway, GUARD, isHomeCheck, isOuting, outcomeLabel, STATUS_LABELS, type Ctx } from './copy'
-import { clock, dayFraction, dayLabel, isToday, until, when } from './format'
+import { clock, dayFraction, dayLabel, isToday, when } from './format'
 import { TrackingControl } from './TrackingControl'
 import { hospitalGuard } from './hospital-transfer'
 
 type Variant = 'alarm' | 'checking' | 'quiet' | 'away' | 'calm' | 'pending' | 'hospital'
-interface Card { variant: Variant; Icon: LucideIcon; badge: string; headline: string; reason: string; grace?: string; ack?: boolean; open?: string }
+interface Card { variant: Variant; Icon: LucideIcon; badge: string; headline: string; reason: string; grace?: boolean; ack?: boolean; open?: string }
 
 function statusCard(unit: Unit, incident: Incident | null, ctx: Ctx, now: number, hasRoutineEvidence: boolean, away: AwayPeriod | null, awayReason: string | null, hospitalIncident: Incident | null): Card {
   const { R } = ctx
@@ -51,7 +51,7 @@ function statusCard(unit: Unit, incident: Incident | null, ctx: Ctx, now: number
     const cause = cardCause ? `${cardCause}.` : isOuting(incident) && doorAt ? `${R} has been out since ${clock(doorAt)}, longer than usual.`
       : lastWater ? `No water use since ${clock(lastWater)}, longer than the usual gap.` : 'No water use for longer than the usual gap.'
     return { variant: 'quiet', Icon: PhoneOutgoing, badge: STATUS_LABELS.unusual_inactivity, headline: `Checking on ${R} quietly`,
-      reason: `${cause} TemanMu is calling ${R} now.`, grace: incident?.state === 'grace' ? until(incident.grace_ends_at, now) : undefined }
+      reason: `${cause} TemanMu is calling ${R} now.`, grace: incident?.state === 'grace' }
   }
   if (unit.care_state === 'in_hospital') return { variant: 'hospital', Icon: Hospital, badge: 'In hospital', headline: `${R} is in hospital`,
     reason: `${guard ? `${guard} recorded the hospital transfer.` : 'Hospital transfer recorded.'} Inactivity checks are paused until you confirm a return home. Water and power safety alerts remain active.` }
@@ -169,8 +169,8 @@ export function HomeTab({ unit, ctx, incident, hospitalIncident, onOpenHospital,
       {card.variant === 'hospital' && <div className="cg-status-actions cg-hospital-actions">
         <TrackingControl unit={unit} relationship={R} away={away} now={now} inCard blocked={trackingBlocked} />
       </div>}
-      {card.grace && <p className="cg-status-grace"><span className="cg-status-timer cg-num">{card.grace}</span>
-        <span>left in the call window. You’ll only be alerted if {R} doesn’t answer.</span></p>}
+      {card.grace && <p className="cg-status-grace"><PhoneOutgoing size={18} aria-hidden="true" />
+        <span>Call in progress. You’ll only be alerted if {R} doesn’t answer.</span></p>}
       {unit.status === 'possible_away' && !away && <div className="cg-status-actions">
         <button type="button" className="cg-btn cg-btn-ink" onClick={onCall}><Phone size={18} aria-hidden="true" />Call {R}</button>
         <button type="button" className="cg-btn cg-btn-outline" onClick={onConfirmHome} disabled={confirmBusy}>

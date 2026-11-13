@@ -255,7 +255,7 @@ export function IncidentPanel({ incident, unit, floor, onDone, inAlertBar = fals
   const card = cardConcern(incident)
 
   const status = resolved ? t.statusClosed(incident.closed_at ? clockLabel(incident.closed_at) : null)
-    : incident.state === 'grace' ? t.statusGrace(countdown(incident.grace_ends_at, clock))
+    : incident.state === 'grace' ? t.statusGrace
     : incident.state === 'notified' ? t.statusNotified(incident.reminder_count + 1, countdown(incident.next_reminder_at, clock))
     : mine ? t.statusMine(incident.acknowledged_by ? clockLabel(incident.acknowledged_by.at) : null)
     : t.isChecking(incident.acknowledged_by?.name ?? t.someone)
