@@ -211,6 +211,20 @@ export function PresentHome() {
     observer.observe(el)
     return () => observer.disconnect()
   }, [])
+  // The dim also fills the empty side space on wide screens (final-slides.css); that layer is fixed to the screen,
+  // so it may only show while this slide holds most of the screen, not after moving on to the next one.
+  // The flag goes on the deck itself: a CSS :has() check lagged a step behind in Chrome.
+  useEffect(() => {
+    const home = wrap.current?.closest('.present-home')
+    const root = home?.closest('.slides-root')
+    if (!home || !root || !('IntersectionObserver' in window)) return
+    const sync = () => root.classList.toggle('slides-home-dimmed', home.classList.contains('is-fallen') && home.classList.contains('is-in-view'))
+    const observer = new IntersectionObserver(([entry]) => home.classList.toggle('is-in-view', entry.intersectionRatio >= .5), { threshold: [0, .5, 1] })
+    const classes = new MutationObserver(sync)
+    observer.observe(home)
+    classes.observe(home, { attributes: true, attributeFilter: ['class'] })
+    return () => { observer.disconnect(); classes.disconnect(); root.classList.remove('slides-home-dimmed') }
+  }, [])
   useEffect(() => {
     sound.current ??= new HomeSoundscape()
     // Audio may only start after a gesture: the presenter's F press counts, so unlock on any key while on this slide.

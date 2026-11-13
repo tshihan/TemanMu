@@ -630,6 +630,6 @@
 @media screen {
   .slides-scaled::before { content: ''; position: fixed; inset: 0; pointer-events: none; opacity: 0; transition: opacity .9s ease;
     background: radial-gradient(calc(1200px * var(--slides-zoom, 1)) calc(720px * var(--slides-zoom, 1)) at calc(50vw + 192px * var(--slides-zoom, 1)) calc(50vh + 45px * var(--slides-zoom, 1)), #1a0f0b8c 0%, #120a07d9 100%); }
-  .slides-scaled:has(.present-home.is-fallen)::before { opacity: 1; transition: opacity 1.4s ease 1.7s; }
+  .slides-scaled.slides-home-dimmed::before { opacity: 1; transition: opacity 1.4s ease 1.7s; }
   .slides-scaled.slides-exporting::before { display: none; }
 }
