@@ -1,6 +1,6 @@
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { Html } from '@react-three/drei'
-import { useFrame } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
 import { MathUtils, type Group } from 'three'
 import { Box } from '../primitives'
 import { getMaterials } from '../materials'
@@ -10,8 +10,11 @@ import { interactionPrompt, type InteractionBindings, type TelephoneState } from
 function MobilePhone({ state, paused }: { state: TelephoneState; paused?: boolean }) {
   const m = getMaterials()
   const phone = useRef<Group>(null)
+  const invalidate = useThree(state => state.invalidate)
+  useEffect(() => { if (!paused) invalidate() }, [state, paused, invalidate])
   useFrame(({ clock }, delta) => {
     if (paused || !phone.current) return
+    if (state === 'ringing') invalidate() // keep the on-demand frame loop shaking it while nothing else moves
     const answering = state === 'answering'
     phone.current.position.x = MathUtils.damp(phone.current.position.x, answering ? .52 : 0, 4, delta)
     phone.current.position.y = MathUtils.damp(phone.current.position.y, answering ? .72 : 0, 4, delta)
@@ -26,7 +29,7 @@ function MobilePhone({ state, paused }: { state: TelephoneState; paused?: boolea
       <mesh position={[0, .015, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[.19, .34]} />
         <meshStandardMaterial color={state === 'idle' ? '#213b3a' : '#83c5bc'}
-          emissive={state === 'idle' ? '#000000' : '#4ab9ae'} emissiveIntensity={state === 'ringing' ? .85 : .35} />
+          emissive={state === 'idle' ? '#000000' : '#4ab9ae'} emissiveIntensity={state === 'ringing' ? 1.6 : .35} />
       </mesh>
       <Box at={[0, .019, -.164]} size={[.055, .003, .006]} mat={m.steel} radius={.002} />
       {state !== 'idle' && <>
@@ -39,7 +42,7 @@ function MobilePhone({ state, paused }: { state: TelephoneState; paused?: boolea
 }
 
 /** The phone on a table top. Local +x should face where Madam Lee stands, so answering lifts it toward her. */
-export function PhoneOnSurface({ interaction, at, rotation = 0 }: { interaction?: InteractionBindings; at: [number, number, number]; rotation?: number }) {
+export function PhoneOnSurface({ interaction, state = 'idle', at, rotation = 0 }: { interaction?: InteractionBindings; state?: TelephoneState; at: [number, number, number]; rotation?: number }) {
   return <group position={at} rotation={[0, rotation, 0]}>
     {interaction ? <InteractiveObject id="telephone" label={interactionPrompt('telephone', interaction.states)}
       selected={interaction.selected === 'telephone'} hovered={interaction.hovered === 'telephone'} disabled={interaction.disabled || !!interaction.phoneDisabledReason}
@@ -47,7 +50,7 @@ export function PhoneOnSurface({ interaction, at, rotation = 0 }: { interaction?
       onSelect={interaction.onSelect} onHover={interaction.onHover}
       hitbox={[0, .03, 0]} hitboxSize={[.3, .12, .44]} tooltip={[0, .51, 0]}>
       <MobilePhone state={interaction.states.telephone} paused={interaction.paused} />
-    </InteractiveObject> : <MobilePhone state="idle" />}
+    </InteractiveObject> : <MobilePhone state={state} />}
     {interaction?.phoneTag && interaction.hovered !== 'telephone' && <Html position={[0, .45, 0]} center style={{ pointerEvents: 'none' }}>
       <span className="home-object-tip">{interaction.phoneTag}</span>
     </Html>}

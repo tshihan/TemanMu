@@ -6,6 +6,8 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { HouseModel } from '../home/HomeEnvironment'
 import { ElderlyCharacter, type CharacterAnimation, type CharacterCommand, type CharacterStatus } from '../home/character/ElderlyCharacter'
 import type { Waypoint } from '../home/character/navigation'
+import type { TelephoneState } from '../home/interactions/registry'
+import { HomeSoundscape } from '../home/soundscape'
 
 type V3 = [number, number, number]
 type FallPhase = 'falling' | 'down' | 'rising' | 'up'
@@ -16,6 +18,7 @@ const TARGET: V3 = [0, .25, -.55]
 // The rooms she wanders between, and how long she lingers in each before moving on.
 const ROOMS: Waypoint[] = ['living', 'dining', 'kitchen', 'bathroom', 'bedroom', 'bedside', 'tvApproach']
 const LINGER_MS: [number, number] = [2500, 6000]
+const RING_DELAY_MS = 1200 // a beat after she is on the floor before TemanMu's check-in call comes through
 const CHARACTER_NAME = 'madam-lee-mei-ling'
 const BODY_BONE = 'Bip01_Spine' // middle of her body, where the pin points once she is lying on the floor
 const noop = () => { /* stable: this slide ignores these character callbacks */ }
@@ -133,6 +136,28 @@ function Resident({ paused, onFall }: { paused: boolean; onFall: (phase: FallPha
     onStatus={onStatus} onReached={noop} onArrived={onArrived} onAnimationComplete={onAnimationComplete} />
 }
 
+// While the phone rings, tracks where it sits on the slide so the dark overlay can leave a lit spot around it.
+function PhoneSpotlight({ ringing }: { ringing: boolean }) {
+  const get = useThree(state => state.get)
+  const at = useRef(new Vector3())
+  useEffect(() => {
+    const home = get().gl.domElement.closest<HTMLElement>('.present-home')
+    home?.classList.toggle('is-ringing', ringing)
+    return () => home?.classList.remove('is-ringing')
+  }, [ringing, get])
+  useFrame(({ scene, camera, gl }) => {
+    if (!ringing) return
+    const phone = scene.getObjectByName('mobile-phone')
+    const home = gl.domElement.closest<HTMLElement>('.present-home')
+    if (!phone || !home) return
+    phone.getWorldPosition(at.current).project(camera)
+    const canvas = gl.domElement.getBoundingClientRect(), page = home.getBoundingClientRect()
+    home.style.setProperty('--phone-x', `${(canvas.left + (at.current.x + 1) / 2 * canvas.width - page.left) / page.width * 100}%`)
+    home.style.setProperty('--phone-y', `${(canvas.top + (1 - at.current.y) / 2 * canvas.height - page.top) / page.height * 100}%`)
+  })
+  return null
+}
+
 /** Draws a fresh frame just before printing and reads it back. Without the read, Chrome can print this WebGL canvas blank when its size doesn't change between screen and print. */
 function PrintFrame() {
   const get = useThree(state => state.get)
@@ -144,7 +169,7 @@ function PrintFrame() {
   return null
 }
 
-function Scene({ pin, paused, onFall }: { pin: RefObject<HTMLSpanElement | null>; paused: boolean; onFall: (phase: FallPhase) => void }) {
+function Scene({ pin, paused, phone, onFall }: { pin: RefObject<HTMLSpanElement | null>; paused: boolean; phone: TelephoneState; onFall: (phase: FallPhase) => void }) {
   return <>
     <PrintFrame />
     <Rig pin={pin} />
@@ -154,7 +179,8 @@ function Scene({ pin, paused, onFall }: { pin: RefObject<HTMLSpanElement | null>
       shadow-radius={8} shadow-mapSize={[2048, 2048]} shadow-camera-left={-9} shadow-camera-right={9}
       shadow-camera-top={9} shadow-camera-bottom={-9} shadow-normalBias={.035} shadow-bias={-.0001} />
     <directionalLight position={[5, 8, -7]} intensity={.8} color="#e8efff" />
-    <HouseModel />
+    <HouseModel phone={phone} />
+    <PhoneSpotlight ringing={phone === 'ringing'} />
     <Resident paused={paused} onFall={onFall} />
     {/* Catches the sun's shadow on the page itself, so the home sits on the slide rather than on a grey floor. */}
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -.48, 0]} receiveShadow>
@@ -175,6 +201,9 @@ export function PresentHome() {
   const pin = useRef<HTMLSpanElement>(null)
   const wrap = useRef<HTMLDivElement>(null)
   const [onScreen, setOnScreen] = useState(true)
+  const [phone, setPhone] = useState<TelephoneState>('idle')
+  const sound = useRef<HomeSoundscape | null>(null)
+  const ringTimer = useRef(0)
   useEffect(() => {
     const el = wrap.current
     if (!el || !('IntersectionObserver' in window)) return
@@ -182,17 +211,31 @@ export function PresentHome() {
     observer.observe(el)
     return () => observer.disconnect()
   }, [])
+  useEffect(() => {
+    sound.current ??= new HomeSoundscape()
+    // Audio may only start after a gesture: the presenter's F press counts, so unlock on any key while on this slide.
+    const unlock = () => sound.current?.unlock()
+    window.addEventListener('keydown', unlock)
+    return () => window.removeEventListener('keydown', unlock)
+  }, [])
+  useEffect(() => { sound.current?.setLoop('telephone', phone === 'ringing') }, [phone])
+  useEffect(() => { sound.current?.setPaused(!onScreen) }, [onScreen])
+  useEffect(() => () => { window.clearTimeout(ringTimer.current); sound.current?.setLoop('telephone', false) }, [])
   // Something has gone wrong: the whole slide dims, leaving only her name pin lit. The pin holds still while she is in motion.
   const onFall = useCallback((phase: FallPhase) => {
     if (phase === 'falling' || phase === 'rising') wrap.current?.closest('.present-home')?.classList.toggle('is-fallen', phase === 'falling')
     if (pin.current) pin.current.dataset.mode = phase === 'down' ? 'lying' : phase === 'up' ? 'standing' : 'hold'
+    // Once she is down, her phone starts ringing (the check-in call) until W gets her up again.
+    window.clearTimeout(ringTimer.current)
+    if (phase === 'down') ringTimer.current = window.setTimeout(() => setPhone('ringing'), RING_DELAY_MS)
+    if (phase === 'rising') setPhone('idle')
   }, [])
   return <div ref={wrap} className="present-home-canvas" aria-hidden="true">
     <SceneBoundary>
       <Canvas shadows={{ type: PCFShadowMap }} orthographic frameloop="demand" dpr={[1, 2]}
         camera={{ position: CAMERA, near: .1, far: 120, zoom: 40 }}
         gl={{ antialias: true, alpha: true, preserveDrawingBuffer: true, toneMapping: ACESFilmicToneMapping, toneMappingExposure: 1 }}>
-        <Suspense fallback={null}><Scene pin={pin} paused={!onScreen} onFall={onFall} /></Suspense>
+        <Suspense fallback={null}><Scene pin={pin} paused={!onScreen} phone={phone} onFall={onFall} /></Suspense>
       </Canvas>
     </SceneBoundary>
     <span ref={pin} className="present-home-pin">Madam Lee</span>

@@ -2,9 +2,9 @@ import { Art, Books, Box, Cylinder, Plant } from '../primitives'
 import { getMaterials } from '../materials'
 import { InteractiveObject } from '../interactions/InteractiveObject'
 import { PhoneOnSurface } from './MobilePhone'
-import { interactionPrompt, type InteractionBindings } from '../interactions/registry'
+import { interactionPrompt, type InteractionBindings, type TelephoneState } from '../interactions/registry'
 
-export function LivingRoom({ interaction }: { interaction?: InteractionBindings }) {
+export function LivingRoom({ interaction, phone }: { interaction?: InteractionBindings; phone?: TelephoneState }) {
   const m = getMaterials()
   const tvOn = interaction?.states.television ?? false
   return <group name="living-room">
@@ -32,7 +32,7 @@ export function LivingRoom({ interaction }: { interaction?: InteractionBindings 
       <Cylinder at={[.27, .64, .25]} radius={.1} height={.025} mat={m.porcelain} />
       <Cylinder at={[.27, .7, .25]} radius={.059} height={.09} mat={m.cream} />
       <Cylinder at={[.27, .749, .25]} radius={.047} height={.005} mat={m.walnut} />
-      {interaction?.phoneSpot !== 'bedside' && <PhoneOnSurface interaction={interaction} at={[.43, .64, -.17]} />}
+      {interaction?.phoneSpot !== 'bedside' && <PhoneOnSurface interaction={interaction} state={phone} at={[.43, .64, -.17]} />}
     </group>
     <group name="television-console" position={[-5.02, 0, 1.55]} rotation={[0, Math.PI / 2, 0]}>
       <Box at={[0, .4, 0]} size={[2.1, .57, .48]} mat={m.oak} />

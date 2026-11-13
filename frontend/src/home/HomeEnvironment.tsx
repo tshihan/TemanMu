@@ -12,7 +12,7 @@ import { DiningArea } from './rooms/DiningArea'
 import { ElderlyCharacter, type CharacterAnimation, type CharacterCommand, type CharacterStatus, type InteractionPose } from './character/ElderlyCharacter'
 import { TownshipResponder, type ResponderCommand } from './character/TownshipResponder'
 import { ROOM_LABELS, type RoomId, type Waypoint } from './character/navigation'
-import { INITIAL_OBJECT_STATES, interactionPrompt, type InteractionBindings, type InteractionId, type ObjectStates } from './interactions/registry'
+import { INITIAL_OBJECT_STATES, interactionPrompt, type InteractionBindings, type InteractionId, type ObjectStates, type TelephoneState } from './interactions/registry'
 import { ScenarioController, type ScenarioActions } from './scenarios/ScenarioController'
 import { DEFAULT_TIMING, RESPONDER_KNOCK_SECONDS, SCENARIO_CALL_TIMING, SCENARIO_DESCRIPTIONS, SCENARIO_LABELS, scenarioSteps, type ScenarioId, type ScenarioStep, type ScenarioTiming } from './scenarios/definitions'
 import { api, usingMock } from '../api'
@@ -34,9 +34,10 @@ const HOME_CAMERA = [8.8, 17, 22] as const
 const HOME_TARGET = [0, .25, -.55] as const
 
 /** One world unit = one metre. +Y is up; -Z is the rear of the home. */
-export function HouseModel({ interaction }: { interaction?: InteractionBindings } = {}) {
+/** `phone` drives the living-room phone when there are no interaction bindings (the slide's non-interactive home). */
+export function HouseModel({ interaction, phone }: { interaction?: InteractionBindings; phone?: TelephoneState } = {}) {
   return <group name="unit-a105">
-    <Architecture interaction={interaction} /><Bedroom interaction={interaction} /><Bathroom interaction={interaction} /><Kitchen interaction={interaction} /><LivingRoom interaction={interaction} /><DiningArea />
+    <Architecture interaction={interaction} /><Bedroom interaction={interaction} /><Bathroom interaction={interaction} /><Kitchen interaction={interaction} /><LivingRoom interaction={interaction} phone={phone} /><DiningArea />
   </group>
 }
 function Scene({ command, characterCommand, responderCommand, responderVisible, responderChecking, responderKnocking, responderNote, interaction, pose, speech, visible, paused, urgent, sensorView, unit, pulses, onCharacterStatus, onReached, onArrived, onResponderArrived, onAnimationComplete, onReady }: {
