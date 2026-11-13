@@ -619,7 +619,17 @@
    CSS zoom re-lays out the text at every size, so line breaks shifted when the window was narrow (e.g. split screen).
    The negative margins take back the space the unscaled canvas would leave behind. */
 @media screen {
-  .slides-scaled .slides-page { zoom: 1; transform: scale(var(--slides-zoom, 1)); transform-origin: 0 0; margin-right: calc(1600px * (var(--slides-zoom, 1) - 1)); margin-bottom: calc(900px * (var(--slides-zoom, 1) - 1)); }
+  .slides-scaled .slides-page { zoom: 1; transform: scale(var(--slides-zoom, 1)); transform-origin: 0 0; margin-left: max(0px, calc((100% - 1600px * var(--slides-zoom, 1)) / 2)); margin-right: calc(1600px * (var(--slides-zoom, 1) - 1)); margin-bottom: calc(900px * (var(--slides-zoom, 1) - 1)); }
   .slides-scaled.slides-exporting .slides-page { transform: none; margin: 0; }
 }
 
+
+/* Slide 1 dims when Madam Lee falls (F). On a screen wider than 16:9 the slide is letterboxed, so the same darkness
+   continues into the empty side space: this layer sits behind the slide and repeats its gradient in screen pixels
+   (slide is centred; the gradient is 1200×720 slide-px around slide point 992,495). */
+@media screen {
+  .slides-scaled::before { content: ''; position: fixed; inset: 0; pointer-events: none; opacity: 0; transition: opacity .9s ease;
+    background: radial-gradient(calc(1200px * var(--slides-zoom, 1)) calc(720px * var(--slides-zoom, 1)) at calc(50vw + 192px * var(--slides-zoom, 1)) calc(50vh + 45px * var(--slides-zoom, 1)), #1a0f0b8c 0%, #120a07d9 100%); }
+  .slides-scaled:has(.present-home.is-fallen)::before { opacity: 1; transition: opacity 1.4s ease 1.7s; }
+  .slides-scaled.slides-exporting::before { display: none; }
+}

@@ -112,6 +112,7 @@ function useHowFlowDot() {
 // /final-slides: copy of /present for the final round. Door sensor replaced by the lobby access card.
 // /present: a short presenting deck of Madam Lee alone at home (3D), the problem, the cover (TemanMu + team names), the solution, and how it works.
 const SLIDE_CANVAS_WIDTH = 1600 // matches .slides-fixed .slides-page in slides.css
+const SLIDE_CANVAS_HEIGHT = 900
 
 export function FinalSlides() {
   const howFlow = useHowFlowDot()
@@ -139,9 +140,11 @@ export function FinalSlides() {
   useEffect(() => {
     const root = rootRef.current
     if (!root) return
-    const fit = () => root.style.setProperty('--slides-zoom', String(root.clientWidth / SLIDE_CANVAS_WIDTH))
+    // Fit both width and height so a wide or short screen (e.g. an external monitor) never crops the bottom of a slide.
+    const fit = () => root.style.setProperty('--slides-zoom', String(Math.min(root.clientWidth / SLIDE_CANVAS_WIDTH, document.documentElement.clientHeight / SLIDE_CANVAS_HEIGHT)))
     const resize = new ResizeObserver(fit)
     resize.observe(root)
+    window.addEventListener('resize', fit)
     fit()
     const freeze = () => root.classList.add('slides-exporting')
     const unfreeze = () => root.classList.remove('slides-exporting')
@@ -149,6 +152,7 @@ export function FinalSlides() {
     window.addEventListener('afterprint', unfreeze)
     return () => {
       resize.disconnect()
+      window.removeEventListener('resize', fit)
       window.removeEventListener('beforeprint', freeze)
       window.removeEventListener('afterprint', unfreeze)
     }
