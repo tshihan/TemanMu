@@ -374,7 +374,7 @@ export function startScene(root: HTMLElement, mode: 'landing' | 'presentation' =
     if (k === 'light') state.lightOn = !state.lightOn
     if (k === 'door') state.doorOpen = !state.doorOpen
     if (powerLabel) powerLabel.textContent = state.lightOn ? '1.8 kW' : '0.15 kW'
-    if (doorLabel) doorLabel.textContent = state.doorOpen ? 'open' : 'closed'
+    if (doorLabel) doorLabel.textContent = state.doorOpen ? 'tapped out' : 'tapped in'
   }
   const onHover = (e: PointerEvent) => { canvas.style.cursor = pick(e) ? 'pointer' : 'default' }
 
