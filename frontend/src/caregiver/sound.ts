@@ -1,3 +1,5 @@
+import { SOUND_ENABLED } from '../soundSwitch'
+
 export type ToneKind = 'morning' | 'alert' | 'reminder'
 
 // [frequency Hz, start s, length s, wave, gain]: soft for good news, insistent for alerts.
@@ -11,6 +13,7 @@ let context: AudioContext | null = null
 
 /** Browsers only allow audio after a user gesture, so call this from one (e.g. the first tap). */
 export function unlockAudio(): void {
+  if (!SOUND_ENABLED) return
   try {
     context ??= new AudioContext()
     if (context.state === 'suspended') void context.resume()
@@ -18,6 +21,7 @@ export function unlockAudio(): void {
 }
 
 export function playTone(kind: ToneKind): void {
+  if (!SOUND_ENABLED) return
   try {
     context ??= new AudioContext()
     const ctx = context

@@ -27,6 +27,7 @@ import seed from '../../../shared/seed.json'
 import { SensorBeacons, type SensorPulses } from './SensorBeacons'
 import { FastForward, Pause, Play, RotateCcw, Settings2, Square, Volume2, VolumeX, X } from 'lucide-react'
 import { HomeSoundscape } from './soundscape'
+import { SOUND_ENABLED } from '../soundSwitch'
 import './home.css'
 
 type Command = { action: 'reset' | 'in' | 'out' | 'left' | 'right'; id: number }
@@ -1030,7 +1031,7 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
           <button type="button" role="radio" aria-checked={!sensorView} onClick={() => setSensorView(false)}>Demo view</button>
           <button type="button" role="radio" aria-checked={sensorView} onClick={() => setSensorView(true)}>Sensor view</button>
         </div>
-        <button type="button" className="live-icon-button" aria-label={soundOn ? 'Mute home sounds' : 'Turn on home sounds'}
+        {SOUND_ENABLED && <button type="button" className="live-icon-button" aria-label={soundOn ? 'Mute home sounds' : 'Turn on home sounds'}
           title={soundOn ? 'Mute home sounds' : 'Turn on home sounds'} aria-pressed={soundOn} onClick={() => {
             const next = !soundOn
             sound.current.setEnabled(next)
@@ -1038,7 +1039,7 @@ export function HomeEnvironment({ className = '' }: { className?: string }) {
             setSoundOn(next)
           }}>
           {soundOn ? <Volume2 size={16} aria-hidden="true" /> : <VolumeX size={16} aria-hidden="true" />}
-        </button>
+        </button>}
         <button type="button" className="live-icon-button" aria-expanded={toolsOpen} aria-controls="live-tools" onClick={() => setToolsOpen(value => !value)} title="Presenter tools" aria-label="Presenter tools">
           <Settings2 size={15} aria-hidden="true" />
         </button>

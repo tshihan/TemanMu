@@ -1,10 +1,12 @@
+import { SOUND_ENABLED } from '../soundSwitch'
+
 export type HomeCue = 'wake' | 'return' | 'doorOpen' | 'doorClose' | 'cardTap' | 'knock'
 export type HomeLoop = 'telephone' | 'water' | 'kettle' | 'footsteps'
 
 /** Small Web Audio soundscape; no network assets and no audio before a user gesture. */
 export class HomeSoundscape {
   private context: AudioContext | null = null
-  private enabled = true
+  private enabled = SOUND_ENABLED
   private paused = false
   private active = new Set<HomeLoop>()
   private voices = new Map<HomeLoop, { stop: () => void }>()
@@ -21,7 +23,7 @@ export class HomeSoundscape {
   }
 
   setEnabled(enabled: boolean) {
-    this.enabled = enabled
+    this.enabled = enabled && SOUND_ENABLED
     if (enabled && this.context) this.unlock()
     else this.stopVoices()
   }

@@ -8,6 +8,7 @@ import { actorName, cardConcern, currentAway, GUARD, isHomeCheck, isOuting, outc
 import { clock, dayFraction, dayLabel, isToday, when } from './format'
 import { TrackingControl } from './TrackingControl'
 import { hospitalGuard } from './hospital-transfer'
+import { SOUND_ENABLED } from '../soundSwitch'
 
 type Variant = 'alarm' | 'checking' | 'quiet' | 'away' | 'calm' | 'pending' | 'hospital'
 interface Card { variant: Variant; Icon: LucideIcon; badge: string; headline: string; reason: string; grace?: boolean; ack?: boolean; open?: string }
@@ -152,10 +153,10 @@ export function HomeTab({ unit, ctx, incident, hospitalIncident, onOpenHospital,
         </div>
       </div>
       <div className="cg-home-tools">
-        <button type="button" className="cg-icon-btn" onClick={onToggleMute}
+        {SOUND_ENABLED && <button type="button" className="cg-icon-btn" onClick={onToggleMute}
           aria-label={muted ? 'Sounds off. Turn on' : 'Sounds on. Mute'} title={muted ? 'Sounds off. Turn on' : 'Sounds on. Mute'}>
           {muted ? <VolumeX size={18} aria-hidden="true" /> : <Volume2 size={18} aria-hidden="true" />}
-        </button>
+        </button>}
         <span className="cg-brand-mark" title="TemanMu"><Mark /></span>
       </div>
     </header>

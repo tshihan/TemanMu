@@ -19,3 +19,5 @@ dist/
 frontend/output/
 frontend/.playwright-cli/
 .playwright-cli/
+
+docs/demo-walkthrough/
