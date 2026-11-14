@@ -337,7 +337,7 @@ export function FinalSlides() {
       </PageFrame>
 
       <PageFrame number={4} className="slides-how present-how">
-        <div className="slides-section-top"><TemanMuWordmark /><span>04 · How it works</span></div>
+        <div className="slides-section-top"><a href="https://youtu.be/KxpILocdEtg?si=6CVPsloL02Gd1m56" target="_blank" rel="noopener noreferrer" aria-label="TemanMu video" style={{ color: 'inherit', textDecoration: 'none' }}><TemanMuWordmark /></a><span>04 · How it works</span></div>
         <div className="slides-how-heading" data-slide-reveal>
           <p className="slides-eyebrow">How it works</p>
           <h2>Sensors notice. TemanMu checks. <em>People respond.</em></h2>
