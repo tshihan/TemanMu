@@ -28,7 +28,7 @@ Cameras feel intrusive, wearables get forgotten or taken off, and simple meter a
 
 ## How it works
 
-TemanMu has two parts: **Safety** for the rare bad day, and **Companion** for every ordinary day.
+TemanMu has three parts: **Safety** for the rare bad day, **Companion** for every ordinary day, and **Home safety** for problems with the home itself.
 
 ### 1. Safety: notice when a routine breaks
 
@@ -60,6 +60,16 @@ Most days nothing goes wrong, and TemanMu still helps the family stay close and 
 - **Same-hour neighbours.** With consent from both sides, TemanMu suggests a neighbour whose day naturally overlaps with Mum's. A community coordinator makes the introduction in person, and exact times are never shared.
 
 The resident stays tech-free: the family acts on their behalf, and anything that reaches the resident comes through a real person.
+
+### 3. Home safety: catch problems with the home itself
+
+The same meters and access card also catch everyday risks in the home, with no cameras or radar:
+
+- **Water leak or tap left on.** People use water in short bursts. If water keeps flowing nonstop for far longer than normal, TemanMu flags a possible leak or forgotten tap.
+- **Appliance left on.** If electricity stays well above normal for too long, such as a stove or iron left on, TemanMu asks for a check. It cannot tell which appliance it is.
+- **Someone at home while she is away.** If water is used, or her card is tapped, while family has marked her away, the family is asked what it means: she is back, a known visitor, or ask the guard to check the home.
+
+Leak and appliance checks keep running while she is away, so a problem in an empty home is still caught.
 
 ### Privacy
 
